@@ -164,7 +164,7 @@ class BayesianOptimization(BO_Base):
 
         for it in range(self.init_points, num_iterations):
             logger.info("Start iteration %d ... ", it)
-
+            print('Iter',it)
             start_time = time.time()
 
 

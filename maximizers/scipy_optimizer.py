@@ -5,7 +5,7 @@ from scipy import optimize
 from functools import partial
 
 from maximizers.base_maximizer import BaseMaximizer
-from initial_design import initial_random_uniform
+from initial_design.initial_random_uniform import init_random_uniform
 
 
 class SciPyOptimizer(BaseMaximizer):
@@ -62,7 +62,7 @@ class SciPyOptimizer(BaseMaximizer):
 
         f = partial(self._acquisition_fkt_wrapper, acq_f=self.objective_func)
 
-        starts = initial_random_uniform(self.lower, self.upper, int(self.n_restarts * 0.5))
+        starts = init_random_uniform(self.lower, self.upper, int(self.n_restarts * 0.5))
         rand_incs = np.array([np.random.normal(loc=self.objective_func.model.get_incumbent()[0],
                                                scale=np.ones([self.lower.shape[0]]) * 0.5)
                               for _ in range(int(self.n_restarts * 0.5))])
