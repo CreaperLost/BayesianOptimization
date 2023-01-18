@@ -12,7 +12,7 @@ import torch
 import math
 import matplotlib
 import matplotlib.pyplot as plt
-
+from fmin.Random_Forest_Based_Local_BO import Random_Forest_1
 # Load the breast cancer dataset
 data = load_breast_cancer()
 # Define the KFold cross-validator
@@ -46,7 +46,8 @@ class SVM_benchmark:
 f = SVM_benchmark(data,cv)
 
 
-
+n_iterations = 100
+n_initial = 10
 """
 Create optimizer.
 """
@@ -56,8 +57,8 @@ turbo1 = Turbo1(
     f=f,  # Handle to objective function
     lb=f.lb,  # Numpy array specifying lower bounds
     ub=f.ub,  # Numpy array specifying upper bounds
-    n_init=20,  # Number of initial bounds from an Latin hypercube design
-    max_evals = 1000,  # Maximum number of evaluations
+    n_init=n_initial,  # Number of initial bounds from an Latin hypercube design
+    max_evals = n_iterations,  # Maximum number of evaluations
     batch_size=10,  # How large batch size TuRBO uses
     verbose=True,  # Print information from each batch
     use_ard=True,  # Set to true if you want to use ARD for the GP kernel
@@ -87,12 +88,11 @@ plt.plot(np.minimum.accumulate(fX), 'r', lw=3)  # Plot cumulative minimum as a r
 plt.title("SVM Benchmark")
 plt.tight_layout()
 plt.show()"""
+
 from fmin.bayesian_optimization import bayesian_optimization
-
-
 robo_start = timeit()
 # start Bayesian optimization to minimize the objective function
-results = bayesian_optimization(f, f.lb, f.ub, model_type="gp", maximizer="differential_evolution" ,num_iterations=100)
+results = bayesian_optimization(f, f.lb, f.ub, model_type="gp", maximizer="differential_evolution" ,n_init=n_initial,num_iterations=n_iterations)
 f_best, x_best =  results["f_opt"] , results["x_opt"]
 fX = results['incumbent_values']
 print("Best value found:\n\tf(x) = %.3f\nObserved at:\n\tx = %s" % (f_best, np.around(x_best, 3)))
@@ -116,8 +116,8 @@ turboM = TurboM(
     f=f,  # Handle to objective function
     lb=f.lb,  # Numpy array specifying lower bounds
     ub=f.ub,  # Numpy array specifying upper bounds
-    n_init=20,  # Number of initial bounds from an Latin hypercube design
-    max_evals = 1000,  # Maximum number of evaluations
+    n_init=n_initial,  # Number of initial bounds from an Latin hypercube design
+    max_evals = n_iterations,  # Maximum number of evaluations
     batch_size=10,  # How large batch size TuRBO uses
     verbose=True,  # Print information from each batch
     use_ard=True,  # Set to true if you want to use ARD for the GP kernel
@@ -126,10 +126,10 @@ turboM = TurboM(
     min_cuda=1024,  # Run on the CPU for small datasets
     device="cpu",  # "cpu" or "cuda"
     dtype="float64",  # float64 or float32
-    n_trust_regions=20
+    n_trust_regions=5
 )
 
-turbo1.optimize()
+turboM.optimize()
 
 X = turboM.X  # Evaluated points
 fX = turboM.fX  # Observed values
@@ -167,6 +167,26 @@ Observed at:
 
 """
 
+forest1_start = timeit()
+Forest_1 = Random_Forest_1(
+    f=f,  # Handle to objective function
+    lb=f.lb,  # Numpy array specifying lower bounds
+    ub=f.ub,  # Numpy array specifying upper bounds
+    n_init=n_initial,  # Number of initial bounds from an Latin hypercube design
+    max_evals = n_iterations,  # Maximum number of evaluations
+    verbose=True,  # Print information from each batch
+    )
+
+Forest_1.optimize()
+
+X = Forest_1.X  # Evaluated points
+fX = Forest_1.fX  # Observed values
+ind_best = np.argmin(fX)
+f_best, x_best = fX[ind_best], X[ind_best, :]
+
+print("Best value found:\n\tf(x) = %.3f\nObserved at:\n\tx = %s" % (f_best, np.around(x_best, 3)))
+end_time = timeit() - forest1_start
+print('Time to eval %d \n',end_time)
 
 
 

@@ -10,6 +10,21 @@ from torch.quasirandom import SobolEngine
 from BayesianOptimizers.turbo_gp import train_gp
 from initial_design.turbo_utils import from_unit_cube, latin_hypercube, to_unit_cube
 
+import math 
+
+import gpytorch
+import numpy as np
+import torch
+from gpytorch.constraints.constraints import Interval
+from gpytorch.distributions import MultivariateNormal
+from gpytorch.kernels import MaternKernel, ScaleKernel
+from gpytorch.likelihoods import GaussianLikelihood
+from gpytorch.means import ConstantMean
+from gpytorch.mlls import ExactMarginalLogLikelihood
+from gpytorch.models import ExactGP
+from typing import List, Optional, Tuple
+import numpy as np
+from pyrfr import regression
 
 class Random_Forest_1:
     """The Random Forest Based Regression Local Bayesian Optimization.
@@ -32,6 +47,7 @@ class Random_Forest_1:
         X, fX = RF1.X, RF1.fX  # Evaluated points
     """
 
+
     def __init__(
         self,
         f,
@@ -41,8 +57,7 @@ class Random_Forest_1:
         max_evals,
         batch_size=1,
         verbose=True,
-        use_ard=True,
-        n_training_steps=50,
+        random_seed = int(1e6)
     ):
 
         # Very basic input checks
@@ -52,9 +67,8 @@ class Random_Forest_1:
         assert max_evals > 0 and isinstance(max_evals, int)
         assert n_init > 0 and isinstance(n_init, int)
         assert batch_size > 0 and isinstance(batch_size, int)
-        assert isinstance(verbose, bool) and isinstance(use_ard, bool)
+        assert isinstance(verbose, bool) 
         assert isinstance(batch_size, int)
-        assert n_training_steps >= 30 and isinstance(n_training_steps, int)
         assert max_evals > n_init and max_evals > batch_size
 
         # Save function information
@@ -62,16 +76,15 @@ class Random_Forest_1:
         self.dim = len(lb)
         self.lb = lb
         self.ub = ub
-
+        self.seed = random_seed
         # Settings
         self.n_init = n_init
         self.max_evals = max_evals
         self.batch_size = batch_size
         self.verbose = verbose
-        self.use_ard = use_ard
-        self.n_training_steps = n_training_steps
 
-        self.lengthscales = np.zeros((0, self.dim)) if self.use_ard else np.zeros((0, 1))
+        self.dtype =  torch.float64
+        self.device = torch.device("cpu")
 
         # Tolerances and counters
         self.n_cand = min(100 * self.dim, 5000)
@@ -91,6 +104,124 @@ class Random_Forest_1:
         # Initialize parameters
         self._restart()
 
+
+        self.rf_opts = regression.forest_opts()
+        self.rf_opts.num_trees = 10
+        self.rf_opts.do_bootstrapping = True
+        self.rf_opts.tree_opts.min_samples_to_split = 3
+        self.rf_opts.tree_opts.min_samples_in_leaf = 3
+        self.rf_opts.tree_opts.max_depth = 2**20
+        self.rf_opts.tree_opts.epsilon_purity = 1e-8
+        self.rf_opts.tree_opts.max_num_nodes = 2**20
+        self.rf_opts.compute_law_of_total_variance = False
+        self.log_y = False
+
+        self.n_points_per_tree = -1
+        self.rf = None  # type: regression.binary_rss_fores
+
+
+    def _init_data_container(self, X: np.ndarray, y: np.ndarray) -> regression.default_data_container:
+        """Fills a pyrfr default data container, s.t. the forest knows categoricals and bounds for
+        continous data.
+        Parameters
+        ----------
+        X : np.ndarray [n_samples, n_features]
+            Input data points
+        y : np.ndarray [n_samples, ]
+            Corresponding target values
+        Returns
+        -------
+        data : regression.default_data_container
+            The filled data container that pyrfr can interpret
+        """
+        # retrieve the types and the bounds from the ConfigSpace
+        data = regression.default_data_container(X.shape[1])
+
+        """for i, (mn, mx) in enumerate(self.bounds):
+            if np.isnan(mx):
+                data.set_type_of_feature(i, mn)
+            else:
+                data.set_bounds_of_feature(i, mn, mx)"""
+
+        for row_X, row_y in zip(X, y):
+            data.add_data_point(row_X, row_y)
+        return data
+
+    def train_rf(self,train_x, train_y):
+        """Fit a GP model where train_x is in [0, 1]^d and train_y is standardized."""
+        assert train_x.ndim == 2
+        assert train_y.ndim == 1
+        assert train_x.shape[0] == train_y.shape[0]
+
+        if self.n_points_per_tree <= 0:
+            self.rf_opts.num_data_points_per_tree = train_x.shape[0]
+        else:
+            self.rf_opts.num_data_points_per_tree = self.n_points_per_tree
+        self.rf = regression.binary_rss_forest()
+        self.rf.options = self.rf_opts
+        data = self._init_data_container(train_x ,train_y)
+        self.rf.fit(data = data, rng=regression.default_random_engine(self.seed) )
+
+    
+    def predict_rf(self, X: np.ndarray, cov_return_type: Optional[str] = "diagonal_cov") -> Tuple[np.ndarray, np.ndarray]:
+        """Predict means and variances for given X.
+        Parameters
+        ----------
+        X : np.ndarray of shape = [n_samples,
+                                   n_features (config + instance features)]
+        cov_return_type: Optional[str]
+            Specifies what to return along with the mean. Refer ``predict()`` for more information.
+        Returns
+        -------
+        means : np.ndarray of shape = [n_samples, 1]
+            Predictive mean
+        vars : np.ndarray  of shape = [n_samples, 1]
+            Predictive variance
+        """
+        if len(X.shape) != 2:
+            raise ValueError("Expected 2d array, got %dd array!" % len(X.shape))
+        """if X.shape[1] != len(self.types):
+            raise ValueError("Rows in X should have %d entries but have %d!" % (len(self.types), X.shape[1]))"""
+        if cov_return_type != "diagonal_cov":
+            raise ValueError("'cov_return_type' can only take 'diagonal_cov' for this model")
+
+        if self.log_y:
+            all_preds = []
+            third_dimension = 0
+
+            # Gather data in a list of 2d arrays and get statistics about the required size of the 3d array
+            for row_X in X:
+                preds_per_tree = self.rf.all_leaf_values(row_X)
+                all_preds.append(preds_per_tree)
+                max_num_leaf_data = max(map(len, preds_per_tree))
+                third_dimension = max(max_num_leaf_data, third_dimension)
+
+            # Transform list of 2d arrays into a 3d array
+            preds_as_array = np.zeros((X.shape[0], self.rf_opts.num_trees, third_dimension)) * np.NaN
+            for i, preds_per_tree in enumerate(all_preds):
+                for j, pred in enumerate(preds_per_tree):
+                    preds_as_array[i, j, : len(pred)] = pred
+
+            # Do all necessary computation with vectorized functions
+            preds_as_array = np.log(np.nanmean(np.exp(preds_as_array), axis=2) + 0.00001)
+
+            # Compute the mean and the variance across the different trees
+            means = preds_as_array.mean(axis=1)
+            vars_ = preds_as_array.var(axis=1)
+        else:
+            means, vars_ = [], []
+            for row_X in X:
+                mean_, var = self.rf.predict_mean_var(row_X)
+                means.append(mean_)
+                vars_.append(var)
+
+        means = np.array(means)
+        vars_ = np.array(vars_)
+
+        return means.reshape((-1, 1)), vars_.reshape((-1, 1))
+
+    
+
     def _restart(self):
         self._X = []
         self._fX = []
@@ -98,43 +229,31 @@ class Random_Forest_1:
         self.succcount = 0
         self.length = self.length_init
 
-    def _create_candidates(self, X, fX, length, n_training_steps, hypers):
+    def _create_candidates(self, X, fX):
         """Generate candidates assuming X has been scaled to [0,1]^d."""
         # Pick the center as the point with the smallest function values
         # NOTE: This may not be robust to noise, in which case the posterior mean of the GP can be used instead
         assert X.min() >= 0.0 and X.max() <= 1.0
 
-        # Standardize function values.
+
+        #See if I can log transform y.
+        """# Standardize function values.
         mu, sigma = np.median(fX), fX.std()
         sigma = 1.0 if sigma < 1e-6 else sigma
-        fX = (deepcopy(fX) - mu) / sigma
+        fX = (deepcopy(fX) - mu) / sigma"""
 
         device, dtype = self.device, self.dtype
-
-        # We use CG + Lanczos for training if we have enough data
-        with gpytorch.settings.max_cholesky_size(self.max_cholesky_size):
-            X_torch = torch.tensor(X).to(device=device, dtype=dtype)
-            y_torch = torch.tensor(fX).to(device=device, dtype=dtype)
-            gp = train_gp(
-                train_x=X_torch, train_y=y_torch, use_ard=self.use_ard, num_steps=n_training_steps, hypers=hypers
-            )
-
-            # Save state dict
-            hypers = gp.state_dict()
+        #Train the random forest
+        self.train_rf(train_x=X, train_y=fX)
 
         # Create the trust region boundaries
-        x_center = X[fX.argmin().item(), :][None, :]
-        weights = gp.covar_module.base_kernel.lengthscale.cpu().detach().numpy().ravel()
-        weights = weights / weights.mean()  # This will make the next line more stable
-        weights = weights / np.prod(np.power(weights, 1.0 / len(weights)))  # We now have weights.prod() = 1
-        lb = np.clip(x_center - weights * length / 2.0, 0.0, 1.0)
-        ub = np.clip(x_center + weights * length / 2.0, 0.0, 1.0)
-
+        x_center = X[fX.argmin(), :][None, :]
+        
         # Draw a Sobolev sequence in [lb, ub]
         seed = np.random.randint(int(1e6))
         sobol = SobolEngine(self.dim, scramble=True, seed=seed)
         pert = sobol.draw(self.n_cand).to(dtype=dtype, device=device).cpu().detach().numpy()
-        pert = lb + (ub - lb) * pert
+        pert = self.lb + (self.ub - self.lb) * pert
 
         # Create a perturbation mask
         prob_perturb = min(20.0 / self.dim, 1.0)
@@ -145,25 +264,13 @@ class Random_Forest_1:
         # Create candidate points
         X_cand = x_center.copy() * np.ones((self.n_cand, self.dim))
         X_cand[mask] = pert[mask]
+        X_cand = np.clip(X_cand, 0.0, 1.0)
+        #Evaluate Candidate
+        means,vars = self.predict_rf(X_cand)
 
+        y_cand = means
 
-        device, dtype = self.device, self.dtype
-
-        # We may have to move the GP to a new device
-        gp = gp.to(dtype=dtype, device=device)
-
-        # We use Lanczos for sampling if we have enough data
-        with torch.no_grad(), gpytorch.settings.max_cholesky_size(self.max_cholesky_size):
-            X_cand_torch = torch.tensor(X_cand).to(device=device, dtype=dtype)
-            y_cand = gp.likelihood(gp(X_cand_torch)).sample(torch.Size([self.batch_size])).t().cpu().detach().numpy()
-
-        # Remove the torch variables
-        del X_torch, y_torch, X_cand_torch, gp
-
-        # De-standardize the sampled values
-        y_cand = mu + sigma * y_cand
-
-        return X_cand, y_cand, hypers
+        return X_cand, y_cand
 
     def _select_candidates(self, X_cand, y_cand):
         """Select candidates."""
@@ -206,7 +313,7 @@ class Random_Forest_1:
                 sys.stdout.flush()
 
             # Thompson sample to get next suggestions
-            while self.n_evals < self.max_evals and self.length >= self.length_min:
+            while self.n_evals < self.max_evals:
                 # Warp inputs
                 X = to_unit_cube(deepcopy(self._X), self.lb, self.ub)
 
@@ -214,9 +321,7 @@ class Random_Forest_1:
                 fX = deepcopy(self._fX).ravel()
 
                 # Create th next batch
-                X_cand, y_cand, _ = self._create_candidates(
-                    X, fX, length=self.length, n_training_steps=self.n_training_steps, hypers={}
-                )
+                X_cand, y_cand = self._create_candidates(X, fX)
                 X_next = self._select_candidates(X_cand, y_cand)
 
                 # Undo the warping
@@ -238,3 +343,5 @@ class Random_Forest_1:
                 # Append data to the global history
                 self.X = np.vstack((self.X, deepcopy(X_next)))
                 self.fX = np.vstack((self.fX, deepcopy(fX_next)))
+
+

@@ -3,7 +3,7 @@ import time
 import json
 import logging
 import numpy as np
-
+import tqdm
 """Inputs to add."""
 from initial_design.initial_random_uniform import init_random_uniform
 from BayesianOptimizers.bo_base import BO_Base
@@ -164,7 +164,8 @@ class BayesianOptimization(BO_Base):
 
         for it in range(self.init_points, num_iterations):
             logger.info("Start iteration %d ... ", it)
-            print('Iter',it)
+            if it % 10 == 0:
+                print('Iter',it)
             start_time = time.time()
 
 
