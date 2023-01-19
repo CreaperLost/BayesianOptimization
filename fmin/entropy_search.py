@@ -8,7 +8,6 @@ from models.gaussian_process_mcmc import GaussianProcessMCMC
 from maximizers.random_sampling import RandomSampling
 from maximizers.scipy_optimizer import SciPyOptimizer
 from maximizers.differential_evolution import DifferentialEvolution
-from BayesianOptimizers.Bayesian_Optimization import BayesianOptimization
 from acquisition_functions.information_gain import InformationGain
 from acquisition_functions.ei import EI
 from acquisition_functions.marginalization import MarginalizationGPMCMC

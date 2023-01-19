@@ -7,17 +7,33 @@ import tqdm
 """Inputs to add."""
 from initial_design.initial_random_uniform import init_random_uniform
 from BayesianOptimizers.bo_base import BO_Base
-
+import logging
+import george
+import numpy as np
+from pybnn.dngo import DNGO
+from priors.default_priors import DefaultPrior
+from models.wrapper_bohamiann import WrapperBohamiann
+from models.gaussian_process import GaussianProcess
+from models.gaussian_process_mcmc import GaussianProcessMCMC
+#from models.random_forest import RandomForest
+from maximizers.scipy_optimizer import SciPyOptimizer
+from maximizers.random_sampling import RandomSampling
+from maximizers.differential_evolution import DifferentialEvolution
+from acquisition_functions.ei import EI
+from acquisition_functions.pi import PI
+from acquisition_functions.log_ei import LogEI
+from acquisition_functions.lcb import LCB
+from acquisition_functions.marginalization import MarginalizationGPMCMC
+from initial_design.initial_latin_hypercube import init_latin_hypercube_sampling
 
 logger = logging.getLogger(__name__)
 
 """
 Code adapted from Robo Package
 https://github.com/automl/RoBO/blob/master/robo/solver/bayesian_optimization.py
-
-
 """
-class BayesianOptimization(BO_Base):
+
+class Robo(BO_Base):
 
     def __init__(self, objective_function, lower, upper,
                  acquisition_function, model, maximize_func,
@@ -26,7 +42,8 @@ class BayesianOptimization(BO_Base):
                  output_path=None,
                  train_interval=1,
                  n_restarts=1,
-                 rng=None):
+                 rng=None,
+                 num_iterations = 10):
         """
         Implementation of the standard Bayesian optimization loop that uses
         an acquisition function and a model to optimize a given objective_function.
@@ -59,21 +76,86 @@ class BayesianOptimization(BO_Base):
         rng: np.random.RandomState
             Random number generator
         """
+        assert upper.shape[0] == lower.shape[0], "Dimension miss match"
+        assert np.all(lower < upper), "Lower bound >= upper bound"
+        assert initial_points <= num_iterations, "Number of initial design point has to be <= than the number of iterations"
 
         if rng is None:
             self.rng = np.random.RandomState(np.random.randint(100000))
         else:
             self.rng = rng
 
-        self.model = model
-        self.acquisition_function = acquisition_function
-        self.maximize_func = maximize_func
+        
+
+        cov_amp = 2
+        n_dims = lower.shape[0]
+
+        initial_ls = np.ones([n_dims])
+        exp_kernel = george.kernels.Matern52Kernel(initial_ls,
+                                                ndim=n_dims)
+        kernel = cov_amp * exp_kernel
+
+        prior = DefaultPrior(len(kernel) + 1)
+
+        n_hypers = 3 * len(kernel)
+        if n_hypers % 2 == 1:
+            n_hypers += 1
+
+        if acquisition_function == "ei":
+            a = EI(model)
+        elif acquisition_function == "log_ei":
+            a = LogEI(model)
+        elif acquisition_function == "pi":
+            a = PI(model)
+        elif acquisition_function == "lcb":
+            a = LCB(model)
+        else:
+            raise ValueError("'{}' is not a valid acquisition function"
+                            .format(acquisition_function))
+
+        if model == "gp_mcmc":
+            self.acquisition_function = MarginalizationGPMCMC(a)
+        else:
+            self.acquisition_function = a
+
+        if model == "gp":
+            self.model = GaussianProcess(kernel, prior=prior, rng=rng,
+                                normalize_output=False, normalize_input=True,
+                                lower=lower, upper=upper)
+        elif model == "gp_mcmc":
+            self.model = GaussianProcessMCMC(kernel, prior=prior,
+                                        n_hypers=n_hypers,
+                                        chain_length=200,
+                                        burnin_steps=100,
+                                        normalize_input=True,
+                                        normalize_output=False,
+                                        rng=rng, lower=lower, upper=upper)
+            """elif model == "rf":
+                self.model = RandomForest(rng=rng)"""
+        elif model == "bohamiann":
+            self.model = WrapperBohamiann()
+        elif model == "dngo":
+            self.model = DNGO()
+        else:
+            raise ValueError("'{}' is not a valid model".format(model))
+
+        if maximize_func == "random":
+            self.maximize_func = RandomSampling(self.acquisition_function, lower, upper, rng=rng)
+        elif maximize_func == "scipy":
+            self.maximize_func = SciPyOptimizer(self.acquisition_function, lower, upper, rng=rng)
+        elif maximize_func == "differential_evolution":
+            self.maximize_func = DifferentialEvolution(self.acquisition_function, lower, upper, rng=rng)
+        else:
+            raise ValueError("'{}' is not a valid function to maximize the "
+                         "acquisition function".format(maximize_func))
+
         self.start_time = time.time()
         self.initial_design = initial_design
         self.objective_function = objective_function
+        self.max_iter = num_iterations
         #Here we start with empty data.
         self.X = None
-        self.y = None
+        self.fX = None
         #Capture some of the information about time.
         self.time_func_evals = []
         self.time_overhead = []
@@ -89,7 +171,28 @@ class BayesianOptimization(BO_Base):
         self.init_points = initial_points
         self.runtime = []
 
-    def run(self, num_iterations=10, X=None, y=None):
+
+
+    """
+
+    Get more information through this 
+    ----------------------------------
+
+    x_best, f_min = bo.optimize(num_iterations, X=X_init, y=Y_init)
+
+    results = dict()
+    results["x_opt"] = x_best
+    results["f_opt"] = f_min
+    results["incumbents"] = [inc for inc in bo.incumbents]
+    results["incumbent_values"] = [val for val in bo.incumbents_values]
+    results["runtime"] = bo.runtime
+    results["overhead"] = bo.time_overhead
+    results["X"] = [x.tolist() for x in bo.X]
+    results["y"] = [y for y in bo.y]
+    return results
+    
+    """
+    def optimize(self, X=None, y=None):
         """
         The main Bayesian optimization loop
         Parameters
@@ -154,15 +257,15 @@ class BayesianOptimization(BO_Base):
                     self.save_output(i)
 
             self.X = np.array(X)
-            self.y = np.array(y)
+            self.fX = np.array(y)
         else:
             self.X = X
-            self.y = y
+            self.fX = y
 
         # Main Bayesian optimization loop
         # After you evaluated the first initi_points, continue with as many iterations are left.
 
-        for it in range(self.init_points, num_iterations):
+        for it in range(self.init_points, self.max_iter):
             logger.info("Start iteration %d ... ", it)
             if it % 10 == 0:
                 print('Iter',it)
@@ -176,7 +279,7 @@ class BayesianOptimization(BO_Base):
                 do_optimize = False
 
             # Choose next point to evaluate
-            new_x = self.choose_next(self.X, self.y, do_optimize)
+            new_x = self.choose_next(self.X, self.fX, do_optimize)
 
             self.time_overhead.append(time.time() - start_time)
             logger.info("Optimization overhead was %f seconds", self.time_overhead[-1])
@@ -192,12 +295,12 @@ class BayesianOptimization(BO_Base):
 
             # Extend the data
             self.X = np.append(self.X, new_x[None, :], axis=0)
-            self.y = np.append(self.y, new_y)
+            self.fX = np.append(self.fX, new_y)
 
             # Estimate incumbent
-            best_idx = np.argmin(self.y)
+            best_idx = np.argmin(self.fX)
             incumbent = self.X[best_idx]
-            incumbent_value = self.y[best_idx]
+            incumbent_value = self.fX[best_idx]
 
             self.incumbents.append(incumbent.tolist())
             self.incumbents_values.append(incumbent_value)
