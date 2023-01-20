@@ -1,5 +1,6 @@
 import numpy as np
 
+
 """
 Define the optimization problem.
 """

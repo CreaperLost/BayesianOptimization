@@ -33,10 +33,9 @@ Code adapted from Robo Package
 https://github.com/automl/RoBO/blob/master/robo/solver/bayesian_optimization.py
 """
 
-class Robo(BO_Base):
+class Random_Forest_Robo(BO_Base):
 
     def __init__(self, objective_function, lower, upper,
-                 acquisition_function, model, maximize_func,
                  initial_design=init_random_uniform,
                  initial_points=3,
                  output_path=None,
@@ -85,71 +84,10 @@ class Robo(BO_Base):
         else:
             self.rng = rng
 
-        cov_amp = 2
-        n_dims = lower.shape[0]
-
-        initial_ls = np.ones([n_dims])
-        exp_kernel = george.kernels.Matern52Kernel(initial_ls,
-                                                ndim=n_dims)
-        kernel = cov_amp * exp_kernel
-
-        prior = DefaultPrior(len(kernel) + 1)
-
-        n_hypers = 3 * len(kernel)
-        if n_hypers % 2 == 1:
-            n_hypers += 1
-
         
-
-        if model == "gp":
-            self.model = GaussianProcess(kernel, prior=prior, rng=rng,
-                                normalize_output=False, normalize_input=True,
-                                lower=lower, upper=upper)
-        elif model == "gp_mcmc":
-            self.model = GaussianProcessMCMC(kernel, prior=prior,
-                                        n_hypers=n_hypers,
-                                        chain_length=200,
-                                        burnin_steps=100,
-                                        normalize_input=True,
-                                        normalize_output=False,
-                                        rng=rng, lower=lower, upper=upper)
-        elif model == "rf":
-            self.model = RandomForest(rng=rng)
-        elif model == "bohamiann":
-            self.model = WrapperBohamiann()
-        elif model == "dngo":
-            self.model = DNGO()
-        else:
-            raise ValueError("'{}' is not a valid model".format(model))
-
-
-        if acquisition_function == "ei":
-            a = EI(self.model)
-        elif acquisition_function == "log_ei":
-            a = LogEI(self.model)
-        elif acquisition_function == "pi":
-            a = PI(self.model)
-        elif acquisition_function == "lcb":
-            a = LCB(self.model)
-        else:
-            raise ValueError("'{}' is not a valid acquisition function"
-                            .format(acquisition_function))
-
-        if self.model == "gp_mcmc":
-            self.acquisition_function = MarginalizationGPMCMC(a)
-        else:
-            self.acquisition_function = a
-
-
-        if maximize_func == "random":
-            self.maximize_func = RandomSampling(self.acquisition_function, lower, upper, rng=rng)
-        elif maximize_func == "scipy":
-            self.maximize_func = SciPyOptimizer(self.acquisition_function, lower, upper, rng=rng)
-        elif maximize_func == "differential_evolution":
-            self.maximize_func = DifferentialEvolution(self.acquisition_function, lower, upper, rng=rng)
-        else:
-            raise ValueError("'{}' is not a valid function to maximize the "
-                         "acquisition function".format(maximize_func))
+        self.model = RandomForest(rng=rng)
+        self.acquisition_function = EI(self.model)
+        self.maximize_func = RandomSampling(self.acquisition_function, lower, upper, rng=rng)
 
         self.start_time = time.time()
         self.initial_design = initial_design
@@ -223,6 +161,7 @@ class Robo(BO_Base):
             y = []
 
             start_time_overhead = time.time()
+            #Samples initial points
             init = self.initial_design(self.lower,
                                        self.upper,
                                        self.init_points,
@@ -275,13 +214,35 @@ class Robo(BO_Base):
 
 
             #So the idea here is that you may don't want to retrain the acquisition all the time
+            #Alway re-optimize.
             if it % self.train_interval == 0:
                 do_optimize = True
             else:
                 do_optimize = False
 
             # Choose next point to evaluate
-            new_x = self.choose_next(self.X, self.fX, do_optimize)
+            #new_x = self.choose_next(self.X, self.fX, do_optimize)
+            #Experimental
+            #Train the Model
+            try:
+                logger.info("Train model...")
+                t = time.time()
+                self.model.train(self.X, self.fX, do_optimize=do_optimize)
+                logger.info("Time to train the model: %f", (time.time() - t))
+            except:
+                logger.error("Model could not be trained!")
+                raise
+
+            #Run acquisition function.
+            self.acquisition_function.update(self.model)
+
+            logger.info("Maximize acquisition function...")
+            t = time.time()
+            #Maximize acquisition.
+            new_x = self.maximize_func.maximize()
+
+            logger.info("Time to maximize the acquisition function: %f", (time.time() - t))
+            
 
             self.time_overhead.append(time.time() - start_time)
             logger.info("Optimization overhead was %f seconds", self.time_overhead[-1])
