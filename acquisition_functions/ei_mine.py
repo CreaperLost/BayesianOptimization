@@ -1,0 +1,179 @@
+import logging
+from scipy.stats import norm
+import numpy as np
+logger = logging.getLogger(__name__)
+
+import abc
+
+class BaseAcquisitionFunction(object):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self,model):
+        """
+        A base class for acquisition_functions functions.
+
+        Parameters
+        ----------
+        model : Model object
+            Models the objective function.
+        """
+        self.model = model 
+
+    def update(self, model):
+        """
+        This method will be called if the model is updated. E.g.
+        Entropy search uses it to update it's approximation of P(x=x_min)
+
+        Parameters
+        ----------
+        model : Model object
+            Models the objective function.
+        """
+        self.model = model
+
+    def _multiple_inputs(foo):
+        def wrapper(self, X, **kwargs):
+            if len(X.shape) > 1:
+                a = [foo(self, x, **kwargs) for x in X]
+            else:
+                a = foo(self, X, **kwargs)
+            return a
+        return wrapper
+
+    @abc.abstractmethod
+    def compute(self, x, derivative=False):
+        """
+        Computes the acquisition_functions value for a given point X. This function has
+        to be overwritten in a derived class.
+
+        Parameters
+        ----------
+        x: np.ndarray(D,), The input point where the acquisition_functions function
+            should be evaluate.
+
+        derivative: Boolean
+            If is set to true also the derivative of the acquisition_functions
+            function at X is returned
+        """
+        pass
+
+    def __call__(self, x, **kwargs):
+
+        if len(x.shape) == 1:
+            x = x[np.newaxis, :]
+        acq = self.compute(x, **kwargs)
+        if np.any(np.isnan(acq)):
+            idx = np.where(np.isnan(acq))[0]
+            acq[idx, :] = -np.finfo(float).max
+
+        return acq
+
+    def get_json_data(self):
+        """
+        Json getter function
+
+        :return: Dict() object
+        """
+
+        json_data = dict()
+        json_data = {"type": __name__}
+        return json_data
+
+
+
+
+class EI(BaseAcquisitionFunction):
+
+    def __init__(self,model, par=0.0):
+
+        r"""
+        Computes for a given x the expected improvement as
+        acquisition_functions value.
+        :math:`EI(X) :=
+            \mathbb{E}\left[ \max\{0, f(\mathbf{X^+}) -
+                f_{t+1}(\mathbf{X}) - \xi\right] \} ]`, with
+        :math:`f(X^+)` as the incumbent.
+
+        Parameters
+        ----------
+        model: Model object
+            A model that implements at least
+                 - predict(X)
+                 - getCurrentBestX().
+            If you want to calculate derivatives than it should also support
+                 - predictive_gradients(X)
+
+        par: float
+            Controls the balance between exploration
+            and exploitation of the acquisition_functions function. Default is 0.0
+        """
+
+        super(EI, self).__init__(model)
+        #Always 0
+        self.par = par
+
+    def compute(self, X ,derivative=False, eta=None, **kwargs): 
+        """
+        Computes the EI value and its derivatives.
+
+        Parameters
+        ----------
+        X: np.ndarray(1, D), The input point where the acquisition_functions function
+            should be evaluate. The dimensionality of X is (N, D), with N as
+            the number of points to evaluate at and D is the number of
+            dimensions of one X.
+
+        derivative: Boolean
+            If is set to true also the derivative of the acquisition_functions
+            function at X is returned
+
+        eta: float
+            The baseline performance y_star to compute the improvement
+
+        Returns
+        -------
+        np.ndarray(1,1)
+            Expected Improvement of X
+        np.ndarray(1,D)
+            Derivative of Expected Improvement at X (only if derivative=True)
+        """
+        
+        m, v = self.model.predict(X)
+
+        if eta is None:
+            print('Please impute ETA. (Best configuration as parameter)')
+            raise ValueError
+
+        s = np.sqrt(v)
+
+        if (s == 0).any():
+            f = np.array([[0]])
+            df = np.zeros((1, X.shape[1]))
+            # if std is zero, we have observed x on all instances
+            # using a RF, std should be never exactly 0.0
+            # Avoid zero division by setting all zeros in s to one.
+            # Consider the corresponding results in f to be zero.
+            """s_copy = np.copy(s)
+            s[s_copy == 0.0] = 1.0
+            z = (eta - m - self.par) / s
+            f = s * (z * norm.cdf(z) + norm.pdf(z))
+            f[s_copy == 0.0] = 0.0"""
+            
+        else:
+            z = (eta - m - self.par) / s
+            f = s * (z * norm.cdf(z) + norm.pdf(z))
+
+            if derivative:
+                dmdx, ds2dx = self.model.predictive_gradients(X)
+                dmdx = dmdx[0]
+                ds2dx = ds2dx[0][:, None]
+                dsdx = ds2dx / (2 * s)
+                df = (-dmdx * norm.cdf(z) + (dsdx * norm.pdf(z))).T
+            if (f < 0).any():
+                logger.error("Expected Improvement is smaller than 0!")
+                raise ValueError
+
+        if derivative:
+            return f, df
+        else:
+            return f

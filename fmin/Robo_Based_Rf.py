@@ -88,7 +88,7 @@ class Random_Forest_Robo(BO_Base):
         self.model = RandomForest(rng=rng)
         self.acquisition_function = EI(self.model)
         self.maximize_func = RandomSampling(self.acquisition_function, lower, upper, rng=rng)
-
+ 
         self.start_time = time.time()
         self.initial_design = initial_design
         self.objective_function = objective_function
