@@ -33,22 +33,6 @@ class RandomForestBenchmark(MLBenchmark):
         """Parameter space to be optimized --- contains the hyperparameters
         """
         cs = CS.ConfigurationSpace(seed=seed)
-        """CS.UniformIntegerHyperparameter(
-                'max_depth', lower=1, upper=50, default_value=10, log=True
-            ),
-            CS.UniformIntegerHyperparameter(
-                'min_samples_split', lower=2, upper=128, default_value=32, log=True
-            ),
-            # the use of a float max_features is different than the sklearn usage
-            CS.UniformFloatHyperparameter(
-                'max_features', lower=0, upper=1.0, default_value=0.5, log=False
-            ),
-            CS.UniformIntegerHyperparameter(
-                'min_samples_leaf', lower=1, upper=20, default_value=1, log=False
-            ),
-            CS.UniformIntegerHyperparameter(
-                'n_estimators', lower=10, upper=250, default_value=1, log=False
-            )"""
         cs.add_hyperparameters([
             CS.OrdinalHyperparameter('n_estimators',sequence = [50,100,250],default_value = 100),
             CS.OrdinalHyperparameter('min_samples_leaf',sequence = [1,3,5,10],default_value = 1),
@@ -99,7 +83,7 @@ class RandomForestBenchmark(MLBenchmark):
         """
         rng = self.rng if rng is None else rng
         if isinstance(config, CS.Configuration):
-            config = config.get_dictionary()
+            config = config.get_dictionary() 
         if isinstance(fidelity, CS.Configuration):
             fidelity = fidelity.get_dictionary()
 
@@ -123,14 +107,10 @@ class RandomForestBenchmark(MLBenchmark):
 class RandomForestBenchmarkBB(RandomForestBenchmark):
     def get_fidelity_space(self, seed: Union[int, None] = None) -> CS.ConfigurationSpace:
         fidelity_space = CS.ConfigurationSpace(seed=seed)
-        """fidelity_space.add_hyperparameters(
-            # black-box setting (full fidelity)
-            RandomForestBenchmark._get_fidelity_choices(n_estimators_choice='fixed', subsample_choice='fixed')
-        )"""
         return fidelity_space
 
 
-class RandomForestBenchmarkMF(RandomForestBenchmark):
+"""class RandomForestBenchmarkMF(RandomForestBenchmark):
     def get_fidelity_space(self, seed: Union[int, None] = None) -> CS.ConfigurationSpace:
         fidelity_space = CS.ConfigurationSpace(seed=seed)
         fidelity_space.add_hyperparameters(
@@ -138,7 +118,7 @@ class RandomForestBenchmarkMF(RandomForestBenchmark):
             RandomForestBenchmark._get_fidelity_choices(n_estimators_choice='variable', subsample_choice='fixed')
         )
         return fidelity_space
-
+"""
 
 
 class RandomForestBenchmark_2(MLBenchmark):
@@ -154,22 +134,6 @@ class RandomForestBenchmark_2(MLBenchmark):
         """Parameter space to be optimized --- contains the hyperparameters
         """
         cs = CS.ConfigurationSpace(seed=seed)
-        """CS.UniformIntegerHyperparameter(
-                'max_depth', lower=1, upper=50, default_value=10, log=True
-            ),
-            CS.UniformIntegerHyperparameter(
-                'min_samples_split', lower=2, upper=128, default_value=32, log=True
-            ),
-            # the use of a float max_features is different than the sklearn usage
-            CS.UniformFloatHyperparameter(
-                'max_features', lower=0, upper=1.0, default_value=0.5, log=False
-            ),
-            CS.UniformIntegerHyperparameter(
-                'min_samples_leaf', lower=1, upper=20, default_value=1, log=False
-            ),
-            CS.UniformIntegerHyperparameter(
-                'n_estimators', lower=10, upper=250, default_value=1, log=False
-            )"""
         cs.add_hyperparameters([
             CS.UniformIntegerHyperparameter('n_estimators',lower = 50,upper = 250,q=5,default_value = 100),
             CS.UniformIntegerHyperparameter('min_samples_leaf',lower = 1,upper = 10 ,q=3,default_value = 1),

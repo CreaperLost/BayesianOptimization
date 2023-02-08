@@ -6,3 +6,5 @@ CodeBase/
 Figures/
 Datasets/
 *.pyc
+XGB_Results/
+XGB_Results_Time/
