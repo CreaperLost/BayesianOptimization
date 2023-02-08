@@ -82,8 +82,8 @@ def run_experiment_local_Smac():
     res_list = []
     res_list_time =[]
 
-    n_init = 5
-    max_evals = 20
+    n_init = 20
+    max_evals = 100
     #seed  =1
 
     opt_list = ['GP','RS','RF']
@@ -102,7 +102,7 @@ def run_experiment_local_Smac():
             os.mkdir(dataset_path)
         if os.path.exists(dataset_path_time) == False:
             os.mkdir(dataset_path_time)
-        for seed in [1]: #,2,3,4,5
+        for seed in [1,2,3]: #,2,3,4,5
 
             b = XGBoost2Benchmark(task_id=task_id,rng=seed)
             cs = b.get_configuration_space()
