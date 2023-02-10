@@ -5,31 +5,14 @@ import numpy as np
 from scipy import stats
 from matplotlib import pyplot as plt
 import openml
+ 
 
 
-"""
+
 parent_path = getcwd() + '\Results'
 Dataset_files = [f for f in listdir(parent_path) if isdir(join(parent_path, f))]
 
-dataset_dict = dict()
-
-
-
-datalist = pd.DataFrame.from_dict(openml.datasets.list_datasets(), orient="index")
-datalist = datalist[["did", "name", "NumberOfInstances", "NumberOfFeatures", "NumberOfClasses"]]
-
-task_ids= [dataset.split('Dataset')[1] for dataset in  Dataset_files]
-task_info = openml.tasks.get_tasks(task_ids, download_data=False)
-data_ids = [i.dataset_id for i in task_info]
-dataset_characteristics=datalist[datalist['did'].isin(data_ids)]
-dataset_characteristics.to_csv('Current_dataset_characteristics.csv')"""
-
-
-
-parent_path = getcwd() + '\Results_Unrestricted'
-Dataset_files = [f for f in listdir(parent_path) if isdir(join(parent_path, f))]
-
-n_seeds = 3
+n_seeds = 5
 
 dataset_dict = dict()
 for dataset in  Dataset_files:
@@ -104,7 +87,7 @@ for dataset in Dataset_files:
     plt.ylabel('Error Rate (1-Accuracy)')
     plt.legend()
     #plt.show()
-    plt.savefig('Figures/Continuous/'+dataset_info.name+'.png')
+    plt.savefig('Figures/Discrete/'+dataset_info.name+'.png')
 
 
     

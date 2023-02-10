@@ -41,40 +41,9 @@ def random_configuration(max_evals,benchmark):
         time_list.append(end_time)
 
     return res_list,time_list
-"""
-def run_experiment_random_search(on_travis: bool = False):
-    task_ids = benchmark_suite.tasks
-    current_dataset = 0
-    max_data = 2
-    for task_id in benchmark_suite.tasks:
-
-        print(f'# ################### TASK of {len(task_ids)}: Task-Id: {task_id} ################### #')
-        if task_id == 167204:
-            continue  # due to memory limits 
-        if task_id == 3: #Handle the case where output variable is a string value.
-            continue
-        current_dataset+=1
-        b = RandomForestBenchmarkBB(task_id=task_id,rng=1)
-        cs = b.get_configuration_space()
-        start = time()
-        num_configs = 5
-        for i in range(num_configs):
-            configuration = cs.sample_configuration()
-            print(configuration)
-            result_dict = b.objective_function(configuration.get_dictionary())
-            valid_loss = result_dict['function_value']
-            train_loss = result_dict['info']['train_loss']
-            test_loss_1 = result_dict['info']['test_loss']
-            result_dict = b.objective_function_test(configuration)
-            test_loss = result_dict['function_value']
-            print(test_loss_1,test_loss)
-            print(f'[{i+1}|{num_configs}] Test {test_loss:.4f} 'f'- Valid {valid_loss:.4f} - Train {train_loss:.4f}')
-        print(f'Done, took totally {time()-start:.2f}')
-        if current_dataset == max_data:
-            break"""
 
 
-import matplotlib.pyplot as plt
+
 
 def run_experiment_local_Smac():
     task_ids = benchmark_suite.tasks
@@ -142,10 +111,6 @@ def run_experiment_local_Smac():
                 pd.DataFrame(y_evaluations).to_csv( seed_path + '/' + opt_type + '.csv')
                 #pd.DataFrame(time_eval).to_csv( seed_path_time + '/' + opt_type + '.csv')
                 
-                #res_list.append([task_id,RFbest_score,RSbest_score])
-                #res_list_time.append([task_id,RFTime,RSTime])
-                #pd.DataFrame(res_list,columns = ['ID','RF','RS']).to_csv('/Seed'+str(seed)+'Results.csv')
-                #pd.DataFrame(res_list_time,columns = ['ID','RF','RS']).to_csv('Results_Time.csv')
         if current_dataset == max_data:
             break
     
@@ -153,13 +118,3 @@ def run_experiment_local_Smac():
 if __name__ == '__main__':
     #run_experiment_random_search(on_travis=args.on_travis)
     run_experiment_local_Smac()
-
-
-"""# Plot lines.
-            plt.plot([i for i in range(max_evals)],np.minimum.accumulate(BO.fX),label='RF-BO')
-            plt.plot([i for i in range(max_evals)],np.minimum.accumulate(random_fX),label='RS')
-
-            #Name axis.
-            plt.xticks([i for i in range(BO.max_evals)], [str(i+1) for i in range(BO.max_evals)])
-            plt.legend()
-            plt.show()"""

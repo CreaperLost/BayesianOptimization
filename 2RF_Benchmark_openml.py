@@ -153,13 +153,3 @@ def run_experiment_local_Smac():
 if __name__ == '__main__':
     #run_experiment_random_search(on_travis=args.on_travis)
     run_experiment_local_Smac()
-
-
-"""# Plot lines.
-            plt.plot([i for i in range(max_evals)],np.minimum.accumulate(BO.fX),label='RF-BO')
-            plt.plot([i for i in range(max_evals)],np.minimum.accumulate(random_fX),label='RS')
-
-            #Name axis.
-            plt.xticks([i for i in range(BO.max_evals)], [str(i+1) for i in range(BO.max_evals)])
-            plt.legend()
-            plt.show()"""

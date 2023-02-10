@@ -2,24 +2,13 @@ import openml
 import openml
 import pandas as pd
 from benchmarks.RandomForestBenchmark import RandomForestBenchmarkBB
-from benchmarks.XGBoostBenchmark import XGBoost2Benchmark
-import argparse
 from time import time
-import logging
 from pathlib import Path
 from time import time
 import numpy as np
-from smac.intensification.simple_intensifier import SimpleIntensifier
-from smac.scenario.scenario import Scenario
-from smac.callbacks import IncorporateRunResultCallback
 from BayesianOptimizers.SMAC.smac_base import BO_RF
-from hpobench.util.example_utils import set_env_variables_to_use_only_one_core
 import os
-from BayesianOptimizers.SMAC.smac_base import BO_RF
 
-"""logger = logging.getLogger("minicomp")
-logging.basicConfig(level=logging.INFO)
-set_env_variables_to_use_only_one_core()"""
 
 benchmark_suite = openml.study.get_suite('OpenML-CC18') # obtain the benchmark suite
 
@@ -38,10 +27,19 @@ def random_configuration(max_evals,benchmark):
         if init_overhead != 0:
             end_time = end_time+init_overhead
             init_overhead = 0
-
         time_list.append(end_time)
-
     return res_list,time_list
+
+
+
+
+def run_benchmark(optimizer = None,benchmark_class = None):
+    assert benchmark_class != None 
+    assert optimizer != None 
+
+
+    
+
 
 
 
@@ -49,17 +47,15 @@ def run_experiment_local_Smac():
     task_ids = benchmark_suite.tasks
     current_dataset = 0
     max_data = 100
-    res_list = []
-    res_list_time =[]
 
     n_init = 20
     max_evals = 100
     #seed  =1
 
-    opt_list = ['GP','RS','RF']
+    opt_list = ['GP']
 
-    parent_path = os.getcwd() + '\XGB_Results'
-    parent_path_time = os.getcwd() + '\XGB_Results_Time'
+    parent_path = os.getcwd() + '\Results'
+    parent_path_time = os.getcwd() + '\Results_Time'
     for task_id in task_ids:
         print(f'# ################### TASK of {len(task_ids)}: Task-Id: {task_id} ################### #')
         if task_id == 167204:
@@ -72,9 +68,9 @@ def run_experiment_local_Smac():
             os.mkdir(dataset_path)
         if os.path.exists(dataset_path_time) == False:
             os.mkdir(dataset_path_time)
-        for seed in [1,2,3]: #,2,3,4,5
+        for seed in [1,2,3,4,5]:
 
-            b = XGBoost2Benchmark(task_id=task_id,rng=seed)
+            b = RandomForestBenchmarkBB(task_id=task_id,rng=seed)
             cs = b.get_configuration_space()
 
             seed_path = dataset_path+'\Seed' + str(seed) 
@@ -84,11 +80,7 @@ def run_experiment_local_Smac():
             if os.path.exists(seed_path_time) == False:
                 os.mkdir(seed_path_time)
 
-
             for opt_type in opt_list:
-                #If we run optimization for this dataset then DON'T rerun
-                if os.path.exists(seed_path + '/' + opt_type + '.csv'):
-                    continue
                 # BO Opt.
                 start = time()
                 if opt_type == 'RF':
@@ -115,14 +107,9 @@ def run_experiment_local_Smac():
                 pd.DataFrame(y_evaluations).to_csv( seed_path + '/' + opt_type + '.csv')
                 #pd.DataFrame(time_eval).to_csv( seed_path_time + '/' + opt_type + '.csv')
                 
-                #res_list.append([task_id,RFbest_score,RSbest_score])
-                #res_list_time.append([task_id,RFTime,RSTime])
-                #pd.DataFrame(res_list,columns = ['ID','RF','RS']).to_csv('/Seed'+str(seed)+'Results.csv')
-                #pd.DataFrame(res_list_time,columns = ['ID','RF','RS']).to_csv('Results_Time.csv')
         if current_dataset == max_data:
             break
     
 
 if __name__ == '__main__':
-    #run_experiment_random_search(on_travis=args.on_travis)
     run_experiment_local_Smac()
