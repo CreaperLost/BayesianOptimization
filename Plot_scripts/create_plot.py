@@ -9,6 +9,8 @@ import sys
 sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
+
+
 def get_results_per_optimizer(config={}):
     assert config!={}
 

@@ -1,5 +1,5 @@
 import abc
-
+import numpy as np
 
 class BaseAcquisitionFunction(object):
     __metaclass__ = abc.ABCMeta
@@ -55,7 +55,15 @@ class BaseAcquisitionFunction(object):
         pass
 
     def __call__(self, x, **kwargs):
-        return self.compute(x, **kwargs)
+
+        if len(x.shape) == 1:
+            x = x[np.newaxis, :]
+        acq = self.compute(x, **kwargs)
+        if np.any(np.isnan(acq)):
+            idx = np.where(np.isnan(acq))[0]
+            acq[idx, :] = -np.finfo(float).max
+
+        return acq
 
     def get_json_data(self):
         """

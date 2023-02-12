@@ -1,42 +1,33 @@
 from copy import deepcopy
-
 import numpy as np
 import time
-import numpy as np
 
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace,Configuration
 from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
     UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant, \
     OrdinalHyperparameter
 from ConfigSpace.util import impute_inactive_values,deactivate_inactive_hyperparameters
-from typing import List
-import numpy as np
-from typing import List, Optional, Tuple
 
-from ConfigSpace import Configuration
-import numpy as np
 from typing import List
-import numpy as np
-from acquisition_functions.ei_mine import EI
-from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
 import typing
 
+from acquisition_functions.ei_mine import EI
+
+
 from initial_design.sobol_design import SobolDesign
+from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
+
+
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
-from typing import List, Optional, Tuple, Union
 
-import numpy as np
-import sklearn.gaussian_process
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import Kernel, KernelOperator
 
-from smac.configspace import ConfigurationSpace
 from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
     HammingKernel,
     Matern,
     WhiteKernel,)
 from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
+
 
 class BO_RF:
     """The Random Forest Based Regression Local Bayesian Optimization.
@@ -176,11 +167,10 @@ class BO_RF:
                     prior=LognormalPrior(mean=0.0, sigma=1.0, rng=self.rng),
                 )
 
-            print(types,bounds)
+            
             cont_dims = np.where(np.array(types) == 0)[0]
             cat_dims = np.where(np.array(types) != 0)[0]
-            print(cont_dims)
-            print(cat_dims)
+            
             if len(cont_dims) > 0:
                 exp_kernel = Matern(
                         np.ones([len(cont_dims)]),

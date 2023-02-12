@@ -68,20 +68,6 @@ class RandomForest(BaseModel):
         self.normalize_y = True
         super(RandomForest, self).__init__()
 
-        
-        """#Random Forest stuff.
-        self.rf_opts = regression.forest_opts()
-        self.rf_opts.num_trees = 10
-        self.rf_opts.do_bootstrapping = True
-        self.rf_opts.tree_opts.min_samples_to_split = 3
-        self.rf_opts.tree_opts.min_samples_in_leaf = 3
-        self.rf_opts.tree_opts.max_depth = 2**20
-        self.rf_opts.tree_opts.epsilon_purity = 1e-8
-        self.rf_opts.tree_opts.max_num_nodes = 2**20
-        self.rf_opts.compute_law_of_total_variance = False
-        self.log_y = False
-        self.n_points_per_tree = -1
-        self.rf = None  # type: regression.binary_rss_fores"""
 
     def get_types(self,
         config_space: ConfigurationSpace,
@@ -201,12 +187,6 @@ class RandomForest(BaseModel):
         if self.n_points_per_tree == 0:
             self.rf.options.num_data_points_per_tree = X.shape[0]
         
-
-        """data = reg.default_data_container(self.X.shape[1])
-
-        for row_X, row_y in zip(X, y):
-            data.add_data_point(row_X, row_y)
-        self.rf.fit(data, self.reg_rng)"""
 
 
         data = self._init_data_container(X ,y)

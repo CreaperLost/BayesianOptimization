@@ -8,7 +8,7 @@ csv_postfix ='.csv'
 def break_config_into_pieces(config={}):
     assert config != {}
     return config['result_space'],config['classifier'],config['results_type']
-
+ 
 #Just openup the configuration dictionary. :)
 def break_config_into_pieces_for_plots(config={}):
     assert config != {}

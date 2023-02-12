@@ -8,9 +8,18 @@ import pandas as pd
 from sklearn.metrics import make_scorer, accuracy_score, balanced_accuracy_score, \
     precision_score, f1_score,roc_auc_score
 
+import abc
+from typing import Union, Dict
+import functools
+
+import logging
+import ConfigSpace
+import numpy as np
+
+from ConfigSpace.util import deactivate_inactive_hyperparameters
+
 from hpobench.abstract_benchmark import AbstractBenchmark
 from benchmarks.data_manager import OpenMLDataManager
-from hpobench.util.rng_helper import get_rng
 
 
 
@@ -38,8 +47,55 @@ metrics_kwargs = dict(
     auc = dict() #dict(multi_class="ovr")
 )
 
+def get_rng(rng: Union[int, np.random.RandomState, None] = None,
+            self_rng: Union[int, np.random.RandomState, None] = None) -> np.random.RandomState:
+    """
+    Helper function to obtain RandomState from int or create a new one.
 
-class MLBenchmark(AbstractBenchmark):
+    Sometimes a default random state (self_rng) is already available, but a
+    new random state is desired. In this case ``rng`` is not None and not already
+    a random state (int or None) -> a new random state is created.
+    If ``rng`` is already a randomState, it is just returned.
+    Same if ``rng`` is None, but the default rng is given.
+
+    Parameters
+    ----------
+    rng : int, np.random.RandomState, None
+    self_rng : np.random.RandomState, None
+
+    Returns
+    -------
+    np.random.RandomState
+    """
+
+    if rng is not None:
+        return _cast_int_to_random_state(rng)
+    if rng is None and self_rng is not None:
+        return _cast_int_to_random_state(self_rng)
+    return np.random.RandomState()
+
+
+def _cast_int_to_random_state(rng: Union[int, np.random.RandomState]) -> np.random.RandomState:
+    """
+    Helper function to cast ``rng`` from int to np.random.RandomState if necessary.
+
+    Parameters
+    ----------
+    rng : int, np.random.RandomState
+
+    Returns
+    -------
+    np.random.RandomState
+    """
+    if isinstance(rng, np.random.RandomState):
+        return rng
+    if int(rng) == rng:
+        # As seed is sometimes -1 (e.g. if SMAC optimizes a deterministic function) -> use abs()
+        return np.random.RandomState(np.abs(rng))
+    raise ValueError(f"{rng} is neither a number nor a RandomState. Initializing RandomState failed")
+
+
+class MLBenchmark():
     _issue_tasks = [3917, 3945]
 
     def __init__(
@@ -50,7 +106,8 @@ class MLBenchmark(AbstractBenchmark):
             data_path: Union[str, Path, None] = None,
             global_seed: int = 1
     ):
-        super(MLBenchmark, self).__init__(rng=rng)
+        
+        self.rng = get_rng(rng=rng)
 
         if isinstance(rng, int):
             self.seed = rng
@@ -93,27 +150,11 @@ class MLBenchmark(AbstractBenchmark):
         self.n_classes = dm.n_classes
 
         # Observation and fidelity spaces
-        self.fidelity_space = self.get_fidelity_space(self.seed)
         self.configuration_space = self.get_configuration_space(self.seed)
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
         """Parameter space to be optimized --- contains the hyperparameters
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def get_fidelity_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
-        """Fidelity space available --- specifies the fidelity dimensions
-
-        If fidelity_choice is 0
-            Fidelity space is the maximal fidelity, akin to a black-box function
-        If fidelity_choice is 1
-            Fidelity space is a single fidelity, in this case the number of trees (n_estimators)
-        If fidelity_choice is 2
-            Fidelity space is a single fidelity, in this case the fraction of dataset (subsample)
-        If fidelity_choice is >2
-            Fidelity space is multi-multi fidelity, all possible fidelities
         """
         raise NotImplementedError()
 
@@ -142,19 +183,12 @@ class MLBenchmark(AbstractBenchmark):
             return self.configuration_space.sample_configuration()
         return [self.configuration_space.sample_configuration() for i in range(size)]
 
-    def get_fidelity(self, size: Union[int, None] = None):
-        """Samples candidate fidelities from the fidelity space
-        """
-        if size is None:  # return only one config
-            return self.fidelity_space.sample_configuration()
-        return [self.fidelity_space.sample_configuration() for i in range(size)]
 
     def shuffle_data_idx(self, train_idx: Iterable = None, rng: Union[np.random.RandomState, None] = None) -> Iterable:
         rng = self.rng if rng is None else rng
         train_idx = self.train_idx if train_idx is None else train_idx
         rng.shuffle(train_idx)
         return train_idx
-
 
 
     """def calc_metric(self,model_choice,x,y,metric_choice='auc' ):
@@ -249,11 +283,46 @@ class MLBenchmark(AbstractBenchmark):
         return model, model_fit_time, train_loss, scores, score_cost
 
 
+    def _check_and_cast_configuration(self,configuration: Union[Dict, ConfigSpace.Configuration],
+                                      configuration_space: ConfigSpace.ConfigurationSpace) \
+            -> ConfigSpace.Configuration:
+        """ Helper-function to evaluate the given configuration.
+            Cast it to a ConfigSpace.Configuration and evaluate if it violates its boundaries.
 
+            Note:
+                We remove inactive hyperparameters from the given configuration. Inactive hyperparameters are
+                hyperparameters that are not relevant for a configuration, e.g. hyperparameter A is only relevant if
+                hyperparameter B=1 and if B!=1 then A is inactive and will be removed from the configuration.
+                Since the authors of the benchmark removed those parameters explicitly, they should also handle the
+                cases that inactive parameters are not present in the input-configuration.
+        """
+        print(configuration)
+        if isinstance(configuration, dict):
+            configuration = ConfigSpace.Configuration(configuration_space, configuration,
+                                                      allow_inactive_with_values=True)
+        elif isinstance(configuration, ConfigSpace.Configuration):
+            configuration = configuration
+        else:
+            raise TypeError(f'Configuration has to be from type List, np.ndarray, dict, or '
+                            f'ConfigSpace.Configuration but was {type(configuration)}')
+
+        all_hps = set(configuration_space.get_hyperparameter_names())
+        active_hps = configuration_space.get_active_hyperparameters(configuration)
+        inactive_hps = all_hps - active_hps
+
+        configuration = deactivate_inactive_hyperparameters(configuration, configuration_space)
+        configuration_space.check_configuration(configuration)
+
+        return configuration
+
+    
+
+    def __call__(self, configuration: Dict, **kwargs) -> float:
+        """ Provides interface to use, e.g., SciPy optimizers """
+        return self.objective_function(configuration, **kwargs)['function_value']
 
     # The idea is that we run only on VALIDATION SET ON THIS ONE. (K-FOLD)
     # pylint: disable=arguments-differ
-    @AbstractBenchmark.check_parameters
     def objective_function(self,
                            configuration: Union[CS.Configuration, Dict],
                            fidelity: Union[CS.Configuration, Dict, None] = None,
@@ -262,7 +331,7 @@ class MLBenchmark(AbstractBenchmark):
                            **kwargs) -> Dict:
         """Function that evaluates a 'config' on a 'fidelity' on the validation set
         """
-
+        self._check_and_cast_configuration(configuration, self.configuration_space)
         #Get a x models trained.
         model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective(
             configuration, fidelity, shuffle, rng, evaluation="val"
@@ -320,7 +389,6 @@ class MLBenchmark(AbstractBenchmark):
 
     # The idea is that we run only on TEST SET ON THIS ONE. (K-FOLD)
     # pylint: disable=arguments-differ
-    @AbstractBenchmark.check_parameters
     def objective_function_test(self,
                                 configuration: Union[CS.Configuration, Dict],
                                 fidelity: Union[CS.Configuration, Dict, None] = None,
@@ -329,6 +397,10 @@ class MLBenchmark(AbstractBenchmark):
                                 **kwargs) -> Dict:
         """Function that evaluates a 'config' on a 'fidelity' on the test set
         """
+
+        self._check_and_cast_configuration(configuration, self.configuration_space)
+
+
         model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective(
             configuration, fidelity, shuffle, rng, evaluation="test"
         )
