@@ -54,11 +54,6 @@ class GaussianProcess(BaseModel):
         Zero mean unit variance normalization of the output values
     n_opt_restart : int
         Number of restarts for GP hyperparameter optimization
-    instance_features : np.ndarray (I, K)
-        Contains the K dimensional instance features of the I different instances
-    pca_components : float
-        Number of components to keep when using PCA to reduce dimensionality of instance features. Requires to
-        set n_feats (> pca_dims).
     """
 
     def __init__(
@@ -70,15 +65,12 @@ class GaussianProcess(BaseModel):
         kernel: Kernel,
         normalize_y: bool = True,
         n_opt_restarts: int = 10,
-        instance_features: Optional[np.ndarray] = None,
-        pca_components: Optional[int] = None,
     ):
         super().__init__( )
 
         self.config_space = configspace
         self.kernel = kernel
         self.rng = np.random.RandomState(seed)
-        print('Not a number',self.rng)
         self.types = types
         self.bounds = bounds
         
@@ -173,11 +165,15 @@ class GaussianProcess(BaseModel):
             If set to true the hyperparameters are optimized otherwise
             the default hyperparameters of the kernel are used.
         """
+        #Impute inactive in the X data
         X = self._impute_inactive(X)
+
+        # Whether to normalize y or not.
         if self.normalize_y:
             y = self._normalize_y(y)
         y = y.flatten()
 
+        # Try to optimize the parameters of GP. (Kernel)
         n_tries = 10
         for i in range(n_tries):
             try:
@@ -192,11 +188,13 @@ class GaussianProcess(BaseModel):
                 theta[-1] += 1
                 self.kernel.theta = np.log(theta)
 
+
+        # Call the optimize, set the parameters and in the end fit to the data.
+
         if do_optimize:
             self._all_priors = self._get_all_priors(add_bound_priors=False)
             self.hypers = self._optimize()
             self.gp.kernel.theta = self.hypers
-            print('Fed X ,y TO GP', (X,y))
             self.gp.fit(X, y)
         else:
             self.hypers = self.gp.kernel.theta
@@ -214,6 +212,8 @@ class GaussianProcess(BaseModel):
             random_state=self.rng,
         )
 
+
+    # Computes the negative marginal log likelihood.
     def _nll(self, theta: np.ndarray) -> Tuple[float, np.ndarray]:
         """Returns the negative marginal log likelihood (+ the prior) for a hyperparameter
         configuration theta. (negative because we use scipy minimize for optimization)
@@ -247,6 +247,8 @@ class GaussianProcess(BaseModel):
         else:
             return -lml, -grad
 
+
+    #Optimize the Gaussian Process parameters
     def _optimize(self) -> np.ndarray:
         """Optimizes the marginal log likelihood and returns the best found hyperparameter
         configuration theta.
@@ -335,6 +337,7 @@ class GaussianProcess(BaseModel):
 
         else:
             predict_kwargs = {"return_cov": False, "return_std": True}
+
             if cov_return_type == "full_cov":
                 predict_kwargs = {"return_cov": True, "return_std": False}
 
@@ -355,6 +358,7 @@ class GaussianProcess(BaseModel):
 
         return mu, var
 
+    #Currently not used. Maybe for different optimization in the future. 
     def sample_functions(self, X_test: np.ndarray, n_funcs: int = 1) -> np.ndarray:
         """Samples F function values from the current posterior at the N specified test points.
 

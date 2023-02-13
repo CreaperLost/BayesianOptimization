@@ -48,6 +48,8 @@ class RandomForest(BaseModel):
             Random number generator 
         """
         self.config_space = config_space
+
+
         if rng is None:
             self.rng = np.random.RandomState()
         else:
@@ -57,6 +59,7 @@ class RandomForest(BaseModel):
 
         self.n_points_per_tree = n_points_per_tree
 
+        
         self.rf = reg.binary_rss_forest()
         self.rf.options.num_trees = num_trees
         self.rf.options.do_bootstrapping = do_bootstrapping

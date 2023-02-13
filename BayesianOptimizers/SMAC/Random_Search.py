@@ -26,6 +26,9 @@ class Random_Search():
 
         # Save the full history
         self.fX = np.array([])
+
+        self.surrogate_time = np.array([])
+
         self.inc_score = np.inf
         self.n_evals = 0
         self.verbose = True
@@ -36,11 +39,10 @@ class Random_Search():
         for config in configurations:
             result_dict = self.objective_function(config.get_dictionary())
             fX_next =np.array([result_dict['function_value']])
-            print(self.fX)
-            print(fX_next)
-            print(self.fX.shape)
-            print(fX_next.shape)
+            
             self.fX = np.concatenate((self.fX, fX_next))
+            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
+
             self.n_evals += 1
             if self.verbose and fX_next[0] < self.inc_score:
                 self.inc_score = fX_next[0]

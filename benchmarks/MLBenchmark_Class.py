@@ -223,7 +223,7 @@ class MLBenchmark():
                 train_idx = self.train_idx
                 # Fit the model
                 start = time.time()
-                """print(train_X,train_y)"""
+                
                 model.fit(train_X, train_y)
                 # computing statistics on training data
                 model_fit_time = model_fit_time + time.time() - start
@@ -234,9 +234,7 @@ class MLBenchmark():
             train_X = np.vstack((self.train_X[0], self.valid_X[0]))
             train_y = pd.concat((self.train_y[0], self.valid_y[0]))
             train_idx = np.arange(len(train_X))
-            """print(train_X)
-            print(train_X[train_idx])
-            print(train_y,train_y.iloc[train_idx])"""
+            
             model.fit(train_X[train_idx], train_y.iloc[train_idx])
             #Model trained on TRAIN + VALIDATION tests.
             list_of_models.append(model)
@@ -296,7 +294,7 @@ class MLBenchmark():
                 Since the authors of the benchmark removed those parameters explicitly, they should also handle the
                 cases that inactive parameters are not present in the input-configuration.
         """
-        print(configuration)
+        
         if isinstance(configuration, dict):
             configuration = ConfigSpace.Configuration(configuration_space, configuration,
                                                       allow_inactive_with_values=True)

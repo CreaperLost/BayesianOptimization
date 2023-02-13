@@ -11,7 +11,7 @@ from smac.configspace import (
     Constant,
     UniformFloatHyperparameter,
     UniformIntegerHyperparameter,
-)
+) 
 
 class BaseModel(object):
     __metaclass__ = abc.ABCMeta

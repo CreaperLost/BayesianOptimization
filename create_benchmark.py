@@ -3,7 +3,7 @@ import openml
 import pandas as pd
 from benchmarks.RandomForestBenchmark import RandomForestBenchmark
 from pathlib import Path
-from BayesianOptimizers.SMAC.smac_base import BO_RF
+from BayesianOptimizers.SMAC.smac_base import Bayesian_Optimization
 from BayesianOptimizers.SMAC.Random_Search import Random_Search
 import os
 import sys
@@ -16,16 +16,10 @@ benchmark_suite = openml.study.get_suite('OpenML-CC18') # obtain the benchmark s
 
 
 
-
-
-
-
 def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     assert optimizers_used != []
     assert bench_config != {}
 
-
-    print(bench_config.keys())
     #Optimizer related
     n_init = bench_config['n_init']
     max_evals = bench_config['max_evals']
@@ -72,11 +66,14 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 benchmark_ = benchmark_class(task_id=task_id,rng=seed)
                 configspace = benchmark_.get_configuration_space()
                 
+
+                print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
+
                 if opt[0] == 'GP':
                     Optimization = opt[1](f=benchmark_.objective_function,model='GP',lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                 elif opt[0] == 'RF':
-                    Optimization = opt[1](f=benchmark_.objective_function,model='GP',lb= None, ub =None , configuration_space= configspace ,\
+                    Optimization = opt[1](f=benchmark_.objective_function,model='RF',lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                 elif opt[0] == 'RS':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
@@ -89,16 +86,20 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 y_evaluations = Optimization.fX
 
                 #Change this.
-                time_evaluations = [0 for i in range(len(y_evaluations))]
+                time_evaluations = Optimization.surrogate_time
+
+                print(time_evaluations)
 
                 if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
                         Path(time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
                     except FileExistsError:
-                        print("Folder is already there")
+                        #print("Folder is already there")
+                        """"""
                     else:
-                        print("Folder was created")
+                        """"""
+                        #print("Folder was created")
                     pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt[0]+csv_postfix ]))
                     pd.DataFrame(time_evaluations).to_csv( parse_directory([ time_per_optimizer_directory, opt[0]+csv_postfix ]))
                 
@@ -112,9 +113,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
 if __name__ == '__main__':
 
-    bench_config =  {
+    """bench_config =  {
         'n_init' : 20,
-        'max_evals' : 50,
+        'max_evals' : 100,
         'n_datasets' : 10,
         'data_ids' : benchmark_suite.tasks,
         'n_seeds' : 1,
@@ -123,17 +124,17 @@ if __name__ == '__main__':
         'bench_class' : XGBoostBenchmark,
     }
 
-    run_benchmark_total([('RS',Random_Search),('RF',BO_RF),('GP',BO_RF)],bench_config)
+    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)"""
 
-    """bench_config =  {
+    bench_config =  {
         'n_init' : 20,
-        'max_evals' : 50,
+        'max_evals' : 100,
         'n_datasets' : 100,
         'data_ids' : benchmark_suite.tasks,
-        'n_seeds' : 3,
+        'n_seeds' : 1,
         'type_of_bench':'Single_Space_Results',
         'bench_name' :'RF',
         'bench_class' : RandomForestBenchmark,
     }
 
-    run_benchmark_total([('RS',Random_Search),('RF',BO_RF),('GP',BO_RF)],bench_config)"""
+    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)

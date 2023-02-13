@@ -333,7 +333,6 @@ class LognormalPrior(Prior):
         mean: float
             Specifies the mean of the normal distribution
         """
-        print(rng)
         super().__init__(rng)
 
         if mean != 0:

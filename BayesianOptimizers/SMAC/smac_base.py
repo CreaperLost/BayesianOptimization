@@ -29,7 +29,7 @@ from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
 from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
 
 
-class BO_RF:
+class Bayesian_Optimization:
     """The Random Forest Based Regression Local Bayesian Optimization.
     
     Parameters
@@ -88,6 +88,7 @@ class BO_RF:
         self.rng = np.random.RandomState(self.seed)
 
         self.config_space =  configuration_space
+
         # Find the type of the configuration space, either Dictionary or ConfiguratioSpace object
         # Miscellaneous
         self.isConfigspace = True if isinstance(self.config_space, ConfigurationSpace) else False
@@ -108,7 +109,7 @@ class BO_RF:
         self.ub = ub
 
         #If configuration space just store it.
-         # type: ignore[attr-defined] # noqa F821
+        # type: ignore[attr-defined] # noqa F821
 
 
         #Type of the initial_design, SOBOL,Random etc.
@@ -147,12 +148,12 @@ class BO_RF:
         self.X = np.zeros((0, self.dim))
         self.fX = np.zeros((0, 1))
 
+        self.surrogate_time = np.array([])
 
         #Number of current evaluations!
         self.n_evals = 0 
 
-        # Initialize parameters
-        self._restart()
+        # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
         self.n_cand = min(100 * self.dim, 10000)
 
 
@@ -207,6 +208,7 @@ class BO_RF:
                 raise ValueError()
 
             self.model = GaussianProcess(self.config_space,types=types,bounds=bounds,kernel=kernel,seed=random_seed)
+        
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
         
@@ -401,18 +403,7 @@ class BO_RF:
         return np.array(population)
 
   
-
-    def _restart(self):
-        self._X = []
-        self._fX = []
-        self.failcount = 0
-        self.succcount = 0
-        self.inc_score = np.inf
-        self.inc_config = None
-        self.history = []
-
-    
-
+        
     def convert_configurations_to_array(configs: List[Configuration]) -> np.ndarray:
         """Impute inactive hyperparameters in configurations with their default.
 
@@ -454,7 +445,8 @@ class BO_RF:
             objective_value_per_configuration[i] = res['function_value']
             #Cost of fiting a model and evaluation of the folds.
             cost = res["cost"]
-    
+
+            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
 
             info = res["info"] if "info" in res else dict()
             # If this is better than the overall best score then replace.
@@ -489,7 +481,7 @@ class BO_RF:
             start_time = time.time()
 
             # Warp inputs
-            X = self.X  # to_unit_cube(deepcopy(self._X), self.lb, self.ub)
+            X = self.X  
             # Standardize values
             fX = self.fX
 
@@ -507,10 +499,12 @@ class BO_RF:
             
             """
 
-            #Train surrogate model.
-            #Train the random forest
-            
+    
+            #Measure time as well as fitting
+            start_time = time.time()
             self.model.train(X,fX)
+            end_time=time.time() - start_time
+            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
             #If we want more candidates we need to remove [0]
 

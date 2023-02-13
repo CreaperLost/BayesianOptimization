@@ -1,2 +1,2 @@
-from BayesianOptimizers.SMAC.smac_base import BO_RF
+from BayesianOptimizers.SMAC.smac_base import Bayesian_Optimization
 from BayesianOptimizers.SMAC.Random_Search import Random_Search
