@@ -26,7 +26,7 @@ class RandomForestBenchmark(MLBenchmark):
                  rng: Union[np.random.RandomState, int, None] = None,
                  valid_size: float = 0.33,
                  data_path: Union[str, None] = None):
-        super(RandomForestBenchmark, self).__init__(task_id, rng, valid_size, data_path)
+        super(RandomForestBenchmark, self).__init__(task_id, rng, valid_size, data_path) 
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:

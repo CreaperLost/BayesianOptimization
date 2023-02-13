@@ -32,6 +32,8 @@ class SobolMaximizer():
         -------
         np.ndarray(N,D)
             Point with highest acquisition value.
+        float
+            The value of the acquisition function
         """
 
         #Draw a Sobolev sequence in [lb, ub]
@@ -57,5 +59,5 @@ class SobolMaximizer():
         y = self.objective_function(X_candidates,eta =eta)
         
         #Find the point of X_candidates with maximum Acquisition function.
-        return X_candidates[y.argmax()]
+        return X_candidates[y.argmax()],y.argmax()
 

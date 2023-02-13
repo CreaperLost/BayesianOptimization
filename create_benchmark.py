@@ -127,9 +127,9 @@ if __name__ == '__main__':
     run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)"""
 
     bench_config =  {
-        'n_init' : 20,
-        'max_evals' : 100,
-        'n_datasets' : 100,
+        'n_init' : 10,
+        'max_evals' : 20,
+        'n_datasets' : 1,
         'data_ids' : benchmark_suite.tasks,
         'n_seeds' : 1,
         'type_of_bench':'Single_Space_Results',
@@ -137,4 +137,5 @@ if __name__ == '__main__':
         'bench_class' : RandomForestBenchmark,
     }
 
-    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)
+    #run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)
+    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],bench_config)
