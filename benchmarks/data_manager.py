@@ -21,14 +21,13 @@ from hpobench import config_file
 class OpenMLDataManager(DataManager):
 
     def __init__(self, task_id: int,
-                 valid_size: Union[float, None] = 0.33,
                  data_path: Union[str, Path, None] = None,
-                 global_seed: Union[int, None] = 1,n_folds :int =5):
+                 global_seed: Union[int, None] = 1,
+                 n_folds :int = 5,
+                 use_holdout = False):
 
         self.task_id = task_id
         self.global_seed = global_seed
-
-        self.valid_size = valid_size
 
         self.train_X = []
         self.valid_X = []
@@ -44,6 +43,7 @@ class OpenMLDataManager(DataManager):
         self.lower_bound_train_size = None
         self.n_classes = None
         self.n_folds = n_folds
+        self.use_holdout = use_holdout
 
         if data_path is None:
             self.data_path = 'Datasets/OpenML'
@@ -59,7 +59,7 @@ class OpenMLDataManager(DataManager):
     # pylint: disable=arguments-differ
     @lockutils.synchronized('not_thread_process_safe', external=True,
                             lock_path=f'{config_file.cache_dir}/openml_dm_lock', delay=0.2)
-    def load(self, valid_size=None, verbose=False):
+    def load(self, verbose=False):
         """Fetches data from OpenML and initializes the train-validation-test data splits
 
         The validation set is fixed till this function is called again or explicitly altered
@@ -82,7 +82,7 @@ class OpenMLDataManager(DataManager):
             return
 
         # If the data is not available, download it.
-        self.__download_data(verbose=verbose, valid_size=valid_size)
+        self.__download_data(verbose=verbose)
 
         # Save the preprocessed splits to file for later usage.
         self.generate_openml_splits(data_set_path)
@@ -92,20 +92,24 @@ class OpenMLDataManager(DataManager):
     def try_to_load_data(self, data_path: str) -> bool:
         path_str = "{}_{}_{}.parquet.gzip"
         #For test.
-        path_str2 = "{}_{}.parquet.gzip"
+        if self.use_holdout == True:
+            path_str2 = "{}_{}.parquet.gzip"
         try:
             for fold in range(self.n_folds) :
                 self.train_X.append( pd.read_parquet(data_path + path_str.format("train", "x",str(fold))).to_numpy())
                 self.train_y.append( pd.read_parquet(data_path + path_str.format("train", "y",str(fold))).squeeze(axis=1))
                 self.valid_X.append( pd.read_parquet(data_path + path_str.format("valid", "x",str(fold))).to_numpy())
                 self.valid_y.append(pd.read_parquet(data_path + path_str.format("valid", "y",str(fold))).squeeze(axis=1))
-            self.test_X = pd.read_parquet(data_path + path_str2.format("test", "x")).to_numpy()
-            self.test_y = pd.read_parquet(data_path + path_str2.format("test", "y")).squeeze(axis=1)
+            
+            #Don't Load test-data any more --
+            if self.use_holdout == True:
+                self.test_X = pd.read_parquet(data_path + path_str2.format("test", "x")).to_numpy()
+                self.test_y = pd.read_parquet(data_path + path_str2.format("test", "y")).squeeze(axis=1)
         except FileNotFoundError:
             return False
         return True
 
-    def __download_data(self, valid_size: Union[int, float, None], verbose: bool):
+    def __download_data(self, verbose: bool):
         self.logger.info('Start to download the OpenML dataset')
 
         # loads full data
@@ -120,28 +124,24 @@ class OpenMLDataManager(DataManager):
         (cat_idx,) = np.where(categorical_ind)
         (cont_idx,) = np.where(~categorical_ind)
 
-        # splitting dataset into train and test (10% test)
-        # train-test split is fixed for a task and its associated dataset (from OpenML)
-        self.train_idx, self.test_idx = self.task.get_train_test_split_indices()
-        train_x = X.iloc[self.train_idx]
-        train_y = y.iloc[self.train_idx]
+        #If we want to use hold-out set or not. :)
+        if self.use_holdout == True:
+            # splitting dataset into train and test (10% test)
+            # train-test split is fixed for a task and its associated dataset (from OpenML)
+            self.train_idx, self.test_idx = self.task.get_train_test_split_indices()
+            train_x = X.iloc[self.train_idx]
+            train_y = y.iloc[self.train_idx]
 
-        self.test_X = X.iloc[self.test_idx]
-        self.test_y = y.iloc[self.test_idx]
+            self.test_X = X.iloc[self.test_idx]
+            self.test_y = y.iloc[self.test_idx]
+        else:
+            train_x = X
+            train_y = y
 
         # splitting training into training and validation
         # validation set is fixed as per the global seed independent of the benchmark seed
 
         #Instead of this please do cross-validation
-
-
-        valid_size = self.valid_size if valid_size is None else valid_size
-
-        """self.train_X, self.valid_X, self.train_y, self.valid_y = train_test_split(
-            train_x, train_y, test_size=valid_size, shuffle=True, stratify=train_y,
-            random_state=check_random_state(self.global_seed)
-        )"""
-
         skf = StratifiedKFold(n_splits=self.n_folds,shuffle=True,random_state=self.global_seed)
         for train_index, val_index in skf.split(train_x, train_y):
             X_train = train_x.iloc[train_index]
@@ -182,13 +182,15 @@ class OpenMLDataManager(DataManager):
         #Learn the preprocess and apply it to the test set. (FIT THE PROCEDURE TO WHOLE DATA)
         
         #Keep a training set before transformations
-        train_X = np.vstack((self.train_X[0], self.valid_X[0]))
-        self.preprocessor.fit(train_X)
+        if self.use_holdout == True:
+            train_X = np.vstack((self.train_X[0], self.valid_X[0]))
+            self.preprocessor.fit(train_X)
 
-        #Do appropriate transformation for the test set.
-        self.test_X = self.preprocessor.transform(self.test_X)
-        self.test_y = self._convert_labels(self.test_y)
+            #Do appropriate transformation for the test set.
+            self.test_X = self.preprocessor.transform(self.test_X)
+            self.test_y = self._convert_labels(self.test_y)
         
+
         for fold in range(self.n_folds):
             # preprocessor fit only on the training set
             self.train_X[fold] = self.preprocessor.fit_transform(self.train_X[fold])
@@ -199,8 +201,7 @@ class OpenMLDataManager(DataManager):
             self.valid_y[fold] = self._convert_labels(self.valid_y[fold])
 
 
-        
-
+    
         """# Similar to (https://arxiv.org/pdf/1605.07079.pdf)
         # use 10 times the number of classes as lower bound for the dataset fraction
         self.lower_bound_train_size = (10 * self.n_classes) / self.train_X.shape[0]
@@ -218,8 +219,10 @@ class OpenMLDataManager(DataManager):
         self.logger.info(f'Save the splits to {data_path}')
 
         path_str = "{}_{}_{}.parquet.gzip"
+
         #For test.
-        path_str2 = "{}_{}.parquet.gzip"
+        if self.use_holdout == True:
+            path_str2 = "{}_{}.parquet.gzip"
 
         
         label_name = str(self.task.target_name)
@@ -229,10 +232,12 @@ class OpenMLDataManager(DataManager):
             self.train_y[fold].to_frame(label_name).to_parquet(data_path + path_str.format("train", "y",str(fold)))
             pd.DataFrame(self.valid_X[fold], columns=colnames).to_parquet(data_path + path_str.format("valid", "x",str(fold)))
             self.valid_y[fold].to_frame(label_name).to_parquet(data_path + path_str.format("valid", "y",str(fold)))
+        
         # 1 Hold-out Test set.
-        colnames = np.arange(self.test_X.shape[1]).astype(str)
-        pd.DataFrame(self.test_X, columns=colnames).to_parquet(data_path + path_str2.format("test", "x"))
-        self.test_y.to_frame(label_name).to_parquet(data_path + path_str2.format("test", "y"))
+        if self.use_holdout == True:
+            colnames = np.arange(self.test_X.shape[1]).astype(str)
+            pd.DataFrame(self.test_X, columns=colnames).to_parquet(data_path + path_str2.format("test", "x"))
+            self.test_y.to_frame(label_name).to_parquet(data_path + path_str2.format("test", "y"))
 
     @staticmethod
     def _convert_labels(labels):

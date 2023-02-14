@@ -64,6 +64,11 @@ class EI(BaseAcquisitionFunction):
         
         m, v = self.model.predict(X)
 
+        neg_nos = [num for num in m if num < 0]
+
+        if len(neg_nos) >0:
+            print('Negative mean' , neg_nos)
+
         if eta is None:
             print('Please impute ETA. (Best configuration as parameter)')
             raise ValueError
@@ -95,7 +100,6 @@ class EI(BaseAcquisitionFunction):
                 df = (-dmdx * norm.cdf(z) + (dsdx * norm.pdf(z))).T
             if (f < 0).any():
                 raise ValueError
-
         if derivative:
             return f, df
         else:

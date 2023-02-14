@@ -29,6 +29,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     data_ids  = bench_config['data_ids']
     n_seeds  = bench_config['n_seeds']
 
+    data_repo  = bench_config['data_repo']
 
     #Benchmark related fields
     type_of_bench = bench_config['type_of_bench'] 
@@ -57,13 +58,13 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         time_per_seed_directory  = parse_directory([time_directory, 'Dataset' +str(task_id)])
 
 
-        for seed in range(1,n_seeds+1):
+        for seed in n_seeds:
 
             score_per_optimizer_directory = parse_directory([score_per_seed_directory,'Seed' + str(seed) ])
             time_per_optimizer_directory = parse_directory([time_per_seed_directory,'Seed' + str(seed) ])
 
             for opt in optimizers_list: # tuple opt[0] == name of opt , opt[1] == base_class of opt.
-                benchmark_ = benchmark_class(task_id=task_id,rng=seed)
+                benchmark_ = benchmark_class(task_id=task_id,rng=seed,data_repo=data_repo)
                 configspace = benchmark_.get_configuration_space()
                 
 
@@ -113,29 +114,62 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
 if __name__ == '__main__':
 
-    """bench_config =  {
-        'n_init' : 20,
-        'max_evals' : 100,
-        'n_datasets' : 10,
-        'data_ids' : benchmark_suite.tasks,
-        'n_seeds' : 1,
-        'type_of_bench':'Single_Space_Results',
+
+    config_of_data = {
+        'Jad':{
+            'data_ids':[1114,865,852,851,850,842]
+        },
+        'OpenML': {
+            'data_ids':benchmark_suite.tasks
+        }
+    }
+
+    type_of_bench = 'Single_Space_Results'
+    n_datasets = 10
+    n_init = 1
+    max_evals = 10
+    repo = 'Jad'  #Jad
+    seeds = [1] # ,2,3,4,5
+    """
+    XGBoost Benchmark
+    
+    """
+
+    print(repo)
+
+    xgb_bench_config =  {
+        'n_init' : n_init,
+        'max_evals' : max_evals,
+        'n_datasets' : n_datasets,
+        'data_ids' : config_of_data[repo]['data_ids'],
+        'n_seeds' : seeds,
+        'type_of_bench': type_of_bench,
         'bench_name' :'XGB',
         'bench_class' : XGBoostBenchmark,
+        'data_repo' : repo
     }
+    #('RS',Random_Search),
+    run_benchmark_total([('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],xgb_bench_config)
 
-    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)"""
 
-    bench_config =  {
-        'n_init' : 10,
-        'max_evals' : 20,
-        'n_datasets' : 1,
-        'data_ids' : benchmark_suite.tasks,
-        'n_seeds' : 1,
-        'type_of_bench':'Single_Space_Results',
-        'bench_name' :'RF',
+
+    """
+    
+    RF Benchmark
+
+
+    """
+
+    rf_bench_config =  {
+        'n_init' : n_init,
+        'max_evals' : max_evals,
+        'n_datasets' : n_datasets,
+        'data_ids' : config_of_data[repo]['data_ids'],
+        'n_seeds' : seeds,
+        'type_of_bench':type_of_bench,
+        'bench_name' : 'RF',
         'bench_class' : RandomForestBenchmark,
+        'data_repo' : repo
     }
 
-    #run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],bench_config)
-    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],bench_config)
+    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],rf_bench_config)

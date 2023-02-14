@@ -367,10 +367,6 @@ class Bayesian_Optimization:
             #Measure time as well as fitting
             start_time = time.time()
 
-            """print('Input to the surrogate model')
-            print(pd.DataFrame(X))
-            print(pd.DataFrame(fX))"""
-
             self.model.train(X,fX)
 
             end_time=time.time() - start_time
@@ -383,8 +379,8 @@ class Bayesian_Optimization:
 
             X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
 
-            print('The next point selected by the AF is: ' , X_next )
-            print('The acquisition value is ' , acquistion_value)
+            """print('The next point selected by the AF is: ' , X_next )
+            print('The acquisition value is ' , acquistion_value)"""
 
             fX_next = [self.f(self.vector_to_configspace(X_next))['function_value']]
 

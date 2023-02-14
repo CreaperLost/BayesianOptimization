@@ -25,9 +25,11 @@ class XGBoostBenchmark(MLBenchmark):
     def __init__(self,
                  task_id: int,
                  rng: Union[np.random.RandomState, int, None] = None,
-                 valid_size: float = 0.33,
-                 data_path: Union[str, None] = None):
-        super(XGBoostBenchmark, self).__init__(task_id, rng, valid_size, data_path)
+                 data_path: Union[str, None] = None,
+                 data_repo:str = 'Jad',
+                 use_holdout =False
+                 ):
+        super(XGBoostBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
@@ -68,10 +70,11 @@ class XGBoostBenchmark(MLBenchmark):
             random_state=rng,
             subsample=1,
             eval_metric = ['auc'],
-            use_label_encoder=False
+            use_label_encoder=False,
         )
         if self.n_classes > 2:
-            extra_args["objective"] = "multi:softmax"
+            #Very important here. We need to use softproba to get probabilities out of XGBoost
+            extra_args["objective"] = 'multi:softproba' #"multi:softmax"
             extra_args.update({"num_class": self.n_classes})
 
         model = xgb.XGBClassifier(

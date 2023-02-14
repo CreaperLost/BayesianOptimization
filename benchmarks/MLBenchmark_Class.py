@@ -20,7 +20,7 @@ from ConfigSpace.util import deactivate_inactive_hyperparameters
 
 from hpobench.abstract_benchmark import AbstractBenchmark
 from benchmarks.data_manager import OpenMLDataManager
-
+from benchmarks.Jad_data_manager import JadDataManager
 
 
 """acc=accuracy_score,
@@ -31,7 +31,7 @@ from benchmarks.data_manager import OpenMLDataManager
     
     
 metrics = dict(
-    auc = accuracy_score #roc_auc_score
+    auc = roc_auc_score #accuracy_score
 )
 """
 acc=dict(),
@@ -44,7 +44,7 @@ acc=dict(),
 
 
 metrics_kwargs = dict(
-    auc = dict() #dict(multi_class="ovr")
+    auc =dict(multi_class="ovr",needs_proba=True) #dict() #
 )
 
 def get_rng(rng: Union[int, np.random.RandomState, None] = None,
@@ -101,38 +101,44 @@ class MLBenchmark():
     def __init__(
             self,
             task_id: int,
-            rng: Union[np.random.RandomState, int, None] = None,
-            valid_size: float = 0.33,
+            rng: Union[int, None] = None,
             data_path: Union[str, Path, None] = None,
-            global_seed: int = 1
+            data_repo:str = 'Jad',
+            use_holdout =False,
+            global_seed: Union[int, None] = 1,
     ):
         
-        self.rng = get_rng(rng=rng)
+        self.global_seed = global_seed
 
         if isinstance(rng, int):
             self.seed = rng
         else:
             self.seed = self.rng.randint(1, 10**6)
 
-        self.global_seed = global_seed  # used for fixed training-validation splits
+        self.rng = get_rng(rng=rng)
 
         self.task_id = task_id
-        self.valid_size = valid_size
         self.scorers = dict()
         for k, v in metrics.items():
             self.scorers[k] = make_scorer(v, **metrics_kwargs[k])
 
         if data_path is None:
+            if data_repo =='Jad':
+                data_path = 'Datasets/Jad'
+            else:
             #from hpobench import config_file
             #data_path = config_file.data_dir / "OpenML"
-            data_path = 'Datasets/OpenML'
+                data_path = 'Datasets/OpenML'
 
         self.data_path = data_path
 
-
         #Load ola ta folds.
-        dm = OpenMLDataManager(task_id, valid_size, data_path, global_seed)
-        dm.load()
+        if data_repo == 'Jad':
+            dm = JadDataManager(task_id,data_path,self.global_seed,n_folds = 5, use_holdout = use_holdout)
+            dm.load()
+        else:
+            dm = OpenMLDataManager(task_id, data_path, self.global_seed,n_folds = 5, use_holdout = use_holdout)
+            dm.load()
 
         # Data variables
         self.train_X = dm.train_X
@@ -184,19 +190,14 @@ class MLBenchmark():
         return [self.configuration_space.sample_configuration() for i in range(size)]
 
 
-    def shuffle_data_idx(self, train_idx: Iterable = None, rng: Union[np.random.RandomState, None] = None) -> Iterable:
+    """def shuffle_data_idx(self, train_idx: Iterable = None, rng: Union[np.random.RandomState, None] = None) -> Iterable:
+        print('This should never run')
         rng = self.rng if rng is None else rng
         train_idx = self.train_idx if train_idx is None else train_idx
         rng.shuffle(train_idx)
-        return train_idx
+        return train_idx"""
 
 
-    """def calc_metric(self,model_choice,x,y,metric_choice='auc' ):
-        y_pred = model_choice.predict(x)
-        if metric_choice == 'auc':
-            print(y,y_pred)
-            return roc_auc_score(y,y_pred)
-        return 0"""
 
     def _train_objective(self,
                          config: Dict,
