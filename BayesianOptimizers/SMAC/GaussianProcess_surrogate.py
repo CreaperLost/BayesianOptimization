@@ -13,7 +13,11 @@ from BayesianOptimizers.SMAC.utils import Prior,SoftTopHatPrior,TophatPrior
 import sklearn.gaussian_process
 from sklearn.gaussian_process.kernels import Kernel, KernelOperator
 from sklearn.gaussian_process import GaussianProcessRegressor
-
+from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
+    HammingKernel,
+    Matern,
+    WhiteKernel,)
+from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
 __license__ = "3-clause BSD"
@@ -33,23 +37,11 @@ class GaussianProcess(BaseModel):
     RoBO: A Flexible and Robust Bayesian Optimization Framework in Python
     In: NIPS 2017 Bayesian Optimization Workshop
 
-    Parameters
+    Parameters 
     ----------
-    types : List[int]
-        Specifies the number of categorical values of an input dimension where
-        the i-th entry corresponds to the i-th input dimension. Let's say we
-        have 2 dimension where the first dimension consists of 3 different
-        categorical choices and the second dimension is continuous than we
-        have to pass [3, 0]. Note that we count starting from 0.
-    bounds : List[Tuple[float, float]]
-        bounds of input dimensions: (lower, uppper) for continuous dims; (n_cat, np.nan) for categorical dims
+    
     seed : int
         Model seed.
-    kernel : george kernel object
-        Specifies the kernel that is used for all Gaussian Process
-    prior : prior object
-        Defines a prior for the hyperparameters of the GP. Make sure that
-        it implements the Prior interface.
     normalize_y : bool
         Zero mean unit variance normalization of the output values
     n_opt_restart : int
@@ -59,21 +51,17 @@ class GaussianProcess(BaseModel):
     def __init__(
         self,
         configspace: ConfigurationSpace,
-        types: List[int],
-        bounds: List[Tuple[float, float]],
         seed: int,
-        kernel: Kernel,
         normalize_y: bool = True,
         n_opt_restarts: int = 10,
     ):
         super().__init__( )
 
         self.config_space = configspace
-        self.kernel = kernel
-        self.rng = np.random.RandomState(seed)
-        self.types = types
-        self.bounds = bounds
         
+        self.rng = np.random.RandomState(seed)
+        self.random_seed = seed
+
         self.normalize_y = normalize_y
         self.n_opt_restarts = n_opt_restarts
 
@@ -81,9 +69,77 @@ class GaussianProcess(BaseModel):
         self.is_trained = False
         self._n_ll_evals = 0
 
+        
+        """
+        types : List[int]
+                        Specifies the number of categorical values of an input dimension where
+                        the i-th entry corresponds to the i-th input dimension. Let's say we
+                        have 2 dimension where the first dimension consists of 3 different
+                        categorical choices and the second dimension is continuous than we
+                        have to pass [3, 0]. Note that we count starting from 0.
+        bounds : List[Tuple[float, float]]
+                        bounds of input dimensions: (lower, uppper) for continuous dims; (n_cat, np.nan) for categorical dims"""
+        self.types, self.bounds = self.get_types(self.config_space, None)
+
+        # After getting the types and bounds specify the desired kernels according to the types and the bounds!
+        self.kernel = self.kernel_selector(self.types)
+        # Then set some conditions 
         self._set_has_conditions()
 
+    """
+    kernel : george kernel object
+        Specifies the kernel that is used for all Gaussian Process
+    prior : prior object
+        Defines a prior for the hyperparameters of the GP. Make sure that
+        it implements the Prior interface."""
+    def kernel_selector(self,types):
+        cov_amp = ConstantKernel(
+                    2.0,
+                    constant_value_bounds=(np.exp(-10), np.exp(2)),
+                    prior=LognormalPrior(mean=0.0, sigma=1.0, rng=self.rng),
+                )
 
+            
+        cont_dims = np.where(np.array(types) == 0)[0]
+        cat_dims = np.where(np.array(types) != 0)[0]
+
+        lower_bounds = -6.754111155189306
+        upper_bounds = 0.0858637988771976
+
+        if len(cont_dims) > 0:
+            exp_kernel = Matern(
+                        np.ones([len(cont_dims)]),
+                        [(np.exp(lower_bounds), np.exp(upper_bounds)) for _ in range(len(cont_dims))],
+                        nu=2.5,
+                        operate_on=cont_dims)
+
+        if len(cat_dims) > 0:
+            ham_kernel = HammingKernel(
+                        np.ones([len(cat_dims)]),
+                        [(np.exp(lower_bounds), np.exp(upper_bounds)) for _ in range(len(cat_dims))],
+                        operate_on=cat_dims)
+
+        assert (len(cont_dims) + len(cat_dims)) == len(self.config_space.get_hyperparameters())
+
+        noise_kernel = WhiteKernel(
+                    noise_level=1e-8,
+                    noise_level_bounds=(np.exp(-25), np.exp(2)),
+                    prior=HorseshoePrior(scale=0.1, rng=self.rng),
+                )
+
+        if len(cont_dims) > 0 and len(cat_dims) > 0:
+            # both
+            kernel = cov_amp * (exp_kernel * ham_kernel) + noise_kernel
+        elif len(cont_dims) > 0 and len(cat_dims) == 0:
+            # only cont
+            kernel = cov_amp * exp_kernel + noise_kernel
+        elif len(cont_dims) == 0 and len(cat_dims) > 0:
+            # only cont
+            kernel = cov_amp * ham_kernel + noise_kernel
+        else:
+            raise ValueError()
+
+        return kernel
 
     def _get_all_priors(
         self,

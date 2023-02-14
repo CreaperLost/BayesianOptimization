@@ -9,7 +9,7 @@ import scipy.spatial.distance
 import scipy.special
 import sklearn.gaussian_process.kernels as kernels
 from typing import List, Optional, Tuple
-
+import pandas as pd
 
 import math
 import warnings
@@ -673,6 +673,27 @@ class WhiteKernel(MagicMixin, kernels.WhiteKernel):
             return np.zeros((X.shape[0], Y.shape[0]))
 
 
+
+"""
+
+Hamming Kernel
+
+This kernel essentially compares 2 arithmetic numbers.
+
+
+For example 
+X = 0.3
+Y = 0.3
+
+If these two are the same then we return 1.
+Else we return 0
+
+
+This is really useful for handling categorical parameters on GP.
+
+Instead of a Matern Kernel.
+
+"""
 class HammingKernel(
     MagicMixin,
     kernels.StationaryKernelMixin,
@@ -752,10 +773,16 @@ class HammingKernel(
         else:
             Y = np.atleast_2d(Y)
 
+
+        #If they are different then we calculate the distance and put it in exponential.
+        #If they are the same then we don't put exponential and just put 1. :)
         indicator = np.expand_dims(X, axis=1) != Y
+
         K = (-1 / (2 * length_scale**2) * indicator).sum(axis=2)
         K = np.exp(K)
+        
 
+        
         if active is not None:
             K = K * active
 

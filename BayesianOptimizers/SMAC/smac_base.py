@@ -21,12 +21,8 @@ from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 
+import pandas as pd
 
-from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
-    HammingKernel,
-    Matern,
-    WhiteKernel,)
-from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
 
 
 class Bayesian_Optimization:
@@ -160,54 +156,7 @@ class Bayesian_Optimization:
         if model == 'RF':
             self.model = RandomForest(self.config_space,rng=random_seed)
         elif model =='GP':
-            types, bounds = self.get_types(self.config_space ,instance_features=None)
-
-            cov_amp = ConstantKernel(
-                    2.0,
-                    constant_value_bounds=(np.exp(-10), np.exp(2)),
-                    prior=LognormalPrior(mean=0.0, sigma=1.0, rng=self.rng),
-                )
-
-            
-            cont_dims = np.where(np.array(types) == 0)[0]
-            cat_dims = np.where(np.array(types) != 0)[0]
-            
-            if len(cont_dims) > 0:
-                exp_kernel = Matern(
-                        np.ones([len(cont_dims)]),
-                        [(np.exp(-6.754111155189306), np.exp(0.0858637988771976)) for _ in range(len(cont_dims))],
-                        nu=2.5,
-                        operate_on=cont_dims,
-                    )
-
-            if len(cat_dims) > 0:
-                    ham_kernel = HammingKernel(
-                        np.ones([len(cat_dims)]),
-                        [(np.exp(-6.754111155189306), np.exp(0.0858637988771976)) for _ in range(len(cat_dims))],
-                        operate_on=cat_dims,
-                    )
-
-            assert (len(cont_dims) + len(cat_dims)) == len(self.config_space.get_hyperparameters())
-
-            noise_kernel = WhiteKernel(
-                    noise_level=1e-8,
-                    noise_level_bounds=(np.exp(-25), np.exp(2)),
-                    prior=HorseshoePrior(scale=0.1, rng=random_seed),
-                )
-
-            if len(cont_dims) > 0 and len(cat_dims) > 0:
-                # both
-                kernel = cov_amp * (exp_kernel * ham_kernel) + noise_kernel
-            elif len(cont_dims) > 0 and len(cat_dims) == 0:
-                # only cont
-                kernel = cov_amp * exp_kernel + noise_kernel
-            elif len(cont_dims) == 0 and len(cat_dims) > 0:
-                # only cont
-                kernel = cov_amp * ham_kernel + noise_kernel
-            else:
-                raise ValueError()
-
-            self.model = GaussianProcess(self.config_space,types=types,bounds=bounds,kernel=kernel,seed=random_seed)
+            self.model = GaussianProcess(self.config_space,seed=random_seed)
         
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
@@ -215,73 +164,6 @@ class Bayesian_Optimization:
         if maximizer == 'Sobol':
             self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
         
-
-    def get_types(self,
-        config_space: ConfigurationSpace,
-        instance_features: typing.Optional[np.ndarray] = None,
-            ) -> typing.Tuple[typing.List[int], typing.List[typing.Tuple[float, float]]]:
-        # Extract types vector for rf from config space and the bounds
-        types = [0] * len(config_space.get_hyperparameters())
-        bounds = [(np.nan, np.nan)] * len(types)
-
-        for i, param in enumerate(config_space.get_hyperparameters()):
-            parents = config_space.get_parents_of(param.name)
-            if len(parents) == 0:
-                can_be_inactive = False
-            else:
-                can_be_inactive = True
-
-            if isinstance(param, (CategoricalHyperparameter)):
-                n_cats = len(param.choices)
-                if can_be_inactive:
-                    n_cats = len(param.choices) + 1
-                types[i] = n_cats
-                bounds[i] = (int(n_cats), np.nan)
-
-            elif isinstance(param, (OrdinalHyperparameter)):
-                n_cats = len(param.sequence)
-                types[i] = 0
-                if can_be_inactive:
-                    bounds[i] = (0, int(n_cats))
-                else:
-                    bounds[i] = (0, int(n_cats) - 1)
-
-            elif isinstance(param, Constant):
-                # for constants we simply set types to 0 which makes it a numerical
-                # parameter
-                if can_be_inactive:
-                    bounds[i] = (2, np.nan)
-                    types[i] = 2
-                else:
-                    bounds[i] = (0, np.nan)
-                    types[i] = 0
-                # and we leave the bounds to be 0 for now
-            elif isinstance(param, UniformFloatHyperparameter):
-                # Are sampled on the unit hypercube thus the bounds
-                # are always 0.0, 1.0
-                if can_be_inactive:
-                    bounds[i] = (-1.0, 1.0)
-                else:
-                    bounds[i] = (0, 1.0)
-            elif isinstance(param, UniformIntegerHyperparameter):
-                if can_be_inactive:
-                    bounds[i] = (-1.0, 1.0)
-                else:
-                    bounds[i] = (0, 1.0)
-            elif not isinstance(param, (UniformFloatHyperparameter,
-                                        UniformIntegerHyperparameter,
-                                        OrdinalHyperparameter,
-                                        CategoricalHyperparameter)):
-                raise TypeError("Unknown hyperparameter type %s" % type(param))
-
-        if instance_features is not None:
-            types = types + [0] * instance_features.shape[1]
-
-        return types, bounds
-
-
-
-
 
 
     def vector_to_configspace(self, vector: np.array,from_normalized = True) -> ConfigurationSpace:
@@ -338,8 +220,6 @@ class Bayesian_Optimization:
             configuration = new_config, configuration_space=self.config_space
         )
         return new_config
-
-
 
 
     def configspace_to_vector(self, config: ConfigurationSpace,normalize=True) -> np.array:
@@ -402,8 +282,7 @@ class Bayesian_Optimization:
             population = np.random.uniform(low=0.0, high=1.0, size=(initial_config_size, self.dim))
         return np.array(population)
 
-  
-        
+     
     def convert_configurations_to_array(configs: List[Configuration]) -> np.ndarray:
         """Impute inactive hyperparameters in configurations with their default.
 
@@ -478,39 +357,34 @@ class Bayesian_Optimization:
         # Main BO loop
         while self.n_evals < self.max_evals:
             
-            start_time = time.time()
 
             # Warp inputs
             X = self.X  
             # Standardize values
             fX = self.fX
 
-            """
-            Output Transformation
-
-            X, Xe = self.space.transform(self.X)
-            try:
-                if self.y.min() <= 0:
-                    y = torch.FloatTensor(power_transform(self.y / self.y.std(), method = 'yeo-johnson'))
-                else:
-                    y = torch.FloatTensor(power_transform(self.y / self.y.std(), method = 'box-cox'))
-                    if y.std() < 0.5:
-                        y = torch.FloatTensor(power_transform(self.y / self.y.std(), method = 'yeo-johnson'))
-            
-            """
-
     
             #Measure time as well as fitting
             start_time = time.time()
+
+            """print('Input to the surrogate model')
+            print(pd.DataFrame(X))
+            print(pd.DataFrame(fX))"""
+
             self.model.train(X,fX)
+
             end_time=time.time() - start_time
+
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
             #If we want more candidates we need to remove [0]
 
             self.acquisition_function.update(self.model)
 
-            X_next = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+            X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+
+            print('The next point selected by the AF is: ' , X_next )
+            print('The acquisition value is ' , acquistion_value)
 
             fX_next = [self.f(self.vector_to_configspace(X_next))['function_value']]
 
