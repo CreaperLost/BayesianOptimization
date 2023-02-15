@@ -48,6 +48,9 @@ class XGBoostBenchmark(MLBenchmark):
             ),
             CS.UniformFloatHyperparameter(
                 'reg_lambda', lower=2**-10, upper=2**10, default_value=1, log=True
+            ),
+            CS.UniformFloatHyperparameter(
+                'subsample', lower=0.1, upper=1, default_value=1, log=False
             )
         ])
         return cs
@@ -68,7 +71,6 @@ class XGBoostBenchmark(MLBenchmark):
             n_estimators=100,
             objective="binary:logistic",
             random_state=rng,
-            subsample=1,
             eval_metric = ['auc'],
             use_label_encoder=False,
         )

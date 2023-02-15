@@ -4,15 +4,12 @@ directory_notation = '\\'
 file_name_connector = '_'
 csv_postfix ='.csv'
 
-#Just openup the configuration dictionary. :)
-def break_config_into_pieces(config={}):
-    assert config != {}
-    return config['result_space'],config['classifier'],config['results_type']
+
  
 #Just openup the configuration dictionary. :)
 def break_config_into_pieces_for_plots(config={}):
     assert config != {}
-    return config['result_space'],config['classifier'],config['results_type'],config['optimizer_type'],config['seeds']
+    return config['result_space'],config['classifier'],config['results_type'],config['optimizer_type'],config['seeds'],config['data_repo']
 
 # A function that given a list of directories, concats them 
 # in the order received.

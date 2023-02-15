@@ -12,7 +12,7 @@ from benchmarks.XGBoostBenchmark import XGBoostBenchmark
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
 
-benchmark_suite = openml.study.get_suite('OpenML-CC18') # obtain the benchmark suite
+
 
 
 
@@ -51,6 +51,12 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Time'])
 
     curr_dataset = 0
+
+    #Add the type of Dataset repo before.
+    score_directory = parse_directory([score_directory,data_repo])
+    time_directory = parse_directory([time_directory,data_repo])
+
+
     for task_id in data_ids:
         
         #These Folders will have seed results in them.
@@ -96,9 +102,10 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
                         Path(time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
                     except FileExistsError:
-                        #print("Folder is already there")
+                        print("Folder is already there")
                         """"""
                     else:
+                        print("Folder is created there")
                         """"""
                         #print("Folder was created")
                     pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt[0]+csv_postfix ]))
@@ -110,46 +117,48 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         if curr_dataset >= n_datasets:
             break 
 
+def get_openml_data():
+    benchmark_suite = openml.study.get_suite('OpenML-CC18')
+    return benchmark_suite.tasks
 
+def get_jad_data():
+    return [1114,865,852,851,850,842]
 
 if __name__ == '__main__':
 
-
+     # obtain the benchmark suite    
     config_of_data = {
         'Jad':{
-            'data_ids':[1114,865,852,851,850,842]
+            'data_ids':get_jad_data
         },
         'OpenML': {
-            'data_ids':benchmark_suite.tasks
+            'data_ids':get_openml_data
         }
     }
 
     type_of_bench = 'Single_Space_Results'
     n_datasets = 10
-    n_init = 1
-    max_evals = 10
+    n_init = 20
+    max_evals = 100
     repo = 'Jad'  #Jad
-    seeds = [1] # ,2,3,4,5
+    seeds = [1,2,3] # ,2,3,4,5
     """
     XGBoost Benchmark
     
     """
-
-    print(repo)
-
     xgb_bench_config =  {
         'n_init' : n_init,
         'max_evals' : max_evals,
         'n_datasets' : n_datasets,
-        'data_ids' : config_of_data[repo]['data_ids'],
+        'data_ids' : config_of_data[repo]['data_ids'](),
         'n_seeds' : seeds,
         'type_of_bench': type_of_bench,
         'bench_name' :'XGB',
         'bench_class' : XGBoostBenchmark,
         'data_repo' : repo
     }
-    #('RS',Random_Search),
-    run_benchmark_total([('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],xgb_bench_config)
+    #
+    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],xgb_bench_config)
 
 
 
@@ -160,11 +169,11 @@ if __name__ == '__main__':
 
     """
 
-    rf_bench_config =  {
+    """rf_bench_config =  {
         'n_init' : n_init,
         'max_evals' : max_evals,
         'n_datasets' : n_datasets,
-        'data_ids' : config_of_data[repo]['data_ids'],
+        'data_ids' : config_of_data[repo]['data_ids'](),
         'n_seeds' : seeds,
         'type_of_bench':type_of_bench,
         'bench_name' : 'RF',
@@ -172,4 +181,4 @@ if __name__ == '__main__':
         'data_repo' : repo
     }
 
-    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],rf_bench_config)
+    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],rf_bench_config)"""

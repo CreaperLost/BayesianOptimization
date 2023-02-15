@@ -53,6 +53,10 @@ class JadDataManager(DataManager):
 
         super(JadDataManager, self).__init__()
 
+   
+        
+        
+
     # pylint: disable=arguments-differ
     """@lockutils.synchronized('not_thread_process_safe', external=True,
                             lock_path=f'{config_file.cache_dir}/openml_dm_lock', delay=0.2)"""
@@ -69,18 +73,32 @@ class JadDataManager(DataManager):
         #Check if we locally have the specific dataset.
         data_set_path = self.data_path + "/datasets/" + str(self.task_id)
         successfully_loaded = self.try_to_load_data(data_set_path)
+
+        
+
         if successfully_loaded:
             self.logger.info(f'Successfully loaded the preprocessed splits from '
                              f'{data_set_path}')
             return
 
         # If the data is not available, download it.
-        self.__download_data(verbose=verbose)
+        self.__download_data(file_path = data_set_path,verbose=verbose)
+
+
+
+        try:
+            Path(data_set_path).mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            print("Folder is already there")
 
         # Save the preprocessed splits to file for later usage.
         self.generate_openml_splits(data_set_path)
 
         return
+
+
+    def find_number_of_target(self,train_y=None,valid_y=None):
+        return pd.concat((train_y,valid_y),axis=0).nunique()
 
     def try_to_load_data(self, data_path: str) -> bool:
         path_str = "{}_{}_{}.parquet.gzip"
@@ -98,6 +116,9 @@ class JadDataManager(DataManager):
             if self.use_holdout == True:
                 self.test_X = pd.read_parquet(data_path + path_str2.format("test", "x")).to_numpy()
                 self.test_y = pd.read_parquet(data_path + path_str2.format("test", "y")).squeeze(axis=1)
+
+            self.n_classes = self.find_number_of_target(self.train_y[0],self.valid_y[0])
+            
         except FileNotFoundError:
             return False
         return True
@@ -112,15 +133,19 @@ class JadDataManager(DataManager):
         continuous_ind  = [X.columns.get_loc(col) for col in X.select_dtypes(exclude=['object']).columns.tolist() ]
         return X,y,categorical_ind,continuous_ind
 
-    def __download_data(self, verbose: bool):
+    def __download_data(self,file_path:str, verbose: bool):
+        assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
-        tmp_file_loc= os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
+        tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
         self.Client.project.download_dataset(self.task_id,tmp_file_loc)
         dataset = pd.read_csv(tmp_file_loc)
         
 
         X, y, categorical_ind,continuous_ind = self.preprocess_data(dataset)
         
+
+        self.n_classes = y.nunique()
+
         #Label encode y.
         labelencoder = LabelEncoder()
         y = pd.Series(labelencoder.fit_transform(y))
@@ -257,3 +282,4 @@ class JadDataManager(DataManager):
             elif isinstance(labels, np.array):
                 labels = np.array(labels)
         return labels
+ 

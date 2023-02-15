@@ -6,29 +6,32 @@ from scipy import stats
 from matplotlib import pyplot as plt
 import openml
 import sys
+from dataset_utils import filter_datasets
+
 sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
-
 
 def get_results_per_optimizer(config={}):
     assert config!={}
 
     #Get the configurations partials.
-    result_space, classifier ,results_type ,optimizer_type, number_of_seeds  = break_config_into_pieces_for_plots(config)
+    result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
 
     #Get us the main file
-    main_directory =  getcwd().replace('\\Plot_scripts','')
+    main_directory =  getcwd().replace('\\Dataset_Scripts','')
 
     #Get the directory.
-    wanted_directory_attributes = [main_directory,result_space,classifier,results_type]
+    wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo]
+
+
     # Briskomaste sto fakelo me kathe dataset kai ta results tou.
     results_directory= parse_directory(wanted_directory_attributes)
 
     #Get each dataset file. :D
     Dataset_files = [f for f in listdir(results_directory) if isdir(join(results_directory, f))]
-    
-    #Save the results of the optimizer per dataset.
+
+    #Save the  results of the optimizer per dataset.
     optimizer_results_per_dataset = dict()
 
     for dataset in  Dataset_files:
@@ -75,13 +78,44 @@ def get_seeds_per_dataset(seeds):
 
 
 
+
+
+def get_dataset_name(dataset_id, config):
+    result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
+    #Get us the main file
+    main_directory =  getcwd()
+
+    #Get the directory.
+    wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo,'dataset_characteristics.csv']
+
+    # Briskomaste sto fakelo me kathe dataset kai ta results tou.
+    path= parse_directory(wanted_directory_attributes)
+
+    print(path)
+
+    if config['data_repo'] == 'Jad':
+        return get_dataset_name_Jad(dataset_id,path)
+    return get_dataset_name_OpenML(dataset_id,path)
+
+
+
 #Casually returns the dataset name given a string
 # e.g. Dataset11 --> Kr vs Kp
-def get_dataset_name(dataset):
+def get_dataset_name_OpenML(dataset,path):
     task_id = dataset.split('Dataset')[1] 
     task = openml.tasks.get_task(task_id, download_data=False)
     dataset_info = openml.datasets.get_dataset(task.dataset_id, download_data=False)
     return dataset_info.name
+
+def get_dataset_name_Jad(dataset,path):
+    data_id = dataset.split('Dataset')[1] 
+    if not Path(path).exists():
+        #fetch_jad_list()
+        print('oops')
+    jad_datasets = pd.read_csv(path)    
+    name = filter_datasets(jad_datasets,[int(data_id)],'Jad')['name']
+    return name.values[0]
+
 
 def create_plot_per_optimizer(optimizer_results_for_dataset):
     confidence, means = get_seeds_per_dataset(optimizer_results_for_dataset['result'])
@@ -101,19 +135,22 @@ opt_colors= {
     'GP':'g',
 }
 
-config_list = [dict( seeds = 3 , optimizer_type = 'RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( seeds = 3 , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( seeds = 3 , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+data_repo = 'Jad'
+n_seeds=  5 
+
+config_list = [dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+               ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ]
 
 config_results =  [get_results_per_optimizer(config) for config in config_list]
 datasets_list_run = config_results[0].keys()
 
 
-
 #Take the datasets--Dirty.
 for dataset in datasets_list_run:
-    title_name = get_dataset_name(dataset)
+    title_name = get_dataset_name(dataset,config_list[0])
+    print(title_name)
     fig, ax = plt.subplots()
     for config_result_idx in range(len(config_results)):
         opt = config_list[config_result_idx]['optimizer_type']
@@ -129,11 +166,11 @@ for dataset in datasets_list_run:
     plt.xlim([1,eval_range])
     plt.axvline(x = 20, color = 'black', linestyle = '--',label='Initial_Evaluations')
     plt.title(title_name + " /w classifier "  + config_list[0]['classifier'])
-    plt.ylabel('Error Rate (1-Accuracy)')
+    plt.ylabel('(1-AUC)')
     plt.legend()
     #plt.show()
     
-    main_directory =  getcwd().replace('\\Plot_scripts','')
+    main_directory =  getcwd().replace('\\Dataset_Scripts','')
     wanted_directory_attributes = [main_directory,'Figures',dataset]
     results_directory = parse_directory(wanted_directory_attributes)
     
