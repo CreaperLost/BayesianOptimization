@@ -12,7 +12,7 @@ sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
 
-def get_results_per_optimizer(config={}):
+def get_results_per_optimizer(config={},accumulate=True):
     assert config!={}
 
     #Get the configurations partials.
@@ -57,7 +57,10 @@ def get_results_per_optimizer(config={}):
             opt_results = pd.read_csv(optimizer_path,index_col=0)
             
             #Create a accumulation.
-            accumulation = np.minimum.accumulate(opt_results)
+            if accumulate == True:
+                accumulation = np.minimum.accumulate(opt_results)
+            else:
+                accumulation = opt_results
             
             #Save the results of the current seed.
             seed_results.append(accumulation)
@@ -130,20 +133,55 @@ def create_plot_per_optimizer(optimizer_results_for_dataset):
 
 
 opt_colors= {
-    'RS':'r',
-    'RF':'b',
-    'GP':'g',
+    'RS':'red',
+    'RF':'blue',
+    'GP':'green',
+    'HEBO_RF':'black',
+    'HEBO_GP':'purple'
 }
 
 data_repo = 'Jad'
-n_seeds=  5 
+n_seeds=  2
 
-config_list = [dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+config_list = [#dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results'),
+               dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ]
 
 config_results =  [get_results_per_optimizer(config) for config in config_list]
+
+surrogate_config_list = [#dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results'),
+               dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ]
+
+surrogate_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in surrogate_config_list]
+
+
+objective_config_list = [#dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results'),
+               dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ]
+
+objective_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in objective_config_list]
+
+
+Acquisition_config_list = [#dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results'),
+               dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ]
+
+acquisition_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in Acquisition_config_list]
+
+
 datasets_list_run = config_results[0].keys()
 
 
@@ -151,23 +189,35 @@ datasets_list_run = config_results[0].keys()
 for dataset in datasets_list_run:
     title_name = get_dataset_name(dataset,config_list[0])
     print(title_name)
-    fig, ax = plt.subplots()
+    fig, (ax1,ax2) = plt.subplots(2,1,sharex=True)
     for config_result_idx in range(len(config_results)):
         opt = config_list[config_result_idx]['optimizer_type']
         
         confidence,means = create_plot_per_optimizer(config_results[config_result_idx][dataset])
         eval_range = means.shape[0]
         x = [i+1 for i in range(eval_range)]
-        ax.plot(x,means,opt_colors[opt],label=opt)
-        ax.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
+        ax1.plot(x,means,opt_colors[opt],label=opt)
+        ax1.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
+
+        surrogate_confidence,surrogate_means = create_plot_per_optimizer(surrogate_config_results[config_result_idx][dataset])
+        ax2.plot(x,surrogate_means,opt_colors[opt],label=opt)
+        ax2.fill_between(x, surrogate_confidence.iloc[0,:], surrogate_confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
+
+        if config_result_idx == 0:
+            objective_confidence,objective_means = create_plot_per_optimizer(objective_config_results[config_result_idx][dataset])
+            ax2.plot(x,objective_means,'orange',label='Mean-Objective Time')
+            acquisition_confidence,acquisition_means = create_plot_per_optimizer(acquisition_config_results[config_result_idx][dataset])
+            ax2.plot(x,acquisition_means,'yellow',label='Mean-acquisition Time')
 
     x_ticks = [i for i in range(eval_range) if i%10==0]
     plt.xticks(x_ticks,x_ticks)
     plt.xlim([1,eval_range])
     plt.axvline(x = 20, color = 'black', linestyle = '--',label='Initial_Evaluations')
-    plt.title(title_name + " /w classifier "  + config_list[0]['classifier'])
-    plt.ylabel('(1-AUC)')
-    plt.legend()
+    fig.suptitle(title_name + " /w classifier "  + config_list[0]['classifier'])
+    ax1.set_ylabel('(1-AUC)')
+    ax2.set_ylabel('Time in seconds')
+    plt.xlabel('Number of Objective Evaluations')
+    plt.legend(bbox_to_anchor=(1.05, 1),loc = 'upper left')
     #plt.show()
     
     main_directory =  getcwd().replace('\\Dataset_Scripts','')
@@ -180,4 +230,4 @@ for dataset in datasets_list_run:
         print("Folder is already there")
     else:
         print("Folder was created")
-    plt.savefig(results_directory+directory_notation+config_list[0]['classifier']+'.png')
+    plt.savefig(results_directory+directory_notation+config_list[0]['classifier']+'.png',bbox_inches='tight')

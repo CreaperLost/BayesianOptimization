@@ -25,7 +25,7 @@ __license__ = "3-clause BSD"
 
 logger = logging.getLogger(__name__)
 
-
+ 
 class GaussianProcess(BaseModel):
     """Gaussian process model.
 

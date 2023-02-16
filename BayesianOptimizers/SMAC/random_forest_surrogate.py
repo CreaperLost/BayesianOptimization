@@ -22,7 +22,7 @@ except:
 class RandomForest(BaseModel):
 
     def __init__(self, config_space, num_trees=30,
-                 do_bootstrapping=True,
+                 do_bootstrapping=True, 
                  n_points_per_tree=0,
                  compute_oob_error=False,
                  return_total_variance=True,

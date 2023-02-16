@@ -20,6 +20,9 @@ from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
+from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
+from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
+
 
 import pandas as pd
 
@@ -159,7 +162,12 @@ class Bayesian_Optimization:
             self.model = RandomForest(self.config_space,rng=random_seed)
         elif model =='GP':
             self.model = GaussianProcess(self.config_space,seed=random_seed)
-        
+        elif model =='HEBO_RF':
+            self.model = HEBO_RF(self.config_space,rng=random_seed)
+        elif model =='HEBO_GP':
+            self.model = HEBO_GP(self.config_space,rng=random_seed)
+
+
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
         

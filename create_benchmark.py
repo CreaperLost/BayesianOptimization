@@ -85,16 +85,13 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
                 print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
-                if opt[0] == 'GP':
-                    Optimization = opt[1](f=benchmark_.objective_function,model='GP',lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
-                elif opt[0] == 'RF':
-                    Optimization = opt[1](f=benchmark_.objective_function,model='RF',lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
-                elif opt[0] == 'RS':
+
+                if opt[0] == 'RS':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 else:
-                    raise FileNotFoundError
+                    Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
+                
                 
                 best_score = Optimization.run()
 
@@ -149,11 +146,11 @@ if __name__ == '__main__':
     }
 
     type_of_bench = 'Single_Space_Results'
-    n_datasets = 10
+    n_datasets = 20
     n_init = 20
     max_evals = 100
     repo = 'Jad'  #Jad
-    seeds = [1,2,3] # ,2,3,4,5
+    seeds = [1,2,3] # ,2,3,4,5 
     """
     XGBoost Benchmark
     
@@ -169,8 +166,10 @@ if __name__ == '__main__':
         'bench_class' : XGBoostBenchmark,
         'data_repo' : repo
     }
-    #
-    run_benchmark_total([('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)],xgb_bench_config)
+    #('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)
+    #('HEBO_RF',Bayesian_Optimization), ('HEBO_GP',Bayesian_Optimization)
+    # ('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('GP',Bayesian_Optimization),('RS',Random_Search),
+    run_benchmark_total([('HEBO_GP',Bayesian_Optimization),('HEBO_RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('RF',Bayesian_Optimization),('RS',Random_Search)],xgb_bench_config)
 
 
 

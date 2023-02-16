@@ -66,8 +66,8 @@ class EI(BaseAcquisitionFunction):
 
         neg_nos = [num for num in m if num < 0]
 
-        if len(neg_nos) >0:
-            print('Negative mean' , neg_nos)
+        """if len(neg_nos) >0:
+            print('Negative mean' , neg_nos)"""
 
         if eta is None:
             print('Please impute ETA. (Best configuration as parameter)')
