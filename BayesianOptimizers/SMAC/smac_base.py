@@ -145,6 +145,8 @@ class Bayesian_Optimization:
         self.fX = np.zeros((0, 1))
 
         self.surrogate_time = np.array([])
+        self.acquisition_time = np.array([])
+        self.objective_time = np.array([])
 
         #Number of current evaluations!
         self.n_evals = 0 
@@ -318,7 +320,12 @@ class Bayesian_Optimization:
             config = self.vector_to_configspace( initial_configurations[i])
             
             #Run the objective function on it.
+            start_time = time.time()
             res = self.f(config, **kwargs)
+            end_time=time.time() - start_time
+            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+
+
             #Get the value and cost from objective
             #This is the validation loss averaged over all folds.
             objective_value_per_configuration[i] = res['function_value']
@@ -326,6 +333,9 @@ class Bayesian_Optimization:
             cost = res["cost"]
 
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
+            self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
+
+
 
             info = res["info"] if "info" in res else dict()
             # If this is better than the overall best score then replace.
@@ -374,20 +384,34 @@ class Bayesian_Optimization:
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
             #If we want more candidates we need to remove [0]
-
+            
+            
             self.acquisition_function.update(self.model)
 
+            start_time = time.time()
             X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+            end_time=time.time() - start_time
+
+            self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
             """print('The next point selected by the AF is: ' , X_next )
             print('The acquisition value is ' , acquistion_value)"""
 
-            fX_next = [self.f(self.vector_to_configspace(X_next))['function_value']]
+
+            config = self.vector_to_configspace( X_next )
+
+            start_time = time.time()
+            res = self.f(config)
+            end_time=time.time() - start_time
+            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+            
+            fX_next = [res['function_value']]
 
             self.n_evals+=1
 
             if self.verbose and fX_next[0] < self.inc_score:
                 self.inc_score = fX_next[0]
+                self.inc_config = config
                 print(f"{self.n_evals}) New best: {self.inc_score:.4}")
                 #sys.stdout.flush()
 

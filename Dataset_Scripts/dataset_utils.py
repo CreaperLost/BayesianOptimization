@@ -55,7 +55,7 @@ def get_open_ml_data_list():
 #A simple fetcher of OpenML data descriptions.
 def get_jad_data_list():
     min_samples = 50
-    max_samples = 200
+    max_samples = 5000
     min_features = 10
     max_features = 100
     analysis_type = 'CLASSIFICATION'

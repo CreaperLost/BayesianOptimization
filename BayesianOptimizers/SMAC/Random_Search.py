@@ -28,6 +28,8 @@ class Random_Search():
         self.fX = np.array([])
 
         self.surrogate_time = np.array([])
+        self.objective_time = np.array([])
+        self.acquisition_time = np.array([])
 
         self.inc_score = np.inf
         self.n_evals = 0
@@ -37,12 +39,15 @@ class Random_Search():
         
         configurations = self.config_space.sample_configuration(self.max_evals)
         for config in configurations:
+            start_time = time()
             result_dict = self.objective_function(config.get_dictionary())
+            end_time = time()-start_time
+            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
             fX_next =np.array([result_dict['function_value']])
             
             self.fX = np.concatenate((self.fX, fX_next))
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
-
+            self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
             self.n_evals += 1
             if self.verbose and fX_next[0] < self.inc_score:
                 self.inc_score = fX_next[0]

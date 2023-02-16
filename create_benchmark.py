@@ -48,26 +48,35 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     score_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Metric'])
 
     #Directory to save time for the optimizers
-    time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Time'])
+    surrogate_time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Surrogate_Time'])
+    #Directory to save time for the optimizers
+    objective_time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Objective_Time'])
+    #Directory to save time for the optimizers
+    acquisition_time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Acquisition_Time'])
 
     curr_dataset = 0
 
     #Add the type of Dataset repo before.
     score_directory = parse_directory([score_directory,data_repo])
-    time_directory = parse_directory([time_directory,data_repo])
-
+    surrogate_time_directory = parse_directory([surrogate_time_directory,data_repo])
+    objective_time_directory = parse_directory([objective_time_directory,data_repo])
+    acquisition_time_directory = parse_directory([acquisition_time_directory,data_repo])
 
     for task_id in data_ids:
         
         #These Folders will have seed results in them.
         score_per_seed_directory = parse_directory([score_directory,'Dataset' +str(task_id)])
-        time_per_seed_directory  = parse_directory([time_directory, 'Dataset' +str(task_id)])
-
+        surrogate_time_per_seed_directory  = parse_directory([surrogate_time_directory, 'Dataset' +str(task_id)])
+        objective_time_per_seed_directory  = parse_directory([objective_time_directory, 'Dataset' +str(task_id)])
+        acquisition_time_per_seed_directory  = parse_directory([acquisition_time_directory, 'Dataset' +str(task_id)])
 
         for seed in n_seeds:
 
             score_per_optimizer_directory = parse_directory([score_per_seed_directory,'Seed' + str(seed) ])
-            time_per_optimizer_directory = parse_directory([time_per_seed_directory,'Seed' + str(seed) ])
+            surrogate_time_per_optimizer_directory = parse_directory([surrogate_time_per_seed_directory,'Seed' + str(seed) ])
+            objective_time_per_optimizer_directory = parse_directory([objective_time_per_seed_directory,'Seed' + str(seed) ])
+            acquisition_time_per_optimizer_directory = parse_directory([acquisition_time_per_seed_directory,'Seed' + str(seed) ])
+
 
             for opt in optimizers_list: # tuple opt[0] == name of opt , opt[1] == base_class of opt.
                 benchmark_ = benchmark_class(task_id=task_id,rng=seed,data_repo=data_repo)
@@ -93,14 +102,17 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 y_evaluations = Optimization.fX
 
                 #Change this.
-                time_evaluations = Optimization.surrogate_time
-
-                print(time_evaluations)
+                surrogate_time_evaluations = Optimization.surrogate_time
+                objective_time_evaluations= Optimization.objective_time
+                acquisition_time_evaluations = Optimization.acquisition_time
+                
 
                 if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
-                        Path(time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
+                        Path(surrogate_time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
+                        Path(objective_time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
+                        Path(acquisition_time_per_optimizer_directory).mkdir(parents=True, exist_ok=False)
                     except FileExistsError:
                         print("Folder is already there")
                         """"""
@@ -109,9 +121,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         """"""
                         #print("Folder was created")
                     pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt[0]+csv_postfix ]))
-                    pd.DataFrame(time_evaluations).to_csv( parse_directory([ time_per_optimizer_directory, opt[0]+csv_postfix ]))
-                
-
+                    pd.DataFrame(surrogate_time_evaluations).to_csv( parse_directory([ surrogate_time_per_optimizer_directory, opt[0]+csv_postfix ]))
+                    pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt[0]+csv_postfix ]))
+                    pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt[0]+csv_postfix ]))
         # Just in case we want less.
         curr_dataset+=1
         if curr_dataset >= n_datasets:
@@ -122,7 +134,7 @@ def get_openml_data():
     return benchmark_suite.tasks
 
 def get_jad_data():
-    return [1114,865,852,851,850,842]
+    return [1114,865,852,851,850,842,839,847,855,857,861,863,969,1048]
 
 if __name__ == '__main__':
 

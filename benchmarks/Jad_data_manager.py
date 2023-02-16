@@ -81,15 +81,18 @@ class JadDataManager(DataManager):
                              f'{data_set_path}')
             return
 
+
+        #Should recheck
+        try:
+            Path(data_set_path).mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            print("Folder is already there")
         # If the data is not available, download it.
         self.__download_data(file_path = data_set_path,verbose=verbose)
 
 
 
-        try:
-            Path(data_set_path).mkdir(parents=True, exist_ok=False)
-        except FileExistsError:
-            print("Folder is already there")
+        
 
         # Save the preprocessed splits to file for later usage.
         self.generate_openml_splits(data_set_path)
@@ -188,12 +191,14 @@ class JadDataManager(DataManager):
 
         # preprocessor to handle missing values, categorical columns encodings,
         # and scaling numeric columns
+
+        #,
         self.preprocessor = make_pipeline(
             ColumnTransformer([
                 (
                     "cat",
                     make_pipeline(SimpleImputer(strategy="most_frequent"),
-                                  OneHotEncoder(sparse=False, handle_unknown="ignore")),
+                    OneHotEncoder(sparse=False, handle_unknown="ignore")),
                     cat_idx,
                 ),
                 (

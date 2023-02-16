@@ -157,12 +157,15 @@ class OpenMLDataManager(DataManager):
 
         # preprocessor to handle missing values, categorical columns encodings,
         # and scaling numeric columns
+
+        #
         self.preprocessor = make_pipeline(
             ColumnTransformer([
                 (
                     "cat",
                     make_pipeline(SimpleImputer(strategy="most_frequent"),
-                                  OneHotEncoder(sparse=False, handle_unknown="ignore")),
+                    OneHotEncoder(sparse=False, handle_unknown="ignore")
+                    ),
                     cat_idx.tolist(),
                 ),
                 (
