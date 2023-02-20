@@ -51,6 +51,12 @@ class XGBoostBenchmark(MLBenchmark):
             ),
             CS.UniformFloatHyperparameter(
                 'subsample', lower=0.1, upper=1, default_value=1, log=False
+            ),
+            CS.UniformFloatHyperparameter('min_child_weight', lower=1., upper=2**7., default_value=1., log=True),
+            CS.UniformFloatHyperparameter('colsample_bylevel', lower=0.01, upper=1., default_value=1.,log=False),
+            CS.UniformFloatHyperparameter('reg_alpha', lower=2**-10, upper=2**10, default_value=1, log=True),
+            CS.UniformIntegerHyperparameter(
+                'n_estimators', lower=50, upper=2000, default_value=2000, log=False
             )
         ])
         return cs
@@ -68,7 +74,6 @@ class XGBoostBenchmark(MLBenchmark):
 
         extra_args = dict(
             booster="gbtree",
-            n_estimators=100,
             objective="binary:logistic",
             random_state=rng,
             eval_metric = ['auc'],

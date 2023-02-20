@@ -46,7 +46,9 @@ class JadDataManager(DataManager):
             #data_path = config_file.data_dir / "OpenML"
         else:
             self.data_path = data_path
-        self.Client = ApiClient('https://exp.jadbio.com:4443', 'pkatsogr@gmail.com', '22222222')
+        
+        
+        
         
         #self.data_path = Path(data_path)
         #openml.config.set_cache_directory(str(self.data_path))
@@ -139,6 +141,7 @@ class JadDataManager(DataManager):
     def __download_data(self,file_path:str, verbose: bool):
         assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
+        self.Client = ApiClient('https://exp.jadbio.com:4443', 'pkatsogr@gmail.com', '22222222')
         tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
         self.Client.project.download_dataset(self.task_id,tmp_file_loc)
         dataset = pd.read_csv(tmp_file_loc)

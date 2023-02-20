@@ -148,11 +148,11 @@ data_repo = 'Jad'
 n_seeds=  3
 
 config_list = [ dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')]
-
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Metric', classifier = 'XGB', result_space = 'Single_Space_Results')
+                ]
 config_results =  [get_results_per_optimizer(config) for config in config_list]
 
 
@@ -161,30 +161,30 @@ config_results =  [get_results_per_optimizer(config) for config in config_list]
 
 
 surrogate_config_list = [dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Surrogate_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ]
 
 surrogate_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in surrogate_config_list]
 
 
 objective_config_list = [dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Objective_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ]
 
 objective_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in objective_config_list]
 
 
 Acquisition_config_list = [dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RF',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-               ,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+               #,dict( data_repo = data_repo, seeds = n_seeds , optimizer_type = 'GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'RS',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_RF',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
-                ,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
+                #,dict(data_repo = data_repo, seeds = n_seeds , optimizer_type = 'HEBO_GP',results_type = 'Acquisition_Time', classifier = 'XGB', result_space = 'Single_Space_Results')
                 ]
 
 acquisition_config_results =  [get_results_per_optimizer(config,accumulate=False) for config in Acquisition_config_list]
@@ -256,18 +256,16 @@ for dataset in datasets_list_run:
         ax2.plot(x,surrogate_means,opt_colors[opt],label=opt)
         ax2.fill_between(x, surrogate_confidence.iloc[0,:], surrogate_confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
-        print(opt,surrogate_means)
-
         if config_result_idx == 0:
             objective_confidence,objective_means = create_plot_per_optimizer(objective_config_results[config_result_idx][dataset])
             ax2.plot(x,objective_means,'orange',label='Mean-Objective Time')
             acquisition_confidence,acquisition_means = create_plot_per_optimizer(acquisition_config_results[config_result_idx][dataset])
             ax2.plot(x,acquisition_means,'yellow',label='Mean-acquisition Time')
 
-    x_ticks = [i for i in range(eval_range) if i%10==0]
+    x_ticks = [i for i in range(eval_range) if i%50==0]
     plt.xticks(x_ticks,x_ticks)
     plt.xlim([1,eval_range])
-    plt.axvline(x = 20, color = 'black', linestyle = '--',label='Initial_Evaluations')
+    plt.axvline(x = 50, color = 'black', linestyle = '--',label='Initial_Evaluations')
     fig.suptitle(title_name + " /w classifier "  + config_list[0]['classifier'])
     ax1.set_ylabel('(1-AUC)')
     ax2.set_ylabel('Time in seconds')

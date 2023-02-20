@@ -54,15 +54,16 @@ def get_open_ml_data_list():
 
 #A simple fetcher of OpenML data descriptions.
 def get_jad_data_list():
-    min_samples = 50
-    max_samples = 5000
-    min_features = 10
-    max_features = 100
+    min_samples = 10
+    max_samples = 5000000
+    min_features = 1
+    max_features = 1000000
     analysis_type = 'CLASSIFICATION'
 
     # # # Select dataset # # #
     # Initialise client
     jad = ApiClient('https://exp.jadbio.com:4443', 'pkatsogr@gmail.com', '22222222')
+
     project = jad.project.find_project('jad_research')
     # Load dataset list
     dataset_list = jad.project.find_project_datasets(project)

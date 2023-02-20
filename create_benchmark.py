@@ -133,7 +133,10 @@ def get_openml_data():
 
 #
 def get_jad_data():
-    return [1114,865,852,851,850,842,839,847,855,857,861,863,969,1048]
+    # Jad Data
+    # Trash == No improvement.
+    # [855,857,861,863,865,969]
+    return [1114,852,851,850,842,839,847,1048]
 
 if __name__ == '__main__':
 
@@ -171,7 +174,8 @@ if __name__ == '__main__':
     #('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)
     #('HEBO_RF',Bayesian_Optimization), ('HEBO_GP',Bayesian_Optimization)
     # ('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('GP',Bayesian_Optimization),('RS',Random_Search),
-    run_benchmark_total([('HEBO_GP',Bayesian_Optimization),('HEBO_RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('RF',Bayesian_Optimization),('RS',Random_Search)],xgb_bench_config)
+    # ('HEBO_GP',Bayesian_Optimization), ('GP',Bayesian_Optimization),('RS',Random_Search)
+    run_benchmark_total([('HEBO_RF',Bayesian_Optimization),('RF',Bayesian_Optimization)],xgb_bench_config)
 
 
 
