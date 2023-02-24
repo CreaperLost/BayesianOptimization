@@ -158,7 +158,7 @@ class HEBO(AbstractOptimizer):
             rec = opt.optimize(initial_suggest = best_x, fix_input = fix_input).drop_duplicates()
             rec = rec[self.check_unique(rec)]
 
-            cnt = 0
+            cnt = 0 
             while rec.shape[0] < n_suggestions:
                 rand_rec = self.quasi_sample(n_suggestions - rec.shape[0], fix_input)
                 rand_rec = rand_rec[self.check_unique(rand_rec)]
@@ -166,7 +166,7 @@ class HEBO(AbstractOptimizer):
                 cnt +=  1
                 if cnt > 3:
                     # sometimes the design space is so small that duplicated sampling is unavoidable
-                    break 
+                    break  
             if rec.shape[0] < n_suggestions:
                 rand_rec = self.quasi_sample(n_suggestions - rec.shape[0], fix_input)
                 rec      = rec.append(rand_rec, ignore_index = True)
@@ -191,7 +191,7 @@ class HEBO(AbstractOptimizer):
     def observe(self, X, y):
         """Feed an observation back.
 
-        Parameters
+        Parameters 
         ----------
         X : pandas DataFrame
             Places where the objective function has already been evaluated.

@@ -59,9 +59,13 @@ class BaseAcquisitionFunction(object):
         if len(x.shape) == 1:
             x = x[np.newaxis, :]
         acq = self.compute(x, **kwargs)
+
+        
+        """print(acq)
+        print(np.isnan(acq))
         if np.any(np.isnan(acq)):
             idx = np.where(np.isnan(acq))[0]
-            acq[idx, :] = -np.finfo(float).max
+            acq[idx, :] = -np.finfo(float).max"""
 
         return acq
 

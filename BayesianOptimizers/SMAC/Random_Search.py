@@ -30,6 +30,7 @@ class Random_Search():
         self.surrogate_time = np.array([])
         self.objective_time = np.array([])
         self.acquisition_time = np.array([])
+        self.total_time = np.array([])
 
         self.inc_score = np.inf
         self.n_evals = 0
@@ -52,6 +53,9 @@ class Random_Search():
             if self.verbose and fX_next[0] < self.inc_score:
                 self.inc_score = fX_next[0]
                 print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+
+            end_time_total =  time() - start_time
+            self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
 
         return self.inc_score
         

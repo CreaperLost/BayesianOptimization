@@ -53,7 +53,7 @@ class  HEBO_RF(BaseModel):
 
 
 
-
+ 
         tmp_y = y.copy()
 
         try:
@@ -115,3 +115,6 @@ class  HEBO_RF(BaseModel):
         return mean.reshape([-1,1]), var.reshape([-1,1]) 
 
 
+    @property
+    def noise(self):
+        return torch.FloatTensor(self.est_noise)

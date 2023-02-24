@@ -2,7 +2,7 @@
 import numpy as np
 
 
-from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel
+from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel,get_types
 from pyrfr import regression
 from typing import List, Optional, Tuple
 from ConfigSpace import ConfigurationSpace
@@ -88,7 +88,7 @@ class RandomForest(BaseModel):
         data : regression.default_data_container
             The filled data container that pyrfr can interpret
         """
-        self.types, self.bounds = self.get_types(self.config_space, None)
+        self.types, self.bounds = get_types(self.config_space, None)
         # retrieve the types and the bounds from the ConfigSpace
         data = regression.default_data_container(X.shape[1])
 

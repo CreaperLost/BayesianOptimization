@@ -12,17 +12,16 @@ from typing import List
 import typing
 
 from acquisition_functions.ei_mine import EI
-
+from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-
+from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
-
 
 import pandas as pd
 
@@ -69,7 +68,7 @@ class Bayesian_Optimization:
 
         # Very basic input checks
         """assert lb.ndim == 1 and ub.ndim == 1
-        assert len(lb) == len(ub)
+        assert len(lb) == len(ub) 
         assert np.all(ub > lb)"""
         assert max_evals > 0 and isinstance(max_evals, int)
         assert n_init > 0 and isinstance(n_init, int)
@@ -150,6 +149,7 @@ class Bayesian_Optimization:
         self.surrogate_time = np.array([])
         self.acquisition_time = np.array([])
         self.objective_time = np.array([])
+        self.total_time = np.array([])
 
         #Number of current evaluations!
         self.n_evals = 0 
@@ -162,18 +162,32 @@ class Bayesian_Optimization:
             self.model = RandomForest(self.config_space,rng=random_seed)
         elif model =='GP':
             self.model = GaussianProcess(self.config_space,seed=random_seed)
-        elif model =='HEBO_RF':
+        elif 'HEBO_RF' in model:
             self.model = HEBO_RF(self.config_space,rng=random_seed)
-        elif model =='HEBO_GP':
+        elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
 
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
+            if maximizer == 'Sobol':
+                self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+        elif acq_funct == "Multi5" or acq_funct == "Multi10":
+            self.acquisition_function = MACE(self.model)
+            self.maximize_func  = EvolutionOpt(self.config_space,self.acquisition_function,pop=100,iters=100,change_to_vector = self.configspace_to_vector)
+
+
+
+        #Check batch_size
+        if acq_funct == 'Multi5':
+            self.batch_size = 5
+        elif acq_funct == 'Multi10':
+            self.batch_size = 10
+        else:
+            self.batch_size = 1
         
-        if maximizer == 'Sobol':
-            self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
-        
+
+
 
 
     def vector_to_configspace(self, vector: np.array,from_normalized = True) -> ConfigurationSpace:
@@ -309,54 +323,45 @@ class Bayesian_Optimization:
         """
         return np.array([config.get_array() for config in configs], dtype=np.float64)
 
-    def run_initial_configurations(self, eval=True, **kwargs):
+    def run_initial_configurations(self):
         '''Creates new population of 'pop_size' and evaluates individuals.
         '''
+
+
+
         initial_configurations = self.load_initial_design_configurations(self.n_init)
         objective_value_per_configuration = np.array([np.inf for i in range(self.n_init)])
 
-        traj = []
-        runtime = []
-        history = []
-
-        if not eval:
-            return traj, runtime, history
 
         for i in range(self.n_init):
+            start_time_total = time.time()
+            
             #get the initial configuration
             
             config = self.vector_to_configspace( initial_configurations[i])
             
             #Run the objective function on it.
             start_time = time.time()
-            res = self.f(config, **kwargs)
+            res = self.f(config)
             end_time=time.time() - start_time
             self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
-
 
             #Get the value and cost from objective
             #This is the validation loss averaged over all folds.
             objective_value_per_configuration[i] = res['function_value']
-            #Cost of fiting a model and evaluation of the folds.
-            cost = res["cost"]
 
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
 
 
 
-            info = res["info"] if "info" in res else dict()
             # If this is better than the overall best score then replace.
             if objective_value_per_configuration[i] < self.inc_score:
                 self.inc_score = objective_value_per_configuration[i]
                 self.inc_config = config
-            #Add the new best score
-            traj.append(self.inc_score)
-            #Add to runtime
-            runtime.append(cost)
-            #Add the action to history.
-            
-            history.append((initial_configurations[i].tolist(), float(objective_value_per_configuration[i]), info))
+
+            end_time_total =  time.time() - start_time_total
+            self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
 
         #Save the new runs to both X and fX
         self.X = deepcopy(initial_configurations)
@@ -364,7 +369,6 @@ class Bayesian_Optimization:
         #change the n_evals.
         self.n_evals += self.n_init
 
-        return traj, runtime, history
 
 
     def run(self):
@@ -375,7 +379,7 @@ class Bayesian_Optimization:
         # Main BO loop
         while self.n_evals < self.max_evals:
             
-
+            start_time_total = time.time()
             # Warp inputs
             X = self.X  
             # Standardize values
@@ -392,12 +396,49 @@ class Bayesian_Optimization:
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
             #If we want more candidates we need to remove [0]
-            
-            
             self.acquisition_function.update(self.model)
 
+
+            #Hm.
             start_time = time.time()
-            X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+            
+            
+            if self.batch_size == 1:
+                X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+            else:
+                X_next = self.maximize_func.maximize(initial_suggest = self.inc_config,eta = self.inc_score)
+                results= pd.DataFrame(X_next).drop_duplicates()
+                
+                # Just add some random in here.
+                if results.shape[0] < self.batch_size:
+                    init_design_def_kwargs = {
+                    "cs": self.config_space,  # type: ignore[attr-defined] # noqa F821
+                    "traj_logger": None,
+                    "rng": np.random.randint(int(1e6)) ,
+                    "ta_run_limit": None,  # type: ignore[attr-defined] # noqa F821
+                    "configs": None,
+                    "n_configs_x_params": 0,
+                    "max_config_fracs": 0.0,
+                    "init_budget": self.batch_size - results.shape[0]
+                    } 
+                    #get some random configurations
+                    r_configs = SobolDesign(**init_design_def_kwargs)._select_configurations()
+                    r_cfgs = [self.configspace_to_vector(cfg) for cfg in r_configs]
+                    results = results.append(r_cfgs,ignore_index=True)
+
+                select_id = np.random.choice(results.shape[0], self.batch_size, replace = False).tolist()
+                
+                mu, var = self.model.predict(results)
+                # smallest mean and highest variance points
+                best_pred_id = np.argmin(mu)
+                best_unce_id = np.argmax(var)
+                #print('Mu min, max var',min(mu),max(var))
+                #Add them to the first and second position.
+                if best_unce_id not in select_id:
+                    select_id[0]= best_unce_id
+                if best_pred_id not in select_id:
+                    select_id[1]= best_pred_id
+                x_next_multiple = results.iloc[select_id].values.tolist()
             end_time=time.time() - start_time
 
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
@@ -405,31 +446,63 @@ class Bayesian_Optimization:
             """print('The next point selected by the AF is: ' , X_next )
             print('The acquisition value is ' , acquistion_value)"""
 
+            #convert configuration.
+            if self.batch_size ==1 :
+                config = self.vector_to_configspace( X_next )
+            else:
+                configs = [self.vector_to_configspace( config ) for config in x_next_multiple]
 
-            config = self.vector_to_configspace( X_next )
 
+            #Run objective
             start_time = time.time()
-            res = self.f(config)
+            if self.batch_size ==1 :
+                res = self.f(config)
+            else:
+                results = []
+                for config in configs:
+                    results.append(self.f(config))
             end_time=time.time() - start_time
-            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
             
-            fX_next = [res['function_value']]
+            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+            #If we got multiple batches.
+            self.n_evals+=self.batch_size
 
-            self.n_evals+=1
 
-            if self.verbose and fX_next[0] < self.inc_score:
-                self.inc_score = fX_next[0]
-                self.inc_config = config
-                print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+
+            if self.batch_size ==1:
+                fX_next = [res['function_value']]
+
+                if fX_next[0] < self.inc_score:
+                    self.inc_score = fX_next[0]
+                    self.inc_config = config
+                    if self.verbose:
+                        print(f"{self.n_evals}) New best: {self.inc_score:.4}")
                 #sys.stdout.flush()
 
-            self.X = np.vstack((self.X, deepcopy(X_next)))
-            
+                self.X = np.vstack((self.X, deepcopy(X_next)))
+                self.fX = np.concatenate((self.fX, fX_next))
+
+            else:
+                for res in results:
+                    fX_next = [res['function_value']]
+                    if fX_next[0] < self.inc_score:
+                        self.inc_score = fX_next[0]
+                        self.inc_config = config
+                        if self.verbose:
+                            print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+                #Add all feature points
+                self.X = np.vstack((self.X, deepcopy(x_next_multiple)))
+                #Add all result points.
+                res_points = [res['function_value'] for res in results]
+                self.fX = np.concatenate((self.fX, res_points))
+                    
+
             #self.fX = np.vstack((self.fX, deepcopy(fX_next)))
-            self.fX = np.concatenate((self.fX, fX_next))
+            #self.fX = np.concatenate((self.fX, fX_next))
 
 
-
+            end_time_total =  time.time() - start_time_total
+            self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
         return self.inc_score
 
 

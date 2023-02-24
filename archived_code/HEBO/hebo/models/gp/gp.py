@@ -138,7 +138,7 @@ class GP(BaseModel):
 
     def sample_f(self):
         raise NotImplementedError('Thompson sampling is not supported for GP, use `sample_y` instead')
-
+ 
     @property
     def noise(self):
         return (self.gp.likelihood.noise * self.yscaler.std**2).view(self.num_out).detach()

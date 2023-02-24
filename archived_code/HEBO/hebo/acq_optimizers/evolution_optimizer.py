@@ -18,7 +18,7 @@ from pymoo.core.problem import Problem
 from pymoo.config import Config
 Config.show_compile_hint = False
 
-from ..design_space.design_space import DesignSpace
+from ..design_space.design_space import DesignSpace 
 from ..acquisitions.acq import Acquisition
 
 class BOProblem(Problem):
@@ -60,6 +60,7 @@ class EvolutionOpt:
         self.space      = design_space
         self.es         = es 
         self.acq        = acq
+        self.n_candidates = conf.get('n_cand',10000)
         self.pop        = conf.get('pop', 100)
         self.iter       = conf.get('iters',500)
         self.verbose    = conf.get('verbose', False)
@@ -105,7 +106,7 @@ class EvolutionOpt:
     def get_crossover(self):
         mask = []
         for name in (self.space.numeric_names + self.space.enum_names):
-            if self.space.paras[name].is_discrete_after_transform:
+            if self.space.paras[name].is_discrete_after_transform: 
                 mask.append('int')
             else:
                 mask.append('real')

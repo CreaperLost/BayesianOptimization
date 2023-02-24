@@ -8,7 +8,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Kernel
 
 from ConfigSpace import ConfigurationSpace
-from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel
+from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel,get_types
 from BayesianOptimizers.SMAC.utils import Prior,SoftTopHatPrior,TophatPrior
 import sklearn.gaussian_process
 from sklearn.gaussian_process.kernels import Kernel, KernelOperator
@@ -18,6 +18,7 @@ from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
     Matern,
     WhiteKernel,)
 from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
+
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
 __license__ = "3-clause BSD"
@@ -79,7 +80,7 @@ class GaussianProcess(BaseModel):
                         have to pass [3, 0]. Note that we count starting from 0.
         bounds : List[Tuple[float, float]]
                         bounds of input dimensions: (lower, uppper) for continuous dims; (n_cat, np.nan) for categorical dims"""
-        self.types, self.bounds = self.get_types(self.config_space, None)
+        self.types, self.bounds = get_types(self.config_space, None)
 
         # After getting the types and bounds specify the desired kernels according to the types and the bounds!
         self.kernel = self.kernel_selector(self.types)

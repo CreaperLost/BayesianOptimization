@@ -37,7 +37,7 @@ class SobolDesign(InitialDesign):
         """
         params = self.cs.get_hyperparameters()
 
-        constants = 0
+        constants = 0 
         for p in params:
             if isinstance(p, Constant):
                 constants += 1

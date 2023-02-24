@@ -73,7 +73,7 @@ class HEBO_GP(BaseModel):
         X = self._impute_inactive(X)
         if self.normalize_y:
             y = self._normalize_y(y)
-
+ 
 
         y = y.reshape(-1,1)
 
@@ -115,4 +115,4 @@ class HEBO_GP(BaseModel):
     @property
     def noise(self):
         var_normalized = self.gp.likelihood.variance[0]
-        return (var_normalized * self.yscaler.std**2).view(self.num_out)
+        return torch.FloatTensor((var_normalized * self.std_y_**2).reshape(1,1))

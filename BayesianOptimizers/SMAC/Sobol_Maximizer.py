@@ -26,7 +26,7 @@ class SobolMaximizer():
 
     def maximize(self,configspace_to_vector,eta):
         """
-        Maximizes the given acquisition function.
+        Maximizes the given acquisition function. 
 
         Returns
         -------
@@ -37,7 +37,7 @@ class SobolMaximizer():
         """
 
         #Draw a Sobolev sequence in [lb, ub]
-        seed = np.random.randint(int(1e6))
+        seed = np.random.randint(int(1e6)) 
 
         init_design_def_kwargs = {
             "cs": self.config_space,  # type: ignore[attr-defined] # noqa F821

@@ -128,14 +128,48 @@ class JadDataManager(DataManager):
             return False
         return True
 
+
+    def find_categorical_columns(self,X):
+
+        cat_ind_bool  = [X.columns.get_loc(col) for col in X.columns.tolist() if len(np.unique(X[[col]])) <= 2]
+        cat_ind_cat  = [X.columns.get_loc(col) for col in X.select_dtypes(include=['object']).columns.tolist() ]
+        cat_indx =list(set(cat_ind_bool + cat_ind_cat))
+
+        all_col_loc = [X.columns.get_loc(col) for col in X.columns.tolist()]
+
+        continuous_indx = [x for x in all_col_loc if x not in cat_indx]
+
+        return cat_indx,continuous_indx
+
+    def bool_dtypes_to_int(self,X):
+        X_new = X.copy()
+
+        bool_idx  = [col for col in X.select_dtypes(include=['bool']).columns.tolist() ]
+
+        X_new[bool_idx] = X_new[bool_idx].astype(int)
+
+        return X_new
+
     def preprocess_data(self,dataset):
         df = dataset.copy()
         df.drop('gr.gnosisda-1',axis=1,inplace=True)
         X = df.drop(['target'],axis=1)
         y = df['target']
         #Categorical_ind is experimental
-        categorical_ind = [X.columns.get_loc(col) for col in X.select_dtypes(include=['object']).columns.tolist() ]
-        continuous_ind  = [X.columns.get_loc(col) for col in X.select_dtypes(exclude=['object']).columns.tolist() ]
+        #Filter by unique.
+        #set a threshold
+
+        
+        #categorical_ind = [X.columns.get_loc(col) for col in X.columns.tolist() if len(np.unique(X[[col]])) <= threshold]
+        #continuous_ind  = [X.columns.get_loc(col) for col in X.select_dtypes(exclude=['object']).columns.tolist() ]
+        #continuous_ind  = [X.columns.get_loc(col) for col in X.columns.tolist() if len(np.unique(X[[col]])) > threshold]
+
+
+        categorical_ind,continuous_ind = self.find_categorical_columns(X)
+
+
+        X = self.bool_dtypes_to_int(X)
+
         return X,y,categorical_ind,continuous_ind
 
     def __download_data(self,file_path:str, verbose: bool):

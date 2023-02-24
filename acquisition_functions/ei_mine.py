@@ -5,7 +5,7 @@ from acquisition_functions.base_acquisition import BaseAcquisitionFunction
 
 
 
-
+ 
 class EI(BaseAcquisitionFunction):
 
     def __init__(self,model, par=0.0):
