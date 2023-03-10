@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import openml
 import sys
 from dataset_utils import filter_datasets
-
+import itertools
 sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
@@ -135,19 +135,21 @@ opt_colors= {
     'RF':'blue',
     'GP':'green',
     'HEBO_RF':'black',
-    'HEBO_GP':'purple'
+    'HEBO_GP':'purple',
+    'HEBO_RF5':'orange',
+    'HEBO_RF10':'grey'
 }
 
-data_repo = 'Jad'
-n_seeds=  3
-optimizers = ['HEBO_RF','GP','RS'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
-time_plot = True
-double_plot = False
 
 
-
-
+#Essential after initial_configs propagate the cost by the corresponding step.
+# For batch acquisition function
+def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
+    l_eval = time_evals.to_list()
+    extra_l=list(itertools.chain.from_iterable(itertools.repeat(x, step) for x in l_eval[initial_config:]))
+    full_eval=l_eval[:initial_config] + extra_l
+    print(full_eval)
+    return full_eval
 
 def plot_per_dataset(config):
     clf_name = config['classifier']
@@ -204,7 +206,7 @@ def plot_per_dataset(config):
         #for each configuration in the configurations do:
         #At this point we essentially parse throught the optimizers.
         for config_result_idx in range(len(configuration_results[metric_list[0]])):
-            if time_plot_bool == True:
+            if time_plot_bool == 'True':
 
                 #The configuration list of results for the specific metric
                 config_list_score = configuration_results['Metric']
@@ -217,11 +219,16 @@ def plot_per_dataset(config):
                 #Get the optimizers.
                 opt = config_list_per_optimizer[config_result_idx]['optimizer_type']
                 
+                
+
                 #Get the confidence and means for the specific dataset.
                 confidence,means = create_plot_per_optimizer(config_list_score[config_result_idx][dataset])
                 #Get the confidence in time and the mean metric for the specific dataset
                 time_confidence,time_means = create_plot_per_optimizer(config_list_time[config_result_idx][dataset])
-
+                if opt == 'HEBO_RF5':
+                    time_means= propagate_batch(time_means,5,interval)
+                elif opt == 'HEBO_RF10':
+                    time_means= propagate_batch(time_means,10,interval)
                 x = config_list_time[config_result_idx][dataset]
                 ax1.plot(time_means,means,opt_colors[opt],label=opt)
                 ax1.fill_between(time_means, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
@@ -264,11 +271,12 @@ def plot_per_dataset(config):
                             ax2.plot(x,means,'yellow',label='Mean-Acquisition Time')
                         #Plot the mean and the confidence on axis 2.
                         elif metric_measured == 'Surrogate_Time':
+                            print(x,means)
                             ax2.plot(x,means,opt_colors[opt],label=opt)
                             ax2.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
                 
                 #Initial configurations.    
-        if time_plot_bool == False:
+        if time_plot_bool == 'False':
             x_ticks = [i for i in range(eval_range) if i%interval==0]
             plt.xticks(x_ticks,x_ticks)
             plt.xlim([1,eval_range])
@@ -286,9 +294,9 @@ def plot_per_dataset(config):
                 
 
         main_directory =  getcwd().replace('\\Dataset_Scripts','')
-        if time_plot_bool == True:
+        if time_plot_bool == 'True':
             wanted_directory_attributes = [main_directory,'Figures',dataset,'TimePlot']
-        elif time_plot_bool == False:
+        elif time_plot_bool == 'False':
             if double_plot_bool == False:
                wanted_directory_attributes = [main_directory,'Figures',dataset,'SingleEvalPlot'] 
             else:
@@ -363,7 +371,6 @@ def plot_average(config):
 
 
     for config_result_idx in range(len(configuration_results['Metric'])):
-        print( total_config_dictionary['Metric'][config_result_idx])
         means_total = []
         means_time_total = []
         for dataset in datasets_list_run:
@@ -382,24 +389,31 @@ def plot_average(config):
         
         confidence_normalized,means_normalized = pd.DataFrame(np.vstack((a,b))) , means_total_Dataframe.mean(axis=1)
 
-        if time_plot == False:
+        if time_plot_bool == 'False':
             #plot each means
             eval_range = means.shape[0]
             x = [i+1 for i in range(eval_range)]
-        else:
+        elif time_plot_bool == 'True':
             time_mean = pd.concat(means_time_total, axis = 1).mean(axis=1)
             x = time_mean
+
+            print(opt, x)
+
+            if opt == 'HEBO_RF5':
+                x= propagate_batch(x,5,interval)
+            elif opt == 'HEBO_RF10':
+                x= propagate_batch(x,10,interval)
 
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
-    if time_plot == False:
+    if time_plot_bool == 'False':
         x_ticks = [i for i in range(eval_range) if i%interval==0]
         plt.xticks(x_ticks,x_ticks)
         plt.xlim([1,eval_range])
         plt.axvline(x = interval, color = 'black', linestyle = '--',label='Initial_Evaluations')
         plt.xlabel('Number of objective evals.')
-    else:
+    elif time_plot_bool =='True':
         plt.xlim(left=0)
         plt.xlabel('Average time in seconds')
 
@@ -409,10 +423,12 @@ def plot_average(config):
     plt.legend()
     main_directory =  getcwd().replace('\\Dataset_Scripts','')
 
-    if time_plot_bool == True:
+    if time_plot_bool == 'True':
         wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','TimePlot']
-    elif time_plot_bool == False:
+    elif time_plot_bool == 'False':
         wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','SingleEvalPlot'] 
+    elif time_plot_bool =='Partial':
+        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','PartialEvalPlot'] 
             
     results_directory = parse_directory(wanted_directory_attributes)
     try:
@@ -423,11 +439,23 @@ def plot_average(config):
         print("Folder was created")
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
+
+
+data_repo = 'Jad'
+n_seeds=  3
+optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+time_plot = True
+double_plot = False
+
+
+
 #How many initial configurations we have run.
 interval = 20
-for bool_flag in [False,True]:
+
+for bool_flag in ['False','True']:
     time_plot = bool_flag
-    double_plot = not bool_flag
+    double_plot = False
 
     general_config = {
     'classifier':'XGB',
@@ -444,7 +472,7 @@ for bool_flag in [False,True]:
     plot_per_dataset(general_config)
     plt.clf()
 
-for bool_flag in [False,True]:
+for bool_flag in ['False','True']:
     time_plot = bool_flag
     double_plot = False
 
@@ -465,5 +493,24 @@ for bool_flag in [False,True]:
     plt.clf()
 
 
+optimizers = ['HEBO_RF','RS','HEBO_RF5','HEBO_RF10','GP'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
 
+for bool_flag in ['False','True']:
+    time_plot = bool_flag
+    double_plot = False
 
+    general_config = {
+    'classifier':'XGB',
+    'result_space':'Single_Space_Results',
+    'optimizers' : optimizers,
+    'n_seeds' : n_seeds,
+    'data_repo':data_repo,
+    'double_plot':double_plot,
+    'metrics': metrics,
+    'time_plot':time_plot,
+    }
+  
+
+    #plot_per_dataset(general_config)
+    plot_average(general_config)
+    plt.clf()

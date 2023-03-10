@@ -16,6 +16,7 @@ from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
+from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
@@ -155,7 +156,10 @@ class Bayesian_Optimization:
         self.n_evals = 0 
 
         # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
-        self.n_cand = min(100 * self.dim, 10000)
+        if 'ACQ10000' in model:
+            self.n_cand = 10000
+        else:
+            self.n_cand = min(100 * self.dim, 10000)
 
 
         if model == 'RF':
@@ -167,11 +171,15 @@ class Bayesian_Optimization:
         elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
 
+        
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Random':
+                self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+
         elif acq_funct == "Multi5" or acq_funct == "Multi10":
             self.acquisition_function = MACE(self.model)
             self.maximize_func  = EvolutionOpt(self.config_space,self.acquisition_function,pop=100,iters=100,change_to_vector = self.configspace_to_vector)

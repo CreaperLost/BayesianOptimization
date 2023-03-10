@@ -26,3 +26,4 @@ class RandomConfigurations(InitialDesign):
         for config in configs:
             config.origin = "Random initial design."
         return configs
+ 

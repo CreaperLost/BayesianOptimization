@@ -6,6 +6,9 @@ from benchmarks.RandomForestBenchmark import RandomForestBenchmark
 from pathlib import Path
 from BayesianOptimizers.SMAC.smac_base import Bayesian_Optimization
 from BayesianOptimizers.SMAC.Random_Search import Random_Search
+from BayesianOptimizers.SMAC.SobolSearch import Sobol_Search
+from BayesianOptimizers.SMAC.HyperCubeSearch import HyperCubeSearch
+
 import os
 import sys
 sys.path.insert(0, '..')
@@ -92,13 +95,17 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
 
-                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF']
+                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_ACQ10000']
+                random_opt = ['HEBO_RF_RANDOM','HEBO_RF_RANDOMACQ10000']
 
-                if opt[0] == 'RS':
+                if opt[0] == 'RS' or opt[0] == 'Sobol ' or opt[0] =='HyperCube':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 elif opt[0] in simple_opt:
                     Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
+                elif opt[0] in random_opt:
+                    Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Random')
                 elif opt[0] == 'HEBO_RF5':
                     Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals,acq_funct='Multi5', batch_size=5 ,verbose=True,random_seed=seed)
@@ -145,7 +152,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
 def get_openml_data():
     benchmark_suite = openml.study.get_suite('OpenML-CC18')
-    return benchmark_suite.tasks
+    #Task from low to high sample. :)
+    tasks =  [167120,167121,3573,146825,146195,167124,7592,219,14965,167119,9977,6,14952,32,3904,14970,14969,3481,2074,9985,28,125922,9960,9952,167141,146820,43,3021,9910,167125,3,45,167140,9976,9978,146822,3917,12,14,16,18,22,146824,146817,146821,9964,3903,23,3902,10093,3918,9981,146800,9957,31,3022,49,53,3549,3560,37,10101,2079,15,29,11,9971,9946,14954,146819,3913,125920]
+    tasks.reverse()
+    #return benchmark_suite.tasks
+    return tasks
 
 
 #
@@ -155,13 +166,12 @@ def get_jad_data():
     # small data archive [855,857,861,863,865,969]
     # big data archive [929]
 
-    #,
+    #, 
     
-    small_data = [1114,852,851,850,842,839,847,1048]
-    big_data = [858,843,881,890,883,1075,866]
 
-    medium_data = [1114,852,851,850,842,839,847,1048,858,843,844,853,854,859,883,957,969,866,1075,1188]
-    return medium_data
+    #medium_data = [1114,851,850,842,839,847,858,843,844,853,854,859,883,957,969,866,1075,890,1004,985,929,881]
+    interesting_Data = [851,842,1114,839,847,843,883,850,866]
+    return interesting_Data
 
 if __name__ == '__main__':
 
@@ -175,28 +185,7 @@ if __name__ == '__main__':
         }
     }
 
-    type_of_bench = 'Single_Space_Results'
-    n_datasets =  50
-    n_init = 20
-    max_evals = 200
-    repo = 'Jad'  #Jad
-    seeds = [1,2,3] # ,2,3,4,5 
 
-
-    
-    #XGBoost Benchmark
-    
-    xgb_bench_config =  {
-        'n_init' : n_init,
-        'max_evals' : max_evals,
-        'n_datasets' : n_datasets,
-        'data_ids' : config_of_data[repo]['data_ids'](),
-        'n_seeds' : seeds,
-        'type_of_bench': type_of_bench,
-        'bench_name' :'XGB',
-        'bench_class' : XGBoostBenchmark,
-        'data_repo' : repo
-    }
     #('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)
     #('HEBO_RF',Bayesian_Optimization), ('HEBO_GP',Bayesian_Optimization)
     # ('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('GP',Bayesian_Optimization),('RS',Random_Search),
@@ -205,12 +194,74 @@ if __name__ == '__main__':
 
 
     #('HEBO_RF',Bayesian_Optimization),('RS',Random_Search),('GP',Bayesian_Optimization),('HEBO_GP',Bayesian_Optimization)
-    opt_list = [('HEBO_RF5',Bayesian_Optimization),
-                ('HEBO_RF10',Bayesian_Optimization),
-                ('HEBO_GP',Bayesian_Optimization),
+
+    """
+    ('HEBO_RF5',Bayesian_Optimization),
+    ('HEBO_RF10',Bayesian_Optimization),
+    ('HEBO_GP',Bayesian_Optimization),
+    ('HEBO_RF',Bayesian_Optimization),
+    ('GP',Bayesian_Optimization),
+    ('RS',Random_Search)
+    #('Sobol',Sobol_Search),
+    ('HyperCube',HyperCubeSearch)
+    
+    opt_list = [('RS',Random_Search),('Sobol',Sobol_Search),('HEBO_RF',Bayesian_Optimization),\
+    ('HEBO_RF_ACQ10000',Bayesian_Optimization),('HEBO_RF_RANDOM',Bayesian_Optimization)]
+    """
+    #opt_list = [('HEBO_RF',Bayesian_Optimization),('RS',Random_Search),('HEBO_RF_RANDOM',Bayesian_Optimization)]
+    opt_list = [('RS',Random_Search),
+                ('Sobol',Sobol_Search),
                 ('HEBO_RF',Bayesian_Optimization),
-                ('GP',Bayesian_Optimization),
-                ('RS',Random_Search)]
+                ('HEBO_RF_ACQ10000',Bayesian_Optimization),
+                ('HEBO_RF_RANDOM',Bayesian_Optimization),
+                ('GP',Bayesian_Optimization)]
+    # 
+    # HEBO_RF_RANDOM , HEBO_RF_RANDOMACQ10000
+
+
+    type_of_bench = 'Single_Space_Results'
+    n_datasets =  1000
+    n_init = 20
+    max_evals = 100
+    repo = 'Jad'  #Jad
+    seeds = [1,2,3] # ,2,3,4,5 
+
+    #XGBoost Benchmark    
+    xgb_bench_config =  {
+        'n_init' : n_init,
+        'max_evals' : max_evals,
+        'n_datasets' : n_datasets,
+        'data_ids' :  config_of_data[repo]['data_ids'](),
+        'n_seeds' : seeds,
+        'type_of_bench': type_of_bench,
+        'bench_name' :'XGB',
+        'bench_class' : XGBoostBenchmark,
+        'data_repo' : repo
+    }
+    run_benchmark_total(opt_list,xgb_bench_config)
+
+    type_of_bench = 'Single_Space_Results'
+    n_datasets =  1000
+    n_init = 20
+    max_evals = 100
+    repo = 'OpenML'  #Jad
+    seeds = [1,2,3] # ,2,3,4,5 
+
+    #XGBoost Benchmark    
+    xgb_bench_config =  {
+        'n_init' : n_init,
+        'max_evals' : max_evals,
+        'n_datasets' : n_datasets,
+        'data_ids' :  config_of_data[repo]['data_ids'](),
+        'n_seeds' : seeds,
+        'type_of_bench': type_of_bench,
+        'bench_name' :'XGB',
+        'bench_class' : XGBoostBenchmark,
+        'data_repo' : repo
+    }
+    
+
+
     run_benchmark_total(opt_list,xgb_bench_config)
     #
 
