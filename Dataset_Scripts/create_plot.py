@@ -137,7 +137,11 @@ opt_colors= {
     'HEBO_RF':'black',
     'HEBO_GP':'purple',
     'HEBO_RF5':'orange',
-    'HEBO_RF10':'grey'
+    'HEBO_RF10':'grey',
+    'Sobol':'purple',
+    'HEBO_RF_ACQ10000':'orange',
+    'HEBO_RF_RANDOM':'blue',
+
 }
 
 
@@ -441,9 +445,11 @@ def plot_average(config):
 
 
 
-data_repo = 'Jad'
+data_repo = 'OpenML'
 n_seeds=  3
-optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+
+optimizers = ['HEBO_RF','RS','Sobol','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP'] 
 metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
 time_plot = True
 double_plot = False
@@ -493,7 +499,7 @@ for bool_flag in ['False','True']:
     plt.clf()
 
 
-optimizers = ['HEBO_RF','RS','HEBO_RF5','HEBO_RF10','GP'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+optimizers = ['HEBO_RF','RS','Sobol','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
 
 for bool_flag in ['False','True']:
     time_plot = bool_flag
