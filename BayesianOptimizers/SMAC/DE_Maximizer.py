@@ -1,7 +1,8 @@
 import numpy as np
 from initial_design.sobol_design import SobolDesign
 from typing import List, Optional, Tuple
-
+from ConfigSpace import Configuration
+from scipy.optimize._differentialevolution import DifferentialEvolutionSolver
  
 class DE_Maximizer():
 
@@ -39,25 +40,56 @@ class DE_Maximizer():
         #Draw a Sobolev sequence in [lb, ub]
         seed = np.random.randint(int(1e6)) 
 
-        init_design_def_kwargs = {
-            "cs": self.config_space,  # type: ignore[attr-defined] # noqa F821
-            "traj_logger": None,
-            "rng": seed,
-            "ta_run_limit": None,  # type: ignore[attr-defined] # noqa F821
-            "configs": None,
-            "n_configs_x_params": 0,
-            "max_config_fracs": 0.0,
-            "init_budget": self.n_cand
-            } 
-        sobol  = SobolDesign(**init_design_def_kwargs)
-        population = sobol._select_configurations() #self.config_space.sample_configuration(size=initial_config_size)
-        if not isinstance(population, List):
-            population = [population]
-        # the population is maintained in a list-of-vector form where each ConfigSpace
-        # configuration is scaled to a unit hypercube, i.e., all dimensions scaled to [0,1]
-        X_candidates = np.array([configspace_to_vector(individual) for individual in population])
-        y = self.objective_function(X_candidates,eta =eta)
-        
-        #Find the point of X_candidates with maximum Acquisition function.
-        return X_candidates[y.argmax()],y.argmax()
+        configs: list[tuple[float, Configuration]] = []
 
+        #Wrapper in order to change to a negative shit.
+        def func(x: np.ndarray) -> np.ndarray:
+            assert self.objective_function is not None
+            # Probably not needed
+            # [Configuration(self.config_space, vector=x)]
+            return -self.objective_function(x)
+
+
+        # Set  some bounds...
+        ds = DifferentialEvolutionSolver(
+            func,
+            bounds=[[0, 1] for _ in range(len(self.config_space))],
+            args=(),
+            strategy="best1bin",
+            maxiter=1000,
+            popsize=50,
+            tol=0.01,
+            mutation=(0.5, 1),
+            recombination=0.7,
+            seed=seed,
+            polish=True,
+            callback=None,
+            disp=False,
+            init="latinhypercube",
+            atol=0,
+        )
+
+        _ = ds.solve()
+        # for each of the pop. insert into a list.
+        for pop, val in zip(ds.population, ds.population_energies):
+            rc = Configuration(self.config_space, vector=pop)
+            # save the actual expected improvement.
+            configs.append((-val, rc))
+
+        #sort in ascending order (lower acquisition values first)
+        configs.sort(key=lambda t: t[0])
+        #Higher acquisition now as we reverse to descending order
+        configs.reverse()
+
+
+        # the acquisition value and the configuration of the max found by DE..
+        if self.n_cand > 1:
+            y_max, x_max =configs[:self.n_cand]
+        else:
+            # just get the  element in 0 pos. (highest acquistion value)
+            y_max , x_max = configs[self.n_cand-1]
+
+        #Find the point of X_candidates with maximum Acquisition function.
+        #return X_candidates[y.argmax()],y.argmax()
+
+        return x_max, y_max
