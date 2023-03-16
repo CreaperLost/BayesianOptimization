@@ -56,8 +56,9 @@ class SobolMaximizer():
         # the population is maintained in a list-of-vector form where each ConfigSpace
         # configuration is scaled to a unit hypercube, i.e., all dimensions scaled to [0,1]
         X_candidates = np.array([configspace_to_vector(individual) for individual in population])
-        y = self.objective_function(X_candidates,eta =eta)
-        
+        #y = self.objective_function(X_candidates,eta =eta)
+        self.objective_function.update(eta)
+        y = self.objective_function(X_candidates)
         #Find the point of X_candidates with maximum Acquisition function.
         return X_candidates[y.argmax()],y.argmax()
 

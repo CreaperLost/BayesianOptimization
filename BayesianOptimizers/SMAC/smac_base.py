@@ -18,6 +18,10 @@ from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
 from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
+from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
+from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
+
+
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
@@ -179,6 +183,10 @@ class Bayesian_Optimization:
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Random':
                 self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'DE':
+                self.maximize_func  = DE_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Scipy':
+                self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
 
         elif acq_funct == "Multi5" or acq_funct == "Multi10":
             self.acquisition_function = MACE(self.model)
@@ -413,6 +421,7 @@ class Bayesian_Optimization:
             
             if self.batch_size == 1:
                 X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+                
             else:
                 X_next = self.maximize_func.maximize(initial_suggest = self.inc_config,eta = self.inc_score)
                 results= pd.DataFrame(X_next).drop_duplicates()
@@ -447,9 +456,13 @@ class Bayesian_Optimization:
                 if best_pred_id not in select_id:
                     select_id[1]= best_pred_id
                 x_next_multiple = results.iloc[select_id].values.tolist()
+
+                
             end_time=time.time() - start_time
 
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
+
+            #print('Acquisition time : ',self.acquisition_time)
 
             """print('The next point selected by the AF is: ' , X_next )
             print('The acquisition value is ' , acquistion_value)"""
@@ -457,10 +470,11 @@ class Bayesian_Optimization:
             #convert configuration.
             if self.batch_size ==1 :
                 config = self.vector_to_configspace( X_next )
+                #print('To Run Next',config )
             else:
                 configs = [self.vector_to_configspace( config ) for config in x_next_multiple]
-
-
+                #print('To Run Next',configs )
+            
             #Run objective
             start_time = time.time()
             if self.batch_size ==1 :

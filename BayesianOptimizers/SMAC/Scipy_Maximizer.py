@@ -3,7 +3,11 @@ from initial_design.sobol_design import SobolDesign
 from typing import List, Optional, Tuple
 from ConfigSpace import Configuration
 from scipy.optimize._differentialevolution import DifferentialEvolutionSolver
- 
+from scipy.optimize import minimize
+import numpy as np
+
+
+
 class Scipy_Maximizer():
 
     def __init__(self,objective_function,config_space,n_cand):
@@ -44,50 +48,47 @@ class Scipy_Maximizer():
 
         #Wrapper in order to change to a negative shit.
         def func(x: np.ndarray) -> np.ndarray:
-            assert self.objective_function is not None
+            assert self.objective_function is not None and self.objective_function.eta is not None
             # Probably not needed
             # [Configuration(self.config_space, vector=x)]
-            return -self.objective_function(x)
+            
+            return -self.objective_function(x).flatten()
+
+        
+        bounds_config = [(0, 1) for _ in range(len(self.config_space))]
+
+        lower_bounds = [i[0] for i in bounds_config]
+        upper_bounds = [i[1] for i in bounds_config]
+
+        # Explore the parameter space more throughly
+        x_seeds = np.random.RandomState(seed =seed).uniform(lower_bounds,upper_bounds,size=( 20, len(bounds_config)))
 
 
-        # Set  some bounds...
-        ds = DifferentialEvolutionSolver(
-            func,
-            bounds=[[0, 1] for _ in range(len(self.config_space))],
-            args=(),
-            strategy="best1bin",
-            maxiter=1000,
-            popsize=50,
-            tol=0.01,
-            mutation=(0.5, 1),
-            recombination=0.7,
-            seed=seed,
-            polish=True,
-            callback=None,
-            disp=False,
-            init="latinhypercube",
-            atol=0,
-        )
+        self.objective_function.update(eta)
 
-        _ = ds.solve()
-        # for each of the pop. insert into a list.
-        for pop, val in zip(ds.population, ds.population_energies):
-            rc = Configuration(self.config_space, vector=pop)
-            # save the actual expected improvement.
-            configs.append((-val, rc))
+        #Initial Acquisition Value
+        max_acq = None
+        
+        for x_try in x_seeds:
+            #print(x_seeds,eta,self.objective_function(x_seeds).flatten())
+            res = minimize(func,
+                       x_try,
+                       bounds=bounds_config,
+                       method="L-BFGS-B")
 
-        #sort in ascending order (lower acquisition values first)
-        configs.sort(key=lambda t: t[0])
-        #Higher acquisition now as we reverse to descending order
-        configs.reverse()
-
+            # See if success
+            if not res.success:
+                continue
+        
+            
+            # Store it if better than previous minimum(maximum).
+            if max_acq is None or -np.squeeze(res.fun) >= max_acq:
+                x_max = res.x
+                max_acq = -np.squeeze(res.fun)
 
         # the acquisition value and the configuration of the max found by DE..
-        if self.n_cand > 1:
-            y_max, x_max =configs[:self.n_cand]
-        else:
-            # just get the  element in 0 pos. (highest acquistion value)
-            y_max , x_max = configs[self.n_cand-1]
+        
+        y_max , x_max = max_acq,np.clip(x_max, lower_bounds, upper_bounds)
 
         #Find the point of X_candidates with maximum Acquisition function.
         #return X_candidates[y.argmax()],y.argmax()

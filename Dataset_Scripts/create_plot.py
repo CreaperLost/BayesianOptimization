@@ -141,7 +141,7 @@ opt_colors= {
     'Sobol':'purple',
     'HEBO_RF_ACQ10000':'orange',
     'HEBO_RF_RANDOM':'blue',
-
+    'HEBO_RF_Scipy':'cyan',
 }
 
 
@@ -444,79 +444,78 @@ def plot_average(config):
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 
+for data_repo in ['Jad','OpenML']:
+    #data_repo = 'Jad'
+    n_seeds=  3
+    #optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+    #'Sobol',
 
-data_repo = 'OpenML'
-n_seeds=  3
-#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-
-optimizers = ['HEBO_RF','RS','Sobol','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP'] 
-metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
-time_plot = True
-double_plot = False
-
-
-
-#How many initial configurations we have run.
-interval = 20
-
-for bool_flag in ['False','True']:
-    time_plot = bool_flag
+    optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP','HEBO_RF_Scipy'] 
+    metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+    time_plot = True
     double_plot = False
 
-    general_config = {
-    'classifier':'XGB',
-    'result_space':'Single_Space_Results',
-    'optimizers' : optimizers,
-    'n_seeds' : n_seeds,
-    'data_repo':data_repo,
-    'double_plot':double_plot,
-    'metrics': metrics,
-    'time_plot':time_plot,
-    }
-  
-
-    plot_per_dataset(general_config)
-    plt.clf()
-
-for bool_flag in ['False','True']:
-    time_plot = bool_flag
-    double_plot = False
-
-    general_config = {
-    'classifier':'XGB',
-    'result_space':'Single_Space_Results',
-    'optimizers' : optimizers,
-    'n_seeds' : n_seeds,
-    'data_repo':data_repo,
-    'double_plot':double_plot,
-    'metrics': metrics,
-    'time_plot':time_plot,
-    }
-  
-
-    #plot_per_dataset(general_config)
-    plot_average(general_config)
-    plt.clf()
 
 
-optimizers = ['HEBO_RF','RS','Sobol','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+    #How many initial configurations we have run.
+    interval = 20
 
-for bool_flag in ['False','True']:
-    time_plot = bool_flag
-    double_plot = False
+    for bool_flag in ['False','True']:
+        time_plot = bool_flag
+        double_plot = False
 
-    general_config = {
-    'classifier':'XGB',
-    'result_space':'Single_Space_Results',
-    'optimizers' : optimizers,
-    'n_seeds' : n_seeds,
-    'data_repo':data_repo,
-    'double_plot':double_plot,
-    'metrics': metrics,
-    'time_plot':time_plot,
-    }
-  
+        general_config = {
+        'classifier':'XGB',
+        'result_space':'Single_Space_Results',
+        'optimizers' : optimizers,
+        'n_seeds' : n_seeds,
+        'data_repo':data_repo,
+        'double_plot':double_plot,
+        'metrics': metrics,
+        'time_plot':time_plot,
+        }
+    
 
-    #plot_per_dataset(general_config)
-    plot_average(general_config)
-    plt.clf()
+        plot_per_dataset(general_config)
+        plt.clf()
+
+    for bool_flag in ['False','True']:
+        time_plot = bool_flag
+        double_plot = False
+
+        general_config = {
+        'classifier':'XGB',
+        'result_space':'Single_Space_Results',
+        'optimizers' : optimizers,
+        'n_seeds' : n_seeds,
+        'data_repo':data_repo,
+        'double_plot':double_plot,
+        'metrics': metrics,
+        'time_plot':time_plot,
+        }
+    
+
+        #plot_per_dataset(general_config)
+        plot_average(general_config)
+        plt.clf()
+
+
+    """for bool_flag in ['False','True']:
+        time_plot = bool_flag
+        double_plot = False
+
+        general_config = {
+        'classifier':'XGB',
+        'result_space':'Single_Space_Results',
+        'optimizers' : optimizers,
+        'n_seeds' : n_seeds,
+        'data_repo':data_repo,
+        'double_plot':double_plot,
+        'metrics': metrics,
+        'time_plot':time_plot,
+        }
+    
+
+        #plot_per_dataset(general_config)
+        plot_average(general_config)
+        plt.clf()"""

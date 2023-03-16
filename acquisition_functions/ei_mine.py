@@ -35,8 +35,14 @@ class EI(BaseAcquisitionFunction):
         super(EI, self).__init__(model)
         #Always 0
         self.par = par
+        self.eta = None 
 
-    def compute(self, X ,derivative=False, eta=None, **kwargs): 
+
+    # updates the acquisition function.
+    def update(self,eta):
+        self.eta = eta
+
+    def compute(self, X ,derivative=False, **kwargs): 
         """
         Computes the EI value and its derivatives.
 
@@ -69,7 +75,7 @@ class EI(BaseAcquisitionFunction):
         """if len(neg_nos) >0:
             print('Negative mean' , neg_nos)"""
 
-        if eta is None:
+        if self.eta is None:
             print('Please impute ETA. (Best configuration as parameter)')
             raise ValueError
 
@@ -89,7 +95,7 @@ class EI(BaseAcquisitionFunction):
             f[s_copy == 0.0] = 0.0"""
             
         else:
-            z = (eta - m - self.par) / s
+            z = (self.eta - m - self.par) / s
             f = s * (z * norm.cdf(z) + norm.pdf(z))
 
             if derivative:

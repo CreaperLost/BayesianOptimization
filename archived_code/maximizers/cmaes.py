@@ -7,7 +7,7 @@ except ImportError:
         In order to use this module, CMA need to be installed. Try running
         pip install cma
     """)
-
+import numpy as
 from maximizers.base_maximizer import BaseMaximizer
 from initial_design.init_random_uniform import init_random_uniform
 
@@ -61,7 +61,8 @@ class CMAES(BaseMaximizer):
         if self.verbose:
             verbose_level = 0
 
-        start_point = init_random_uniform(self.lower, self.upper, 1, self.rng)
+        start_point = np.random.RandomState(seed =seed).uniform(lower_bounds,upper_bounds,size=( 20, len(bounds_config)))
+
 
         def obj_func(x):
             a = self.objective_func(x[None, :])
