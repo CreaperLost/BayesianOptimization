@@ -162,18 +162,23 @@ class Bayesian_Optimization:
         # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
         if 'ACQ10000' in model:
             self.n_cand = 10000
+        elif 'ACQ100' in model:
+            self.n_cand =100
+        elif 'ACQ500' in model:
+            self.n_cand =500
         else:
             self.n_cand = min(100 * self.dim, 10000)
 
 
         if model == 'RF':
             self.model = RandomForest(self.config_space,rng=random_seed)
-        elif model =='GP':
+        elif 'HEBO_GP' in model:
+            self.model = HEBO_GP(self.config_space,rng=random_seed)
+        elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
         elif 'HEBO_RF' in model:
             self.model = HEBO_RF(self.config_space,rng=random_seed)
-        elif 'HEBO_GP' in model:
-            self.model = HEBO_GP(self.config_space,rng=random_seed)
+        
 
         
 
@@ -462,7 +467,7 @@ class Bayesian_Optimization:
 
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
-            #print('Acquisition time : ',self.acquisition_time)
+            #print('Acquisition time : ',self.acquisition_time[-1])
 
             """print('The next point selected by the AF is: ' , X_next )
             print('The acquisition value is ' , acquistion_value)"""

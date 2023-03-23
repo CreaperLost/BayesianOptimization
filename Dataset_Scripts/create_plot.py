@@ -139,8 +139,8 @@ opt_colors= {
     'HEBO_RF5':'orange',
     'HEBO_RF10':'grey',
     'Sobol':'purple',
-    'HEBO_RF_ACQ10000':'orange',
-    'HEBO_RF_RANDOM':'blue',
+    'HEBO_RF_ACQ100':'orange',
+    'HEBO_RF_ACQ500':'blue',
     'HEBO_RF_Scipy':'cyan',
     'HEBO_RF_DE':'orange'
 }
@@ -300,12 +300,12 @@ def plot_per_dataset(config):
 
         main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
         if time_plot_bool == 'True':
-            wanted_directory_attributes = [main_directory,'Figures',dataset,'TimePlot']
+            wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'TimePlot']
         elif time_plot_bool == 'False':
             if double_plot_bool == False:
-               wanted_directory_attributes = [main_directory,'Figures',dataset,'SingleEvalPlot'] 
+               wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'SingleEvalPlot'] 
             else:
-                wanted_directory_attributes = [main_directory,'Figures',dataset,'DoubleEvalPlot'] 
+                wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'DoubleEvalPlot'] 
         results_directory = parse_directory(wanted_directory_attributes)
 
         
@@ -330,7 +330,7 @@ def plot_per_dataset(config):
 
 #ylabel (Average normalized 1-AUC)
 #xlabel (Number of eval)
-def plot_average(config):
+def plot_average(config,plot = True,extra_data = None):
 
     clf_name = config['classifier']
     result_space = config['result_space']
@@ -449,13 +449,13 @@ def plot_average(config):
 data_repo = 'Jad'
 n_seeds=  3
     #optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-    #'Sobol',
-
-#optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ10000','HEBO_RF_RANDOM','GP','HEBO_RF_Scipy'] 
-optimizers = ['Sobol','HEBO_RF','GP']
-metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time'] #
-time_plot = True
-double_plot = False
+    #'Sobol', 'HEBO_RF_Scipy'
+    #,'GP'
+    #,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
+    optimizers = ['HEBO_RF','RS'] #'HEBO_RF_ACQ100','HEBO_RF_ACQ500' 
+    metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+    time_plot = True
+    double_plot = False
 
 
 

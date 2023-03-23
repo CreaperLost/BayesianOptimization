@@ -94,14 +94,25 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
 
-                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_ACQ10000']
+                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_ACQ100','HEBO_RF_ACQ500','HEBO_RF_INIT10','HEBO_RF_INIT50','GP_INIT10','GP_INIT50']
                 random_opt = ['HEBO_RF_RANDOM','HEBO_RF_RANDOMACQ10000']
 
                 if opt[0] == 'RS' or opt[0] == 'Sobol' or opt[0] =='HyperCube':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 elif opt[0] in simple_opt:
-                    Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
+                    print('TREXO',opt[0])
+                    if 'INIT10' in opt[0]:
+                        print('me init 10')
+                        Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                        initial_design=None,n_init = 10,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
+                    elif 'INIT50' in opt[0]:
+                        print('me init 50')
+                        Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                        initial_design=None,n_init = 50,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
+                    else:
+                        print('me init', 20)
+                        Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                        initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                 elif opt[0] in random_opt:
                     Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Random')
@@ -163,9 +174,15 @@ def get_openml_data():
     benchmark_suite = openml.study.get_suite('OpenML-CC18')
     #Task from low to high sample. :)
 
-    # Already run:  11,14954
-    #tasks =  [167120,167121,3573,146825,146195,167124,7592,219,14965,167119,9977,6,14952,32,3904,14970,14969,3481,2074,9985,28,125922,9960,9952,167141,146820,43,3021,9910,167125,3,45,167140,9976,9978,146822,3917,12,14,16,18,22,146824,146817,146821,9964,3903,23,3902,10093,3918]
-    tasks = [11,14954]
+    #Not run.. ,
+    #tasks = [167120,167121,3573,146825,146195,167124,7592,219,14965,167119,9977,6,14952,32,3904,14970,14969,3481]
+    
+    # these tasks indeed improve
+
+    tasks = [11,14954,43,3021,3917,3918,9910,9952,9976,167125,167141,2074]
+
+    
+
     tasks.reverse()
     #return benchmark_suite.tasks
     return tasks
@@ -241,12 +258,37 @@ if __name__ == '__main__':
     #opt_list = [('Sobol',Sobol_Search)]
 
     #opt_list= [('HEBO_RF_Scipy',Bayesian_Optimization)]
-    opt_list = [('HEBO_RF_DE',Bayesian_Optimization)]
+    """opt_list = [('RS',Random_Search),('HEBO_RF',Bayesian_Optimization),
+                ('HEBO_RF_ACQ10000',Bayesian_Optimization),
+                ('HEBO_RF_RANDOM',Bayesian_Optimization),
+                ('Sobol',Sobol_Search),
+                ('HEBO_RF_Scipy',Bayesian_Optimization),
+                ('HEBO_RF_DE',Bayesian_Optimization)]
+                ,('HEBO_RF10',Bayesian_Optimization)]"""
+
+    #
+    #
+    #,('RS',Sobol_Search),
+    #('HEBO_RF_ACQ100',Bayesian_Optimization),('HEBO_RF_ACQ500',Bayesian_Optimization),('HEBO_RF',Bayesian_Optimization)
+    #('RS',Random_Search),('HEBO_RF',Bayesian_Optimization)
+    # ('HEBO_RF_ACQ100',Bayesian_Optimization),('HEBO_RF_ACQ500',Bayesian_Optimization)
+
+
+
+
+    opt_list = [('RS',Random_Search),
+                ('HEBO_RF',Bayesian_Optimization),
+                ('HEBO_RF_INIT10',Bayesian_Optimization),
+                ('HEBO_RF_INIT50',Bayesian_Optimization),
+                ('GP',Bayesian_Optimization),
+                ('GP_INIT10',Bayesian_Optimization),
+                ('GP_INIT50',Bayesian_Optimization)]
     
+
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000
     n_init = 20
-    max_evals = 100
+    max_evals = 200
     repo = 'Jad'  #Jad
     seeds = [1,2,3] # ,2,3,4,5 
 
@@ -264,12 +306,9 @@ if __name__ == '__main__':
     }
     run_benchmark_total(opt_list,xgb_bench_config)
 
-    type_of_bench = 'Single_Space_Results'
-    n_datasets =  1000
-    n_init = 20
-    max_evals = 100
-    repo = 'OpenML'  #Jad
-    seeds = [1,2,3] # ,2,3,4,5 
+
+    # Just run for OpenML as well
+    repo = 'OpenML'  
 
     #XGBoost Benchmark     
     xgb_bench_config =  {

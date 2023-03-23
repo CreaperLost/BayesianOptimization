@@ -19,6 +19,7 @@ for config in config_list:
     data_id = get_dataset_ids(config)
     print(data_id)
     data_list  = get_data_list(config['data_repo'])
+    
     data_list.to_csv('Jad_Full_List.csv')
     print(data_list)
     remaining_data =filter_datasets(datalist=data_list,data_ids=data_id,repo = config['data_repo']) 
