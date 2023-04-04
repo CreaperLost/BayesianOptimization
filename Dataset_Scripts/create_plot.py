@@ -20,7 +20,7 @@ def get_results_per_optimizer(config={},accumulate='none'):
     result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
 
     #Get us the main file
-    main_directory =  getcwd().replace('\\Dataset_Scripts','')
+    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
 
     #Get the directory.
     wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo]
@@ -142,6 +142,7 @@ opt_colors= {
     'HEBO_RF_ACQ100':'orange',
     'HEBO_RF_ACQ500':'blue',
     'HEBO_RF_Scipy':'cyan',
+    'HEBO_RF_DE':'orange'
 }
 
 
@@ -152,7 +153,7 @@ def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
     l_eval = time_evals.to_list()
     extra_l=list(itertools.chain.from_iterable(itertools.repeat(x, step) for x in l_eval[initial_config:]))
     full_eval=l_eval[:initial_config] + extra_l
-    print(full_eval)
+    #print(full_eval)
     return full_eval
 
 def plot_per_dataset(config):
@@ -201,8 +202,8 @@ def plot_per_dataset(config):
     #Take the datasets--Dirty.
     for dataset in datasets_list_run:
         #Inserting the first of many configurations give_us acess to many of the fields we want. -- Dirty.
-        print()
-        title_name = get_dataset_name(dataset,total_config_dictionary[metric_list[0]][0])
+        
+        title_name = '' #get_dataset_name(dataset,total_config_dictionary[metric_list[0]][0])
         if double_plot_bool == True:
             fig, (ax1,ax2) = plt.subplots(2,1,sharex=True)
         else: 
@@ -275,7 +276,7 @@ def plot_per_dataset(config):
                             ax2.plot(x,means,'yellow',label='Mean-Acquisition Time')
                         #Plot the mean and the confidence on axis 2.
                         elif metric_measured == 'Surrogate_Time':
-                            print(x,means)
+                            #print(x,means)
                             ax2.plot(x,means,opt_colors[opt],label=opt)
                             ax2.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
                 
@@ -297,7 +298,7 @@ def plot_per_dataset(config):
         plt.legend(bbox_to_anchor=(1.05, 1),loc = 'upper left')
                 
 
-        main_directory =  getcwd().replace('\\Dataset_Scripts','')
+        main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
         if time_plot_bool == 'True':
             wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'TimePlot']
         elif time_plot_bool == 'False':
@@ -401,13 +402,13 @@ def plot_average(config,plot = True,extra_data = None):
             time_mean = pd.concat(means_time_total, axis = 1).mean(axis=1)
             x = time_mean
 
-            print(opt, x)
+            #print(opt, x)
 
             if opt == 'HEBO_RF5':
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)
-
+        print(opt,means_normalized.iloc[0:100:30],means_normalized.iloc[19])
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -425,7 +426,7 @@ def plot_average(config,plot = True,extra_data = None):
     plt.title('Average effectiveness of BO methods ' + " /w classifier "  + clf_name)
     plt.ylabel('Average `1-AUC')
     plt.legend()
-    main_directory =  getcwd().replace('\\Dataset_Scripts','')
+    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
 
     if time_plot_bool == 'True':
         wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','TimePlot']
@@ -444,9 +445,9 @@ def plot_average(config,plot = True,extra_data = None):
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 
-for data_repo in ['Jad','OpenML']:
-    #data_repo = 'Jad'
-    n_seeds=  3
+
+data_repo = 'Jad'
+n_seeds=  3
     #optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
     #'Sobol', 'HEBO_RF_Scipy'
     #,'GP'
@@ -458,10 +459,10 @@ for data_repo in ['Jad','OpenML']:
 
 
 
-    #How many initial configurations we have run.
-    interval = 20
+#How many initial configurations we have run.
+interval = 20
 
-    for bool_flag in ['False','True']:
+for bool_flag in ['False','True']:
         time_plot = bool_flag
         double_plot = False
 
@@ -480,7 +481,7 @@ for data_repo in ['Jad','OpenML']:
         plot_per_dataset(general_config)
         plt.clf()
 
-    for bool_flag in ['False','True']:
+for bool_flag in ['False','True']:
         time_plot = bool_flag
         double_plot = False
 
@@ -501,7 +502,7 @@ for data_repo in ['Jad','OpenML']:
         plt.clf()
 
 
-    """for bool_flag in ['False','True']:
+"""for bool_flag in ['False','True']:
         time_plot = bool_flag
         double_plot = False
 

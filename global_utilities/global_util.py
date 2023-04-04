@@ -1,6 +1,8 @@
-
+import os
 #Some globals used for parsing the directories etc.
 directory_notation = '\\'
+if os.name != 'nt':
+    directory_notation = '/'
 file_name_connector = '_'
 csv_postfix ='.csv'
 
