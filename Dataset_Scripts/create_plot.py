@@ -94,7 +94,7 @@ def get_dataset_name(dataset_id, config):
     # Briskomaste sto fakelo me kathe dataset kai ta results tou.
     path= parse_directory(wanted_directory_attributes)
 
-    print(path)
+    #print(path)
 
     if data_repo == 'Jad':
         return get_dataset_name_Jad(dataset_id,path)
@@ -142,7 +142,11 @@ opt_colors= {
     'HEBO_RF_ACQ100':'orange',
     'HEBO_RF_ACQ500':'blue',
     'HEBO_RF_Scipy':'cyan',
-    'HEBO_RF_DE':'orange'
+    'HEBO_RF_DE':'orange',
+    'GP_INIT10' : 'orange',
+    'GP_INIT50' : 'cyan',
+    'HEBO_RF_INIT10':'grey',
+    'HEBO_RF_INIT50':'blue',
 }
 
 
@@ -323,14 +327,8 @@ def plot_per_dataset(config):
 
 
 
-#Get the mean  on all datasets, all optimizers
-#Get the min mean per dataset
-#  normalize every optimizer on each dataset with max of dataset. 
-# get the confidence using interval bla bla
 
-#ylabel (Average normalized 1-AUC)
-#xlabel (Number of eval)
-def plot_average(config,plot = True,extra_data = None):
+def plot_average(config):
 
     clf_name = config['classifier']
     result_space = config['result_space']
@@ -408,7 +406,7 @@ def plot_average(config,plot = True,extra_data = None):
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)
-        print(opt,means_normalized.iloc[0:100:30],means_normalized.iloc[19])
+        #print(opt,means_normalized.iloc[0:100:30],means_normalized.iloc[19])
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -444,6 +442,145 @@ def plot_average(config,plot = True,extra_data = None):
         print("Folder was created")
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
+#Get the mean  on all datasets, all optimizers
+#Get the min mean per dataset
+#  normalize every optimizer on each dataset with max of dataset. 
+# get the confidence using interval bla bla
+
+#ylabel (Average normalized 1-AUC)
+#xlabel (Number of eval)
+def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=None,time_data2=None):
+    for opt_index in range(len(data1)):
+        opt = opt_list[opt_index]
+        total_data = pd.concat((data1[opt_index],data2[opt_index]),axis=1)
+        
+        #print(total_data)
+        a,b=stats.norm.interval(0.95, loc=total_data.mean(axis=1), scale=total_data.std(axis=1)/np.sqrt(total_data.shape[0]))
+        confidence_normalized,means_normalized = pd.DataFrame(np.vstack((a,b))) , total_data.mean(axis=1)
+
+        if time_plot_bool == 'False':
+            #plot each means
+            eval_range = means_normalized.shape[0]
+            x = [i+1 for i in range(eval_range)]
+        elif time_plot_bool == 'True':
+            time_mean = pd.concat((time_data1[opt_index],time_data2[opt_index]),axis=1).mean(axis=1)
+            x = time_mean
+
+            """if opt == 'HEBO_RF5':
+                x= propagate_batch(x,5,interval)
+            elif opt == 'HEBO_RF10':
+                x= propagate_batch(x,10,interval)"""
+        print(opt,means_normalized.iloc[99])
+        plt.plot(x,means_normalized,opt_colors[opt],label=opt)
+        plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
+
+    if time_plot_bool == 'False':
+        x_ticks = [i for i in range(eval_range) if i%interval==0]
+        plt.xticks(x_ticks,x_ticks)
+        plt.xlim([1,eval_range])
+        #plt.axvline(x = 10, color = 'black', linestyle = '--',label=' 10 Initial_Evaluations')
+        plt.axvline(x = 20, color = 'black', linestyle = '--',label=' 20 Initial_Evaluations')
+        #plt.axvline(x = 50, color = 'black', linestyle = '--',label=' 50 Initial_Evaluations')
+        plt.xlabel('Number of objective evals.')
+    elif time_plot_bool =='True':
+        plt.xlim(left=0)
+        plt.xlabel('Average time in seconds')
+
+
+    plt.title('Average effectiveness of BO methods ' + " /w classifier "  + clf_name)
+    plt.ylabel('Average `1-AUC')
+    plt.legend()
+    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
+
+    if time_plot_bool == 'True':
+        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','TimePlot']
+    elif time_plot_bool == 'False':
+        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','SingleEvalPlot'] 
+    elif time_plot_bool =='Partial':
+        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','PartialEvalPlot'] 
+            
+    results_directory = parse_directory(wanted_directory_attributes)
+    try:
+        Path(results_directory).mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        print("Folder is already there")
+    else:
+        print("Folder was created")
+    plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
+
+def get_average_per_category(config):
+    clf_name = config['classifier']
+    result_space = config['result_space']
+    opt_list = config['optimizers']
+    seeds= config['n_seeds']
+    data_repo = config['data_repo']
+    metric_list = config['metrics']
+    #Boolean checkers for what plot type we want.
+    double_plot_bool = config['double_plot']
+    time_plot_bool = config['time_plot']
+
+    #We need at least 1 metric and 1 optimizer.
+    assert len(metric_list) > 0 and len(opt_list) > 0
+
+    total_config_dictionary = dict()
+
+    for metric in metric_list:
+        #Per metric.
+        list_per_metric = []
+        for opt_name in opt_list:
+            #Create the dictionary for the optimizer and the specified metric
+            config_dict_per_metric=dict({ 'data_repo' : data_repo, 'seeds' : seeds , 'optimizer_type' : opt_name,'results_type' : metric, 'classifier' : clf_name, 'result_space' : result_space})
+            list_per_metric.append(config_dict_per_metric)
+        #Add the optimizer configurations for the specific metric.
+        total_config_dictionary[metric] = list_per_metric
+    
+    configuration_results = dict()
+    #Get the list of configurations per metric.
+    for metric_config_name in list(total_config_dictionary.keys()):
+        configuration_list_for_a_metric = total_config_dictionary[metric_config_name]
+        #Save the results for the specific configuration and the specific metric.
+        #Whether to accumulate the results or not.
+        if metric_config_name == 'Metric':
+            acc= 'min'
+        elif metric_config_name == 'Total_Time':
+            acc= 'addition'
+        else:
+            acc= 'none'
+        configuration_results[metric_config_name] = [get_results_per_optimizer(config,acc) for config in configuration_list_for_a_metric]
+
+    #Get the list of datasets run on the metrics.
+    datasets_list_run = configuration_results[metric_list[0]][0].keys()
+    
+    
+    per_opt = []
+    per_opt_time = []
+    for config_result_idx in range(len(configuration_results['Metric'])):
+        means_total = []
+        means_time_total = []
+        for dataset in datasets_list_run:
+            opt = total_config_dictionary['Metric'][config_result_idx]['optimizer_type']
+            #Get the mean of the metric per dataset per optimizer.
+            confidence,means = create_plot_per_optimizer(configuration_results['Metric'][config_result_idx][dataset])
+            means_total.append(means)
+            confidence_time,means_time = create_plot_per_optimizer(configuration_results['Total_Time'][config_result_idx][dataset])
+            means_time_total.append(means_time)
+
+        
+
+        means_total_Dataframe = pd.concat(means_total, axis = 1)
+        means_time_total_Dataframe = pd.concat(means_time_total, axis = 1)
+        per_opt.append(means_total_Dataframe)
+        per_opt_time.append(means_time_total_Dataframe)
+        #a,b=stats.norm.interval(0.95, loc=means_total_Dataframe.mean(axis=1), scale=means_total_Dataframe.std(axis=1)/np.sqrt(means_total_Dataframe.shape[0]))
+        
+        #confidence_normalized,means_normalized = pd.DataFrame(np.vstack((a,b))) , means_total_Dataframe.mean(axis=1)
+
+
+    return per_opt,per_opt_time
+
+
+    
+
 
 
 data_repo = 'Jad'
@@ -452,23 +589,44 @@ n_seeds=  3
     #'Sobol', 'HEBO_RF_Scipy'
     #,'GP'
     #,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
-    optimizers = ['HEBO_RF','RS'] #'HEBO_RF_ACQ100','HEBO_RF_ACQ500' 
-    metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
-    time_plot = True
-    double_plot = False
+optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ100','HEBO_RF_ACQ500' ] #
+metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+time_plot = True
+double_plot = False
 
 
 
 #How many initial configurations we have run.
-interval = 20
 
-for bool_flag in ['False','True']:
+#data_repo = 'Jad'
+n_seeds=  3
+#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+#'Sobol', 'HEBO_RF_Scipy'
+#,'GP'
+#,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
+#optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ100','HEBO_RF_ACQ500'] 
+optimizers = ['HEBO_RF','RS','GP','GP_INIT10','GP_INIT50','HEBO_RF_INIT10','HEBO_RF_INIT50'] 
+optimizers = ['RS','GP','HEBO_RF'] 
+#optimizers = ['HEBO_RF','HEBO_RF_INIT10','HEBO_RF_INIT50']
+metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+time_plot = True
+double_plot = False
+
+#How many initial configurations we have run.
+interval = 20
+result_space = 'Init-Single_Space_Results'
+
+
+"""for data_repo in ['Jad','OpenML']:
+    
+
+    for bool_flag in ['False','True']:
         time_plot = bool_flag
         double_plot = False
 
         general_config = {
         'classifier':'XGB',
-        'result_space':'Single_Space_Results',
+        'result_space':result_space,
         'optimizers' : optimizers,
         'n_seeds' : n_seeds,
         'data_repo':data_repo,
@@ -480,14 +638,19 @@ for bool_flag in ['False','True']:
 
         plot_per_dataset(general_config)
         plt.clf()
+"""
 
 for bool_flag in ['False','True']:
+    means_per_cat = []
+    means_per_cat_time = []
+    for data_repo in ['Jad','OpenML']:
+    
         time_plot = bool_flag
         double_plot = False
 
         general_config = {
         'classifier':'XGB',
-        'result_space':'Single_Space_Results',
+        'result_space':result_space,
         'optimizers' : optimizers,
         'n_seeds' : n_seeds,
         'data_repo':data_repo,
@@ -498,26 +661,13 @@ for bool_flag in ['False','True']:
     
 
         #plot_per_dataset(general_config)
-        plot_average(general_config)
-        plt.clf()
-
-
-"""for bool_flag in ['False','True']:
-        time_plot = bool_flag
-        double_plot = False
-
-        general_config = {
-        'classifier':'XGB',
-        'result_space':'Single_Space_Results',
-        'optimizers' : optimizers,
-        'n_seeds' : n_seeds,
-        'data_repo':data_repo,
-        'double_plot':double_plot,
-        'metrics': metrics,
-        'time_plot':time_plot,
-        }
+        opt, opt_time  = get_average_per_category(general_config)
+        print('Time',opt)
+        means_per_cat.append( opt )
+        means_per_cat_time.append( opt_time )
+    plt.clf()
+    #One category is for JAD, the other is for OpenML.
+    plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
     
 
-        #plot_per_dataset(general_config)
-        plot_average(general_config)
-        plt.clf()"""
+    
