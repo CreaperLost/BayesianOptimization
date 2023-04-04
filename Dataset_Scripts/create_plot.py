@@ -448,14 +448,14 @@ def plot_average(config,plot = True,extra_data = None):
 
 data_repo = 'Jad'
 n_seeds=  3
-    #optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-    #'Sobol', 'HEBO_RF_Scipy'
-    #,'GP'
-    #,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
-    optimizers = ['HEBO_RF','RS'] #'HEBO_RF_ACQ100','HEBO_RF_ACQ500' 
-    metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
-    time_plot = True
-    double_plot = False
+#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
+#'Sobol', 'HEBO_RF_Scipy'
+#,'GP'
+#,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
+optimizers = ['HEBO_RF','RS'] #'HEBO_RF_ACQ100','HEBO_RF_ACQ500' 
+metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+time_plot = True
+double_plot = False
 
 
 
