@@ -177,8 +177,10 @@ class Bayesian_Optimization:
         elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
         elif 'HEBO_RF' in model:
-            self.model = HEBO_RF(self.config_space,rng=random_seed)
-        
+            n_est = 30
+            if 'NTREE_500' in model:
+                n_est = 500
+            self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators = n_est)
 
         
 

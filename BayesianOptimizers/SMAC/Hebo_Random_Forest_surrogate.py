@@ -23,7 +23,7 @@ import numpy as np
 from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel
 
 class  HEBO_RF(BaseModel):
-    def __init__(self, config_space, rng=None):
+    def __init__(self, config_space, rng=None,n_estimators= 30):
         
         self.config_space = config_space
 
@@ -32,7 +32,7 @@ class  HEBO_RF(BaseModel):
         else:
             self.rng = rng
 
-        self.n_estimators =  30
+        self.n_estimators =  n_estimators
         self.rf = RandomForestRegressor(n_estimators = self.n_estimators,random_state=rng)
 
         self.num_out = 1
