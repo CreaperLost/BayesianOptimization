@@ -50,9 +50,6 @@ class  HEBO_RF(BaseModel):
         assert X.shape[0] == y.shape[0]
 
         X = self._impute_inactive(X)
-
-
-
  
         tmp_y = y.copy()
 
