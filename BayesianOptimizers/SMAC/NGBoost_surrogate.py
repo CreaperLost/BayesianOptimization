@@ -38,9 +38,9 @@ class  NGBoost_Surrogate(BaseModel):
         else:
             self.rng = rng
 
-        self.ngboost = NGBRegressor(random_state=rng)        
+        self.ngboost = NGBRegressor(n_estimators=100,random_state=rng,verbose=False)        
         self.normalize_y = True
-        super(NGBoost, self).__init__()
+        super(NGBoost_Surrogate, self).__init__()
 
 
     def train(self, X, y):
@@ -90,7 +90,6 @@ class  NGBoost_Surrogate(BaseModel):
 
         mean,var = dist.loc , dist.var 
         
-    
         if self.normalize_y:
             mean, var = self._untransform_y(mean, var)
 

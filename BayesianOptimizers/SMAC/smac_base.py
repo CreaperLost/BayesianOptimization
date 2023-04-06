@@ -20,13 +20,16 @@ from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
-
+from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
 
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
+from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
+from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate
+
 
 import pandas as pd
 
@@ -181,7 +184,10 @@ class Bayesian_Optimization:
             if 'NTREE_500' in model:
                 n_est = 500
             self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators = n_est)
-
+        elif 'BNN' in model:
+            self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
+        elif 'NGBOOST' in model:
+            self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
         
 
         if acq_funct == "EI":
@@ -194,6 +200,9 @@ class Bayesian_Optimization:
                 self.maximize_func  = DE_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Scipy':
                 self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Sobol_Local':
+                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+                raise RuntimeError
 
         elif acq_funct == "Multi5" or acq_funct == "Multi10":
             self.acquisition_function = MACE(self.model)
