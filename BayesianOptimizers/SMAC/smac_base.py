@@ -21,7 +21,7 @@ from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-
+from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
@@ -188,7 +188,8 @@ class Bayesian_Optimization:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
             self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
-        
+        elif 'SimpleRF' == model:
+            self.model = Simple_RF(self.config_space,rng=random_seed)
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
@@ -436,7 +437,11 @@ class Bayesian_Optimization:
             
             
             if self.batch_size == 1:
-                X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+                if isinstance(self.maximize_func,Sobol_Local_Maximizer):
+                    print('Eimai instance SobolLocal')
+                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score,best_config = self.inc_config)
+                else:
+                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
                 
             else:
                 X_next = self.maximize_func.maximize(initial_suggest = self.inc_config,eta = self.inc_score)
