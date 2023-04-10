@@ -124,6 +124,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt[0] == 'HEBO_RF_Scipy':
                     Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Scipy')
+                elif opt[0] =='HEBO_RF_Local':
+                    Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
                 else: 
                     print(opt[0])
                     raise RuntimeError
@@ -299,10 +302,11 @@ if __name__ == '__main__':
                 ('HEBO_RF',Bayesian_Optimization),  
                 ]"""
     
-    opt_list = [('NGBOOST',Bayesian_Optimization)] #('BNN',Bayesian_Optimization)]
+    #opt_list = [('NGBOOST',Bayesian_Optimization)] #('BNN',Bayesian_Optimization)]
     
-    #opt_list = [('SimpleRF',Bayesian_Optimization)]
-    #opt_list = [('Hebo_RF_Local',Bayesian_Optimization)]
+    #opt_list = []
+    opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
+    #('SimpleRF',Bayesian_Optimization)
 
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000
