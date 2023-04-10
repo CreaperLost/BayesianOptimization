@@ -56,13 +56,13 @@ class Sobol_Local_Maximizer():
 
         # Put a Gaussian on the incumbent and sample from that
         loc = configspace_to_vector(best_config)
-        scale = np.ones([loc.shape[1]]) * 0.1
-        rand_incs = np.array([np.clip(np.random.normal(loc, scale), 0, 1)[0]
+        scale = np.ones([loc.shape[0]]) * 0.1
+        rand_incs = np.array( [np.clip(np.random.normal(loc, scale), 0, 1)
                               for _ in range(int(100))])
-
         # the population is maintained in a list-of-vector form where each ConfigSpace
         # configuration is scaled to a unit hypercube, i.e., all dimensions scaled to [0,1]
         X_candidates = np.concatenate((rand_incs, np.array([configspace_to_vector(individual) for individual in population])  )) 
+        
 
         #y = self.objective_function(X_candidates,eta =eta)
         self.objective_function.update(eta)

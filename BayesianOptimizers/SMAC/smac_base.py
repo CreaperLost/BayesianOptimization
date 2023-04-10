@@ -193,6 +193,7 @@ class Bayesian_Optimization:
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
+            print(maximizer)
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Random':
@@ -203,6 +204,7 @@ class Bayesian_Optimization:
                 self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Sobol_Local':
                 self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+            else:
                 raise RuntimeError
 
         elif acq_funct == "Multi5" or acq_funct == "Multi10":
@@ -438,7 +440,6 @@ class Bayesian_Optimization:
             
             if self.batch_size == 1:
                 if isinstance(self.maximize_func,Sobol_Local_Maximizer):
-                    print('Eimai instance SobolLocal')
                     X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score,best_config = self.inc_config)
                 else:
                     X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
