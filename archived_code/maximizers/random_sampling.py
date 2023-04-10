@@ -26,7 +26,7 @@ class RandomSampling(BaseMaximizer):
 
     def maximize(self):
         """
-        Maximizes the given acquisition function.
+        Maximizes the given acquisition function. 
 
         Returns
         -------

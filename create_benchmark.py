@@ -94,23 +94,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
 
-                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_NTREE_500','HEBO_RF_ACQ10000','HEBO_RF_NTREE_500_ACQ10000']
+                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_NTREE_500','HEBO_RF_ACQ10000','HEBO_RF_NTREE_500_ACQ10000','NGBOOST','BNN','SimpleRF']
                 random_opt = ['HEBO_RF_RANDOM','HEBO_RF_RANDOMACQ10000']
 
                 if opt[0] == 'RS' or opt[0] == 'Sobol' or opt[0] =='HyperCube':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 elif opt[0] in simple_opt:
-                    print('TREXO',opt[0])
                     if 'INIT10' in opt[0]:
-                        print('me init 10')
                         Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                         initial_design=None,n_init = 10,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                     elif 'INIT50' in opt[0]:
-                        print('me init 50')
                         Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                         initial_design=None,n_init = 50,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                     else:
-                        print('me init', 20)
                         Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
                         initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed)
                 elif opt[0] in random_opt:
@@ -179,8 +175,8 @@ def get_openml_data():
     
     # these tasks indeed improve
 
-    #tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910,167125,9976]
-    tasks = [167125,9976]
+    tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910] #,167125,9976
+    #tasks = [167125,9976]
     
 
     #tasks.reverse()
@@ -200,8 +196,8 @@ def get_jad_data():
 
     #medium_data = [1114,851,850,842,839,847,858,843,844,853,854,859,883,957,969,866,1075,890,1004,985,929,881]
     #  very big. 866
-    #interesting_Data = [851,842,1114,839,847,843,883,850,866]
-    interesting_Data = [866]
+    interesting_Data = [851,842,1114,839,847,843,883,850] #,866
+    #interesting_Data = [866]
     return interesting_Data
 
 if __name__ == '__main__':
@@ -295,10 +291,18 @@ if __name__ == '__main__':
     ('HEBO_RF_NTREE_500',Bayesian_Optimization),    
     
     """
-    opt_list = [('RS',Random_Search),
+
+    """('NGBOOST',Bayesian_Optimization)
+    ('BNN',Bayesian_Optimization)"""
+
+    """opt_list = [('RS',Random_Search),
                 ('HEBO_RF',Bayesian_Optimization),  
-                ]
+                ]"""
     
+    opt_list = [('NGBOOST',Bayesian_Optimization)] #('BNN',Bayesian_Optimization)]
+    
+    #opt_list = [('SimpleRF',Bayesian_Optimization)]
+    #opt_list = [('Hebo_RF_Local',Bayesian_Optimization)]
 
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000

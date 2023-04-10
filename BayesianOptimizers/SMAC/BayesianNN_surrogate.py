@@ -45,16 +45,16 @@ def get_default_network(input_dimensionality: int) -> torch.nn.Module:
             torch.nn.init.constant_(module.bias, val=0.0)
 
     return torch.nn.Sequential(
-        torch.nn.Linear(input_dimensionality, 50), torch.nn.Tanh(),
-        torch.nn.Linear(50, 50), torch.nn.Tanh(),
-        torch.nn.Linear(50, 1),
+        torch.nn.Linear(input_dimensionality, 10), torch.nn.Tanh(),
+        torch.nn.Linear(10, 10), torch.nn.Tanh(),
+        torch.nn.Linear(10, 1),
         AppendLayer()
     ).apply(init_weights)
 
 
-class WrapperBohamiann(BaseModel):
+class BNN_Surrogate(BaseModel):
 
-    def __init__(self, get_net=get_default_network, lr=1e-2, use_double_precision=True, verbose=True):
+    def __init__(self, get_net=get_default_network, lr=1e-2, use_double_precision=True, verbose=False,config_space = None,rng = None):
         """
         Wrapper around pybnn Bohamiann implementation. It automatically adjusts the length by the MCMC chain,
         by performing 100 times more burnin steps than we have data points and sampling ~100 networks weights.
@@ -73,17 +73,25 @@ class WrapperBohamiann(BaseModel):
         verbose: Boolean
            Determines whether to print pybnn output.
         """
+        self.config_space = config_space
+
+        if rng is None:
+            self.rng = np.random.RandomState()
+        else:
+            self.rng = rng
+
 
         self.lr = lr
         self.normalize_y = True
         self.verbose = verbose
         self.bnn = Bohamiann(get_network=get_net, use_double_precision=use_double_precision)
 
-    def train(self, X, y, **kwargs):
+    def train(self, X, y):
         assert X.ndim == 2
         assert y.ndim == 1
         assert X.shape[0] == y.shape[0]
-        X = self._impute_inactive(X)
+        
+        #X = self._impute_inactive(X)
  
         tmp_y = y.copy()
 
