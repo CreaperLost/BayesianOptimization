@@ -130,26 +130,6 @@ def create_plot_per_optimizer(optimizer_results_for_dataset):
 # Gia kathe seed.
 # Gia kathe optimizer.
 
-opt_colors= {
-    'RS':'red',
-    'RF':'blue',
-    'GP':'green',
-    'HEBO_RF':'black',
-    'HEBO_GP':'purple',
-    'HEBO_RF5':'orange',
-    'HEBO_RF10':'grey',
-    'Sobol':'purple',
-    'HEBO_RF_ACQ100':'orange',
-    'HEBO_RF_ACQ500':'blue',
-    'HEBO_RF_Scipy':'cyan',
-    'HEBO_RF_DE':'orange',
-    'GP_INIT10' : 'orange',
-    'GP_INIT50' : 'cyan',
-    'HEBO_RF_INIT10':'grey',
-    'HEBO_RF_INIT50':'blue',
-}
-
-
 
 #Essential after initial_configs propagate the cost by the corresponding step.
 # For batch acquisition function
@@ -470,7 +450,7 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)"""
-        print(opt,means_normalized.iloc[99])
+        print(opt,means_normalized.iloc[199])
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -579,42 +559,44 @@ def get_average_per_category(config):
     return per_opt,per_opt_time
 
 
-    
+colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
+
+"""opt_colors= {
+    'RS':colors[0],
+    'RF':colors[1],
+    'GP':'green',
+    'HEBO_RF':'black',
+    'HEBO_GP':'purple',
+    'HEBO_RF5':'orange',
+    'HEBO_RF10':'grey',
+    'Sobol':'purple',
+    'HEBO_RF_ACQ100':'orange',
+    'HEBO_RF_ACQ500':'blue',
+    'HEBO_RF_Scipy':'cyan',
+    'HEBO_RF_DE':'orange',
+    'GP_INIT10' : 'orange',
+    'GP_INIT50' : 'cyan',
+    'HEBO_RF_INIT10':'grey',
+    'HEBO_RF_INIT50':'blue',
+}"""
 
 
 
 data_repo = 'Jad'
 n_seeds=  3
-#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-#'Sobol', 'HEBO_RF_Scipy'
-#,'GP'
-#,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
-optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ100','HEBO_RF_ACQ500' ] #
 metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
 time_plot = True
 double_plot = False
-
-
-
-#How many initial configurations we have run.
-
-#data_repo = 'Jad'
-n_seeds=  3
-#optimizers = ['HEBO_RF','GP','RS','HEBO_GP','HEBO_RF5','HEBO_RF10'] #['RF','GP','RS','HEBO_RF','HEBO_GP'] 'RF','HEBO_GP']
-#'Sobol', 'HEBO_RF_Scipy'
-#,'GP'
-#,'HEBO_RF_ACQ10000','HEBO_RF_RANDOM'
-#optimizers = ['HEBO_RF','RS','HEBO_RF_ACQ100','HEBO_RF_ACQ500'] 
-optimizers = ['HEBO_RF','RS','GP','GP_INIT10','GP_INIT50','HEBO_RF_INIT10','HEBO_RF_INIT50'] 
-optimizers = ['RS','GP','HEBO_RF'] 
-#optimizers = ['HEBO_RF','HEBO_RF_INIT10','HEBO_RF_INIT50']
-metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
-time_plot = True
-double_plot = False
-
 #How many initial configurations we have run.
 interval = 20
-result_space = 'Init-Single_Space_Results'
+result_space = 'Trees_Single_Space_Results'
+optimizers = ['HEBO_RF_NTREE_500','HEBO_RF_NTREE_500_ACQ10000'] 
+
+opt_colors = dict()
+clr_pos = 0
+for opt in optimizers:
+    opt_colors.update({opt:colors[clr_pos]})
+    clr_pos+=1
 
 
 """for data_repo in ['Jad','OpenML']:
