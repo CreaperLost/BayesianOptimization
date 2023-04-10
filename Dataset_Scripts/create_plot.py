@@ -11,7 +11,7 @@ import itertools
 sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
-
+import os
 def get_results_per_optimizer(config={},accumulate='none'):
     assert config!={}
     assert accumulate == 'none' or accumulate =='min' or accumulate =='addition'
@@ -96,8 +96,12 @@ def get_dataset_name(dataset_id, config):
 
     #print(path)
 
+    
+
     if data_repo == 'Jad':
+        path = parse_directory([main_directory,'Jad_Full_List.csv'])
         return get_dataset_name_Jad(dataset_id,path)
+    
     return get_dataset_name_OpenML(dataset_id,path)
 
 
@@ -139,6 +143,13 @@ def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
     full_eval=l_eval[:initial_config] + extra_l
     #print(full_eval)
     return full_eval
+
+def get_Jad_avg_score(dataset_name):
+    parent_dir = os.path.join(os.getcwd(), os.pardir)
+    Res_File = pd.read_csv(os.path.join(parent_dir,'JAD_Results_AUC.csv'),index_col=0).set_index('dataset')
+    if dataset_name not in Res_File.index:
+        return None
+    return Res_File.loc[dataset_name].values[0]
 
 def plot_per_dataset(config):
     clf_name = config['classifier']
@@ -187,7 +198,12 @@ def plot_per_dataset(config):
     for dataset in datasets_list_run:
         #Inserting the first of many configurations give_us acess to many of the fields we want. -- Dirty.
         
-        title_name = '' #get_dataset_name(dataset,total_config_dictionary[metric_list[0]][0])
+        title_name = get_dataset_name(dataset,total_config_dictionary[metric_list[0]][0])
+
+        jad_score =  get_Jad_avg_score(title_name)
+        
+
+
         if double_plot_bool == True:
             fig, (ax1,ax2) = plt.subplots(2,1,sharex=True)
         else: 
@@ -275,7 +291,8 @@ def plot_per_dataset(config):
             if double_plot_bool == True:
                 ax2.set_ylabel('Time in seconds')
 
-        
+        if  jad_score != None:
+            plt.axhline(y=1-jad_score,color = 'black', linestyle = '-',label='Jad Score')
         # This happens for all the figures.
         ax1.set_ylabel('(1-AUC)')
         fig.suptitle(title_name + " /w classifier "  + clf_name)
@@ -297,10 +314,11 @@ def plot_per_dataset(config):
         try:
             Path(results_directory).mkdir(parents=True, exist_ok=False)
         except FileExistsError:
-            print("Folder is already there")
+            pass
+            #print("Folder is already there")
         else:
-            print("Folder was created")
-
+            #print("Folder was created")
+            pass
         
         plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
@@ -599,7 +617,7 @@ for opt in optimizers:
     clr_pos+=1
 
 
-"""for data_repo in ['Jad','OpenML']:
+for data_repo in ['Jad','OpenML']:
     
 
     for bool_flag in ['False','True']:
@@ -620,8 +638,8 @@ for opt in optimizers:
 
         plot_per_dataset(general_config)
         plt.clf()
-"""
 
+"""  
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
@@ -650,6 +668,6 @@ for bool_flag in ['False','True']:
     plt.clf()
     #One category is for JAD, the other is for OpenML.
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
-    
+"""  
 
     
