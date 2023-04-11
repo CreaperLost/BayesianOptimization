@@ -74,7 +74,7 @@ def get_target_data_per_split(dataset_name,dataset_split):
 
     return per_repeat
 
-def get_avg_score(dataset_name,target_data_split):
+def get_avg_score(dataset_name,target_data_split,dataset_split):
     #Some information.
     n_repeats = len(target_data_split)
     n_folds = len(target_data_split[0])
@@ -95,16 +95,13 @@ def get_avg_score(dataset_name,target_data_split):
             #print(f"Values: {row}")
             
             per_fold = []
-            start_fold_idx = 0
             for n_fold in range(n_folds):
                 # Get the target for the specific fold.
                 target = [int(i) for i in target_data_split[n_repeat][n_fold]]
-                
-                # Find the end_folx_idx
-                end_fold_idx = start_fold_idx + len(target) 
+                split_indexes = dataset_split[n_repeat][n_fold]
 
                 #Find the predictions of the specific fold.
-                predictions = row.iloc[start_fold_idx:end_fold_idx]
+                predictions = row.iloc[split_indexes]
                 
                 # for single class this throws exception
                 try:
@@ -112,16 +109,11 @@ def get_avg_score(dataset_name,target_data_split):
                 except:
                     pass
                 roc_auc = roc_auc_score(target, predictions,multi_class='ovr')
-                print(np.append(predictions,np.array(target).reshape(-1,1),axis=1))
-                print(roc_auc)
-                quit()
+                
                 
                 #append
                 per_fold.append(roc_auc)
-                #Append the already used n_folds
-                # Iterate to the next indexes.
-                #print(start_fold_idx,end_fold_idx,len(target),roc_auc)
-                start_fold_idx = end_fold_idx
+
 
             mean_auc_of_config_for_fold = sum(per_fold) / len(per_fold)
             avg_score_per_config.append((index,mean_auc_of_config_for_fold))
@@ -140,7 +132,7 @@ def best_get_avg(dataset_name,n_folds = 10,n_repeats = 3):
     target_data_split = get_target_data_per_split(dataset_name,dataset_split)
 
     # Avg AUC per config.
-    avg_per_config = get_avg_score(dataset_name,target_data_split)
+    avg_per_config = get_avg_score(dataset_name,target_data_split,dataset_split)
     #Return the maximum
     return avg_per_config.max()
 
@@ -157,6 +149,6 @@ def get_datasets_of_jad():
         if entry.is_dir():
             result_per_dataset.append((entry.name,best_get_avg(entry.name,10,3)))
 
-    #pd.DataFrame(result_per_dataset,columns=['dataset','AUC']).to_csv(os.path.join(parent_dir,'JAD_Results_AUC.csv'))
+    pd.DataFrame(result_per_dataset,columns=['dataset','AUC']).to_csv(os.path.join(parent_dir,'JAD_Results_AUC.csv'))
 
 get_datasets_of_jad()
