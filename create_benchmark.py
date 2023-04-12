@@ -94,10 +94,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 print('Currently running ' + opt[0] + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
 
-                simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_NTREE_500','HEBO_RF_ACQ10000','HEBO_RF_NTREE_500_ACQ10000','NGBOOST','BNN','SimpleRF']
-                random_opt = ['HEBO_RF_RANDOM','HEBO_RF_RANDOMACQ10000']
+                """simple_opt = ['RF','HEBO_GP','GP','HEBO_RF','HEBO_RF_NTREE_500','HEBO_RF_ACQ10000','HEBO_RF_NTREE_500_ACQ10000','NGBOOST','BNN','SimpleRF']
+                random_opt = ['HEBO_RF_RANDOM','HEBO_RF_RANDOMACQ10000']"""
+
 
                 if opt[0] == 'RS' or opt[0] == 'Sobol' or opt[0] =='HyperCube':
+                    Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
+                elif opt[0] == 'RF_Local':
+                    Optimization = opt[1](f=benchmark_.objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
+                else: 
+                    print(opt[0])
+                    raise RuntimeError
+                """if opt[0] == 'RS' or opt[0] == 'Sobol' or opt[0] =='HyperCube':
                     Optimization = opt[1](f=benchmark_.objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 elif opt[0] in simple_opt:
                     if 'INIT10' in opt[0]:
@@ -126,10 +135,8 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Scipy')
                 elif opt[0] =='HEBO_RF_Local':
                     Optimization = opt[1](f=benchmark_.objective_function,model=opt[0],lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
-                else: 
-                    print(opt[0])
-                    raise RuntimeError
+                    initial_design=None,n_init = n_init,max_evals= max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')"""
+                
 
 
                 best_score = Optimization.run()
@@ -216,97 +223,10 @@ if __name__ == '__main__':
     }
 
 
-    #('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)
-    #('HEBO_RF',Bayesian_Optimization), ('HEBO_GP',Bayesian_Optimization)
-    # ('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('GP',Bayesian_Optimization),('RS',Random_Search),
-    # ('HEBO_GP',Bayesian_Optimization), ('GP',Bayesian_Optimization),('RS',Random_Search) #('RF',Bayesian_Optimization)
-    # ('HEBO_GP',Bayesian_Optimization)
-
-
-    #('HEBO_RF',Bayesian_Optimization),('RS',Random_Search),('GP',Bayesian_Optimization),('HEBO_GP',Bayesian_Optimization)
-
-    """
-    ('HEBO_RF5',Bayesian_Optimization),
-    ('HEBO_RF10',Bayesian_Optimization),
-    ('HEBO_GP',Bayesian_Optimization),
-    ('HEBO_RF',Bayesian_Optimization),
-    ('GP',Bayesian_Optimization),
-    ('RS',Random_Search)
-    #('Sobol',Sobol_Search),
-    ('HyperCube',HyperCubeSearch)
-    
-    opt_list = [('RS',Random_Search),('Sobol',Sobol_Search),('HEBO_RF',Bayesian_Optimization),\
-    ('HEBO_RF_ACQ10000',Bayesian_Optimization),('HEBO_RF_RANDOM',Bayesian_Optimization)]
-    """
-    #opt_list = [('HEBO_RF',Bayesian_Optimization),('RS',Random_Search),('HEBO_RF_RANDOM',Bayesian_Optimization)]
-    """opt_list = [('RS',Random_Search),
-                ('Sobol',Sobol_Search),
-                ('HEBO_RF',Bayesian_Optimization),
-                ('HEBO_RF_ACQ10000',Bayesian_Optimization),
-                ('HEBO_RF_RANDOM',Bayesian_Optimization),
-                ('GP',Bayesian_Optimization)]"""
-    #,
-    #opt_list = [('HEBO_RF_DE',Bayesian_Optimization),('Sobol',Sobol_Search)]
-    
-    """opt_list = [('RS',Random_Search),
-                ('HEBO_RF',Bayesian_Optimization),
-                ('HEBO_RF_ACQ10000',Bayesian_Optimization),
-                ('HEBO_RF_RANDOM',Bayesian_Optimization),
-                ('GP',Bayesian_Optimization)]
-    """
-
-    #opt_list = [('Sobol',Sobol_Search)]
-
-    #opt_list= [('HEBO_RF_Scipy',Bayesian_Optimization)]
-    """opt_list = [('RS',Random_Search),('HEBO_RF',Bayesian_Optimization),
-                ('HEBO_RF_ACQ10000',Bayesian_Optimization),
-                ('HEBO_RF_RANDOM',Bayesian_Optimization),
-                ('Sobol',Sobol_Search),
-                ('HEBO_RF_Scipy',Bayesian_Optimization),
-                ('HEBO_RF_DE',Bayesian_Optimization)]
-                ,('HEBO_RF10',Bayesian_Optimization)]"""
-
-    #
-    #
-    #,('RS',Sobol_Search),
-    #('HEBO_RF_ACQ100',Bayesian_Optimization),('HEBO_RF_ACQ500',Bayesian_Optimization),('HEBO_RF',Bayesian_Optimization)
-    #('RS',Random_Search),('HEBO_RF',Bayesian_Optimization)
-    # ('HEBO_RF_ACQ100',Bayesian_Optimization),('HEBO_RF_ACQ500',Bayesian_Optimization)
-
-
-    #('HEBO_RF_INIT10',Bayesian_Optimization),
-    #('HEBO_RF_INIT50',Bayesian_Optimization),
-    #            ('GP',Bayesian_Optimization),
-    #            ('GP_INIT10',Bayesian_Optimization),
-    #            ('GP_INIT50',Bayesian_Optimization)
-
-    """
-    To RUN:
-
-    ('RS',Random_Search),
-    ('HEBO_RF',Bayesian_Optimization),
-    
-    on JAD: 866
-    on OpenML: 167125,9976
-    """
-    """
-    ('HEBO_RF_NTREE_500_ACQ10000',Bayesian_Optimization),
-    ('HEBO_RF_NTREE_500',Bayesian_Optimization),    
-    
-    """
-
-    """('NGBOOST',Bayesian_Optimization)
-    ('BNN',Bayesian_Optimization)"""
-
-    """opt_list = [('RS',Random_Search),
-                ('HEBO_RF',Bayesian_Optimization),  
-                ]"""
-    
     #opt_list = [('NGBOOST',Bayesian_Optimization)] #('BNN',Bayesian_Optimization)]
     
     #opt_list = []
-    opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
-    #('SimpleRF',Bayesian_Optimization)
+    opt_list = [('RF_Local',Bayesian_Optimization)]
 
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000
@@ -352,49 +272,3 @@ if __name__ == '__main__':
 
     run_benchmark_total(opt_list,xgb_bench_config)
     
-
-
-
-    #Neural Network Benchmark
-    
-    
-    """nn_benchmark_config =  {
-        'n_init' : n_init,
-        'max_evals' : max_evals,
-        'n_datasets' : n_datasets,
-        'data_ids' : config_of_data[repo]['data_ids'](),
-        'n_seeds' : seeds,
-        'type_of_bench': type_of_bench,
-        'bench_name' :'FNN',
-        'bench_class' : FNNBenchmark,
-        'data_repo' : repo
-    }
-    #('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization)
-    #('HEBO_RF',Bayesian_Optimization), ('HEBO_GP',Bayesian_Optimization)
-    # ('RS',Random_Search),('RF',Bayesian_Optimization),('GP',Bayesian_Optimization),('GP',Bayesian_Optimization),('RS',Random_Search),
-    # ('HEBO_GP',Bayesian_Optimization), ('GP',Bayesian_Optimization),('RS',Random_Search) #('RF',Bayesian_Optimization)
-    # ('HEBO_GP',Bayesian_Optimization)
-    run_benchmark_total([('HEBO_RF',Bayesian_Optimization),('RS',Random_Search),('GP',Bayesian_Optimization)],nn_benchmark_config)"""
-    
-
-
-    """
-    
-    RF Benchmark
-
-
-    """
-
-    """rf_bench_config =  {
-        'n_init' : n_init,
-        'max_evals' : max_evals,
-        'n_datasets' : n_datasets,
-        'data_ids' : config_of_data[repo]['data_ids'](),
-        'n_seeds' : seeds,
-        'type_of_bench':type_of_bench,
-        'bench_name' : 'RF',
-        'bench_class' : RandomForestBenchmark,
-        'data_repo' : repo
-    }
-
-    run_benchmark_total([('GP',Bayesian_Optimization),('RF',Bayesian_Optimization)],rf_bench_config)"""

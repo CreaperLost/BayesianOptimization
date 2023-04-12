@@ -10,13 +10,13 @@ import xgboost as xgb
 from typing import Union, Dict
 import ConfigSpace as CS
 import numpy as np
-from benchmarks.MLBenchmark_Class import MLBenchmark
+from benchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
 
 __version__ = '0.0.1'
 
 
 
-class XGBoostBenchmark(MLBenchmark):
+class MultiFold_XGBoostBenchmark(MultiFold_MLBenchmark):
     def __init__(self,
                  task_id: int,
                  rng: Union[np.random.RandomState, int, None] = None,
@@ -24,7 +24,7 @@ class XGBoostBenchmark(MLBenchmark):
                  data_repo:str = 'Jad',
                  use_holdout =False
                  ):
-        super(XGBoostBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
+        super(MultiFold_XGBoostBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
@@ -63,7 +63,6 @@ class XGBoostBenchmark(MLBenchmark):
         rng = self.rng if rng is None else rng
         if isinstance(config, CS.Configuration):
             config = config.get_dictionary()
-
 
         rng = rng if (rng is None or isinstance(rng, int)) else self.seed
 

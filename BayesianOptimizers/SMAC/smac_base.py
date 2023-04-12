@@ -174,7 +174,7 @@ class Bayesian_Optimization:
 
 
         if model == 'RF':
-            self.model = RandomForest(self.config_space,rng=random_seed)
+            self.model = Simple_RF(self.config_space,rng=random_seed)
         elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
         elif 'GP' in model:
@@ -188,12 +188,10 @@ class Bayesian_Optimization:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
             self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
-        elif 'SimpleRF' == model:
-            self.model = Simple_RF(self.config_space,rng=random_seed)
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
-            print(maximizer)
+            
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Random':

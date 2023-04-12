@@ -1,7 +1,0 @@
-id,pid,name,description,createdAt,size,samples,features,type
-1114,52,nki70_arff_v1_did1228,,2023-02-13,104311,144,77,General
-865,52,auto_price_v2_did745,,2023-02-13,14387,159,16,General
-852,52,squash-unstored_v2_did985,,2023-02-13,6929,52,24,General
-851,52,white-clover_v2_did1009,,2023-02-13,11165,63,32,General
-850,52,fl2000_v2_did988,,2023-02-13,5996,67,16,General
-842,52,squash-stored_v2_did972,,2023-02-13,7536,52,25,General
