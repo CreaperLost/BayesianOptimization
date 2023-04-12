@@ -468,7 +468,7 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)"""
-        print(opt,means_normalized.iloc[199])
+        print(opt,means_normalized.iloc[199],means_normalized.iloc[99])
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -607,8 +607,8 @@ time_plot = True
 double_plot = False
 #How many initial configurations we have run.
 interval = 20
-result_space = 'Trees_Single_Space_Results'
-optimizers = ['HEBO_RF_NTREE_500','HEBO_RF_NTREE_500_ACQ10000'] 
+result_space = 'Single_Space_Results'
+optimizers = ['SimpleRF','HEBO_RF'] 
 
 opt_colors = dict()
 clr_pos = 0
@@ -639,7 +639,7 @@ for data_repo in ['Jad','OpenML']:
         plot_per_dataset(general_config)
         plt.clf()
 
-"""  
+
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
@@ -668,6 +668,6 @@ for bool_flag in ['False','True']:
     plt.clf()
     #One category is for JAD, the other is for OpenML.
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
-"""  
+
 
     
