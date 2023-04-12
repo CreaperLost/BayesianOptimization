@@ -305,8 +305,8 @@ if __name__ == '__main__':
     #opt_list = [('NGBOOST',Bayesian_Optimization)] #('BNN',Bayesian_Optimization)]
     
     #opt_list = []
-    opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
-    #('SimpleRF',Bayesian_Optimization)
+    #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
+    opt_list = [('SimpleRF',Bayesian_Optimization)]
 
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000

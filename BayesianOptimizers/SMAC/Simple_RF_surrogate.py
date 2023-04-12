@@ -45,7 +45,23 @@ class  Simple_RF(BaseModel):
 
         #Not needed for non conditional space.
         #X = self._impute_inactive(X)
- 
+
+        tmp_y = y.copy()
+
+        try:
+            if y.min() <= 0:
+                y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=True)
+            else:
+                y = power_transform(y / y.std(), method = 'box-cox',standardize=True)
+                if y.std() < 0.5:
+                    y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=True)
+            if y.std() < 0.5:
+                raise RuntimeError('Power transformation failed')
+        except:    
+            #Reset y.
+            y = tmp_y
+
+
         y = self._normalize_y(y)
         y = y.flatten()
         
@@ -77,7 +93,9 @@ class  Simple_RF(BaseModel):
         for estimator in self.rf.estimators_:
             preds.append(estimator.predict(X).reshape([-1,1]))
         var = np.var(np.concatenate(preds, axis=1), axis=1)
-        
+
+
+
         mean, var = self._untransform_y(mean, var)
 
         return mean.reshape([-1,1]), var.reshape([-1,1]) 
