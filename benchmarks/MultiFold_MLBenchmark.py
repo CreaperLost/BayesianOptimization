@@ -418,7 +418,7 @@ class MultiFold_MLBenchmark():
             for model_fold in range(len(model)-1):
                 val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
             #Average validation score.
-            val_scores[k] /= len(model)
+            val_scores[k] /= (len(model)-1)
             val_score_cost[k] = time.time() - _start
         val_loss = 1 - val_scores["auc"]
 

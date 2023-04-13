@@ -217,7 +217,6 @@ def get_jad_data():
     #  very big. 866
     interesting_Data = [851,842,1114,839,847,843,883,850] #,866
     #interesting_Data = [866]
-    interesting_Data = [883,850]
     return interesting_Data
 
 if __name__ == '__main__':
@@ -242,9 +241,9 @@ if __name__ == '__main__':
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000
     n_init = 20
-    max_evals = 200
+    max_evals = 100
     
-    seeds = [1,2,3] # ,2,3,4,5 
+    seeds = [1,2] # ,2,3,4,5 
 
      #Jad
     repo = 'OpenML'  
