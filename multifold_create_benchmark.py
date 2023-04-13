@@ -106,7 +106,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 else: 
                     print(opt)
                     raise RuntimeError
-
+ 
 
                 best_score = Optimization.run()
 

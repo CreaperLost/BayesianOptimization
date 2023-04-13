@@ -278,6 +278,82 @@ class MultiFold_MLBenchmark():
         return model, model_fit_time, train_loss, scores, score_cost
 
 
+    # Train 1 model on 1 fold and just return it.
+    def _train_objective_per_fold(self,
+                         config: Dict,
+                         fidelity: Dict,
+                         shuffle: bool,
+                         rng: Union[np.random.RandomState, int, None] = None,
+                         evaluation: Union[str, None] = "valid",fold = None):
+
+        assert fold !=None
+        if rng is not None:
+            rng = get_rng(rng, self.rng)
+
+        
+        if evaluation == "val":
+            model_fit_time = 0
+            
+            # initializing model
+            model = self.init_model(config, fidelity, rng, n_feat = self.train_X[fold].shape[1])
+            # preparing data -- Select the fold
+            train_X = self.train_X[fold]
+            train_y = self.train_y[fold]
+            train_idx = self.train_idx
+            # Fit the model
+            start = time.time()
+                
+            model.fit(train_X, train_y)
+            # computing statistics on training data
+            model_fit_time = model_fit_time + time.time() - start
+
+            """# initializing model for the test set!
+            model = self.init_model(config, fidelity, rng , n_feat = self.train_X[0].shape[1])
+            train_X = np.vstack((self.train_X[0], self.valid_X[0]))
+            train_y = pd.concat((self.train_y[0], self.valid_y[0]))
+            train_idx = np.arange(len(train_X))
+            
+            model.fit(train_X[train_idx], train_y.iloc[train_idx])
+            #Model trained on TRAIN + VALIDATION tests.
+            list_of_models.append(model)"""
+
+            scores = dict()
+            score_cost = dict()
+            #Done no scoring because we just trained. :) -- Added some scores
+            for k, v in self.scorers.items():
+                scores[k] = 0.0
+                score_cost[k] = 0.0
+                _start = time.time()
+                #Select model in first position.
+                scores[k] = v(model, train_X[train_idx], train_y.iloc[train_idx])
+                score_cost[k] = time.time() - _start
+            train_loss = 1 - scores["auc"]
+        else:
+            # initializing model
+            model = self.init_model(config, fidelity, rng, n_feat = self.train_X[0].shape[1])
+
+            train_X = np.vstack((self.train_X[0], self.valid_X[0]))
+            train_y = pd.concat((self.train_y[0], self.valid_y[0]))
+            train_idx = np.arange(len(train_X))
+
+            #Here we got 1 train set. (Train + Validation from Fold 0.)
+            start = time.time()
+            model.fit(train_X[train_idx], train_y.iloc[train_idx])
+            model_fit_time = time.time() - start
+
+            
+            #This does some kind of prediction?
+            # computing statistics on training data
+            scores = dict()
+            score_cost = dict()
+            for k, v in self.scorers.items():
+                _start = time.time()
+                scores[k] = v(model, train_X[train_idx], train_y.iloc[train_idx])
+                score_cost[k] = time.time() - _start
+            train_loss = 1 - scores["auc"]
+
+        return model, model_fit_time, train_loss, scores, score_cost
+
     def _check_and_cast_configuration(self,configuration: Union[Dict, ConfigSpace.Configuration],
                                       configuration_space: ConfigSpace.ConfigurationSpace) \
             -> ConfigSpace.Configuration:
@@ -342,7 +418,71 @@ class MultiFold_MLBenchmark():
             for model_fold in range(len(model)-1):
                 val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
             #Average validation score.
-            val_scores[k] /= len(model)
+            val_scores[k] /= (len(model)-1)
+            val_score_cost[k] = time.time() - _start
+        val_loss = 1 - val_scores["auc"]
+
+
+        
+        #This shouldn't run in general. :)
+        #Get the Test Score, once.
+        test_scores = dict()
+        test_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
+            test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
+            test_score_cost[k] = time.time() - _start
+        test_loss = 1 - test_scores["auc"]
+
+        info = {
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'test_loss': test_loss,
+            'model_cost': model_fit_time,
+            'train_scores': train_scores,
+            'train_costs': train_score_cost,
+            'val_scores': val_scores,
+            'val_costs': val_score_cost,
+            'test_scores': test_scores,
+            'test_costs': test_score_cost,
+            # storing as dictionary and not ConfigSpace saves tremendous memory
+            'fidelity': fidelity,
+            'config': configuration,
+        }
+
+        return {
+            'function_value': info['val_loss'],
+            'cost': model_fit_time + info['val_costs']['auc'],
+            'info': info
+        }
+
+
+    #Get the current fold, train a model and then apply on validation set to get AUC score returned.
+    def objective_function_per_fold(self,
+                           configuration: Union[CS.Configuration, Dict],
+                           fidelity: Union[CS.Configuration, Dict, None] = None,
+                           shuffle: bool = False,
+                           rng: Union[np.random.RandomState, int, None] = None,fold=None,
+                           **kwargs) -> Dict:
+        """Function that evaluates a 'config' on a 'fidelity' on the validation set
+        """
+        assert fold!= None
+        self._check_and_cast_configuration(configuration, self.configuration_space)
+        #Get a model trained on the fold.
+        model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective_per_fold(
+            configuration, fidelity, shuffle, rng, evaluation="val",fold=fold
+        )
+
+        #Get the Validation Score - of 1 fold.
+        val_scores = dict()
+        val_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Get the score of a model on the specific set.
+            val_scores[k] = v(model, self.valid_X[fold], self.valid_y[fold])
+            #Average validation score. We only got 1 model.
+            #val_scores[k] /= len(model)
             val_score_cost[k] = time.time() - _start
         val_loss = 1 - val_scores["auc"]
 
