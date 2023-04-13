@@ -21,7 +21,7 @@ from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
+from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF,Simple_RF_NO_STD,Simple_RF_NO_BOX
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
@@ -175,6 +175,10 @@ class Bayesian_Optimization:
 
         if model == 'RF':
             self.model = Simple_RF(self.config_space,rng=random_seed)
+        elif model == 'RF_NO_STD':
+            self.model = Simple_RF_NO_STD(self.config_space,rng=random_seed)
+        elif model == 'RF_NO_BOX':
+            self.model = Simple_RF_NO_BOX(self.config_space,rng=random_seed)
         elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
         elif 'GP' in model:
