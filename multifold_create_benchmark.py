@@ -164,9 +164,9 @@ if __name__ == '__main__':
                             'OpenML': {'data_ids':get_openml_data}      }
 
     #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
-    opt_list = ['RF_Local','Random_Search']
+    opt_list = ['Random_Search']
 
-    for repo in ['Jad','OpenML']:
+    for repo in ['OpenML','Jad']:
         #XGBoost Benchmark    
         xgb_bench_config =  {
             'n_init' : 10,
