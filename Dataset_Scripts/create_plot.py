@@ -477,7 +477,7 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
         plt.xticks(x_ticks,x_ticks)
         plt.xlim([1,eval_range])
         #plt.axvline(x = 10, color = 'black', linestyle = '--',label=' 10 Initial_Evaluations')
-        plt.axvline(x = 20, color = 'black', linestyle = '--',label=' 20 Initial_Evaluations')
+        plt.axvline(x = 10, color = 'black', linestyle = '--',label=' 10 Initial_Evaluations')
         #plt.axvline(x = 50, color = 'black', linestyle = '--',label=' 50 Initial_Evaluations')
         plt.xlabel('Number of objective evals.')
     elif time_plot_bool =='True':
@@ -608,7 +608,7 @@ double_plot = False
 #How many initial configurations we have run.
 interval = 20
 result_space = 'Single_Space_Results'
-optimizers = ['SimpleRF','HEBO_RF'] 
+optimizers = ['RF','RF_Local','RF_NTREE_500'] 
 
 opt_colors = dict()
 clr_pos = 0

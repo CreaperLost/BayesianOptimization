@@ -103,14 +103,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt[0] == 'RF_Local':
                     Optimization = opt[1](f=benchmark_.objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
-                elif opt[0] == 'RF_NO_STD':
-                    Optimization = opt[1](f=benchmark_.objective_function, model='RF_NO_STD' ,lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
-                elif opt[0] == 'RF_NO_BOX':
-                    Optimization = opt[1](f=benchmark_.objective_function, model='RF_NO_BOX' ,lb= None, ub =None , configuration_space= configspace ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
-                elif opt[0] == 'Simple_RF':
+                elif opt[0] == 'RF':
                     Optimization = opt[1](f=benchmark_.objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
+                elif opt[0] == 'RF_NTREE_500':
+                    Optimization = opt[1](f=benchmark_.objective_function, model='RF_NTREE_500' ,lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
                 else: 
                     print(opt[0])
@@ -195,7 +192,7 @@ def get_openml_data():
     # these tasks indeed improve
 
     tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910] #,167125,9976
-    #tasks = [167125,9976]
+    tasks = [167125,9976]
     
 
     #tasks.reverse()
@@ -215,8 +212,8 @@ def get_jad_data():
 
     #medium_data = [1114,851,850,842,839,847,858,843,844,853,854,859,883,957,969,866,1075,890,1004,985,929,881]
     #  very big. 866
-    interesting_Data = [851,842,1114,839,847,843,883,850] #,866
-    #interesting_Data = [866]
+    interesting_Data = [851,842,1114,839,847,843,850] #,866, ,883
+    interesting_Data = [883]
     return interesting_Data
 
 if __name__ == '__main__':
@@ -236,16 +233,18 @@ if __name__ == '__main__':
     
     #opt_list = []
     #('RF_Local',Bayesian_Optimization)
-    opt_list = [('RF_NO_STD',Bayesian_Optimization),('RF_NO_BOX',Bayesian_Optimization),('Simple_RF',Bayesian_Optimization)]
+    opt_list = [('RF_NTREE_500',Bayesian_Optimization),('RF',Bayesian_Optimization),('RF_Local',Bayesian_Optimization)]
 
     type_of_bench = 'Single_Space_Results'
     n_datasets =  1000
-    n_init = 20
-    max_evals = 100
+    n_init = 10
+    max_evals = 200
     
-    seeds = [1,2] # ,2,3,4,5 
+    seeds = [1,2,3] # ,2,3,4,5 
 
-     #Jad
+
+
+    #Jad
     repo = 'OpenML'  
     #XGBoost Benchmark    
     xgb_bench_config =  {
@@ -259,11 +258,10 @@ if __name__ == '__main__':
         'bench_class' : XGBoostBenchmark,
         'data_repo' : repo
     }
+    
     run_benchmark_total(opt_list,xgb_bench_config)
 
-
-    # Just run for OpenML as well
-    
+     # Just run for OpenML as well
     repo = 'Jad' 
     #XGBoost Benchmark     
     xgb_bench_config =  {
@@ -278,7 +276,8 @@ if __name__ == '__main__':
         'data_repo' : repo
     }
     
-
-
     run_benchmark_total(opt_list,xgb_bench_config)
     
+    
+    
+   

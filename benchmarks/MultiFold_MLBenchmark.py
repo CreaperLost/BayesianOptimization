@@ -325,7 +325,7 @@ class MultiFold_MLBenchmark():
                 score_cost[k] = 0.0
                 _start = time.time()
                 #Select model in first position.
-                scores[k] = v(model, train_X[train_idx], train_y.iloc[train_idx])
+                scores[k] = 0#v(model, train_X[train_idx], train_y.iloc[train_idx])
                 score_cost[k] = time.time() - _start
             train_loss = 1 - scores["auc"]
         else:

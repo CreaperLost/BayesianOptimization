@@ -21,7 +21,8 @@ from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF,Simple_RF_NO_STD,Simple_RF_NO_BOX
+
+from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
 from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
@@ -173,25 +174,26 @@ class Bayesian_Optimization:
             self.n_cand = min(100 * self.dim, 10000)
 
 
-        if model == 'RF':
-            self.model = Simple_RF(self.config_space,rng=random_seed)
-        elif model == 'RF_NO_STD':
-            self.model = Simple_RF_NO_STD(self.config_space,rng=random_seed)
-        elif model == 'RF_NO_BOX':
-            self.model = Simple_RF_NO_BOX(self.config_space,rng=random_seed)
+        if 'RF' in model:
+            n_est = 30
+            if 'NTREE_500' in model:
+                n_est = 500
+            self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=n_est)
         elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
         elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
-        elif 'HEBO_RF' in model:
-            n_est = 30
-            if 'NTREE_500' in model:
-                n_est = 500
-            self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators = n_est)
         elif 'BNN' in model:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
             self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
+
+
+        """ elif 'HEBO_RF' in model:
+            n_est = 30
+            if 'NTREE_500' in model:
+                n_est = 500
+            self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators = n_est)"""
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)

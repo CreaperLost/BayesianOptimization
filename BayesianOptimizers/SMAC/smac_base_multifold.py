@@ -146,6 +146,10 @@ class Bayesian_Optimization_MultiFold:
         
         self.n_init = n_init #Initial configurations
         self.max_evals = max_evals #Maxmimum evaluations
+        #max evaluations per fold. if we got 10 folds, 500 total then we do 50 per fold. but if we go every 2 folds, we can do 100.
+        self.max_evals_per_fold = (self.per_fold * self.max_evals ) / self.n_folds
+        #Ensure in a loop that the batch_size won't exceed the allowed iterations per fold.
+        assert self.max_evals_per_fold >= batch_size
         self.batch_size = batch_size #Number of points to maximize  acquisition for.
         self.verbose = verbose #hm
 
@@ -155,10 +159,13 @@ class Bayesian_Optimization_MultiFold:
 
         #History of actions. Complementary to the X,fx
         self.history = []
+        #Keep score of each fold in here...
+        self.y = [list() for _ in range(self.n_folds)]
 
 
         # Save the full history
         self.X = np.zeros((0, self.dim))
+        #Keep the average in self.fX
         self.fX = np.zeros((0, 1))
 
         self.surrogate_time = np.array([])
@@ -180,22 +187,19 @@ class Bayesian_Optimization_MultiFold:
             self.n_cand = min(100 * self.dim, 10000)
 
 
-        if model == 'RF':
-            self.model = Simple_RF(self.config_space,rng=random_seed)
+        if 'RF' in model:
+            n_est = 30
+            if 'NTREE_500' in model:
+                n_est = 500
+            self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=n_est)
         elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
         elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
-        elif 'HEBO_RF' in model:
-            n_est = 30
-            if 'NTREE_500' in model:
-                n_est = 500
-            self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators = n_est)
         elif 'BNN' in model:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
             self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
-
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
             
@@ -211,7 +215,6 @@ class Bayesian_Optimization_MultiFold:
                 self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             else:
                 raise RuntimeError
-
         elif acq_funct == "Multi5" or acq_funct == "Multi10":
             self.acquisition_function = MACE(self.model)
             self.maximize_func  = EvolutionOpt(self.config_space,self.acquisition_function,pop=100,iters=100,change_to_vector = self.configspace_to_vector)
@@ -383,17 +386,11 @@ class Bayesian_Optimization_MultiFold:
             
             #Run the objective function on it.
             start_time = time.time()
-            #Just run the initials on the first fold.
-            score = 0
-            # for the number of folds specified
-
-            #SANITY CHECK HERE.
-            for f in range(fold):
-                score += self.f(config,fold=f)['function_value']
             
-            objective_value_per_configuration[i] = score/fold
+            objective_value_per_configuration[i] = self.f(config,fold=fold)['function_value']
 
             end_time=time.time() - start_time
+
             self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
 
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
@@ -407,6 +404,10 @@ class Bayesian_Optimization_MultiFold:
             end_time_total =  time.time() - start_time_total
             self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
 
+
+        #Sanity check.
+        self.y[fold] = (self.y[fold] + objective_value_per_configuration.flatten().tolist())
+        
         #Save the new runs to both X and fX
         self.X = deepcopy(initial_configurations)
         self.fX = deepcopy(objective_value_per_configuration)
@@ -415,176 +416,141 @@ class Bayesian_Optimization_MultiFold:
 
 
     def run_on_current_fold(self,fold):
-        # Try to make it purely NP based
-        # Run the current configurations on the remaining folds
-        new_fx = []
-        for config in self.X:
-            new_fx.append(self.f(self.vector_to_configspace( config ),fold)['function_value'])
-        new_fx=np.array(new_fx)
+        #Run the previous on the new fold. and add the results to the list
+        self.y[fold] = [self.f(self.vector_to_configspace( config ),fold=fold)['function_value'] for config in self.X]
+
+    # This will be gready, as we should only care about the current fold avg. Not the previous
+    def compute_avg_performance(self,iter_fold):
+        # Store the current predictions in np.array
+        # Get the mean of each ROW (Config)
+        # Store in fX :)
+        
+        print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
+        self.fX = np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0)
 
 
-        # Concatenate and average out.
-        self.fX = ( self.fX + new_fx ) / 2
+    def compute_current_inc_after_avg(self):
+        self.inc_score = np.min(self.fX)
+        #Here we store a config space object
+        self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
+        if self.verbose:
+            print(f"{self.n_evals}) New best: {self.inc_score:.4}")
 
+
+    # Get the score per fold, and return the avg.
+    def run_objective_on_previous_folds(self,config,iter_fold):
+        #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
+        per_fold_auc = [self.f(config,fold=f)['function_value'] for f in range(iter_fold)]
+        # each list increase by 1 config for each fold.
+        for f in range(iter_fold):
+            self.y[f] = self.y[f] + [per_fold_auc[f]]
+        return np.mean(per_fold_auc)
+    
+    # Save the performance per fold. Per self.max_evals_per_fold...
+    def save_performance_history_between_folds(self):
+        pass
 
     def run(self):
         
 
         for fold in range(0,self.n_folds):
-            # If we move per 1 fold --> run on first.
-            # If we move per 2 folds --> run on second etc.
-            # If we move per 10 folds --> run initials on 10th :D
-            if (fold+1) == self.per_fold:
-                # Run initial configurations on the specified per folds
-                # Run BO per 2 folds --> run initials on first 2.
-                #Sanity check
-                self.run_initial_configurations(fold=self.per_fold)
+            assert self.n_evals <= self.max_evals
+            print(f"Current fold : {fold}, Total Folds {self.n_folds}")
+            print(f"N_Evals : {self.n_evals}, Maximum Evals {self.max_evals}")
+            #Run the initial configurations (Sobol) for first fold.
+            #Only runs ONCE.
 
-            # per fold. an eimai sto fold 2 kai kano ana duo tote kano ta runs.
-            if (fold+1) % self.per_fold == 0:
-                # Prota run ta configurations eos tora sto 2o fold ktlp kai average out.
-                start_time_total = time.time()
+            iterator_fold = fold+1
+            if fold==0:
+                self.run_initial_configurations(fold=fold)
+            print('Run Just Initials.')
+            print('Len X, Len FX',len(self.X),len(self.fX))
+            print(f"Iterator Fold : {iterator_fold}")
+            # Prota run ta configurations eos tora sto 2o fold ktlp kai average out.
+            start_time_total = time.time()
 
-                #Before runnning the basic Bayesian Opt
-                #We want all the previous configurations to run the new folds first
-                #If we are on 2nd fold then we need to run the 2nd and aggregate
-                #if we move per 2 folds though we need to run the current - per.fold
-                #so if we are on 4th we run 2,3 folds.
-                if fold != 0 :
-                    self.run_on_current_fold(fold)
+            #From the 2nd fold onwards do this for the previous configurations
+            if fold != 0 :
+                #Run the previous optimized configurations on current fold.
+                self.run_on_current_fold(fold)
 
+                #After running the previous on the new fold.
+                #We have to get some average scores.
+                self.compute_avg_performance(iterator_fold)
+
+                #And compute the incumberment on the folds using an averaging., before running BO again
+                self.compute_current_inc_after_avg()
+
+            """After training everything on the specified folds run BO.
+                #Recheck for the per x case.
+
+                #Measure time as well as fitting
+                #max_evals_per_fold per fold iteration, forxample 50 per 1 fold, 100 per 2 folds etc."""
+            curr_eval = 0
+            # Only for the first fold, we have some initials.
+            if fold == 0:
+                curr_eval = self.n_init
+
+            while curr_eval< self.max_evals_per_fold:
                 # Just set tmp input
                 X = self.X  
                 # Get the current input
                 fX = self.fX
 
+                print('Len X, Len FX',len(self.X),len(self.fX))
+                # Train the surrogate
+                start_time = time.time()
+
+                self.model.train(X,fX)
+
+                end_time=time.time() - start_time
+                self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
+
+                #If we want more candidates we need to remove [0]
+                self.acquisition_function.update(self.model)
+
+                #Start the Acquisition maximization procedure.
+                start_time = time.time()
+                    
+                if isinstance(self.maximize_func,Sobol_Local_Maximizer):
+                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score,best_config = self.inc_config)
+                else:
+                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
+                        
+                end_time=time.time() - start_time
+                self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
+
+
+                #Run objective -- SANITY CHECK
+                start_time = time.time()
                 
-
-                #After training everything on the specified folds run BO.
-                #Recheck for the per x case.
-
-                #Measure time as well as fitting
-                #Max_evals per fold iteration, forxample 50 per 1 fold, 100 per 2 folds etc.
-                for curr_eval in range(0,self.max_evals,self.batch_size):
-                    start_time = time.time()
-
-                    self.model.train(X,fX)
-
-                    end_time=time.time() - start_time
-
-                    self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
-
-                    #If we want more candidates we need to remove [0]
-                    self.acquisition_function.update(self.model)
-
-                    #Hm.
-                    start_time = time.time()
-                    
-                    
-                    if self.batch_size == 1:
-                        if isinstance(self.maximize_func,Sobol_Local_Maximizer):
-                            X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score,best_config = self.inc_config)
-                        else:
-                            X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
-                        
-                    else:
-                        X_next = self.maximize_func.maximize(initial_suggest = self.inc_config,eta = self.inc_score)
-                        results= pd.DataFrame(X_next).drop_duplicates()
-                        
-                        # Just add some random in here.
-                        if results.shape[0] < self.batch_size:
-                            init_design_def_kwargs = {
-                            "cs": self.config_space,  # type: ignore[attr-defined] # noqa F821
-                            "traj_logger": None,
-                            "rng": np.random.randint(int(1e6)) ,
-                            "ta_run_limit": None,  # type: ignore[attr-defined] # noqa F821
-                            "configs": None,
-                            "n_configs_x_params": 0,
-                            "max_config_fracs": 0.0,
-                            "init_budget": self.batch_size - results.shape[0]
-                            } 
-                            #get some random configurations
-                            r_configs = SobolDesign(**init_design_def_kwargs)._select_configurations()
-                            r_cfgs = [self.configspace_to_vector(cfg) for cfg in r_configs]
-                            results = results.append(r_cfgs,ignore_index=True)
-
-                        select_id = np.random.choice(results.shape[0], self.batch_size, replace = False).tolist()
-                        
-                        mu, var = self.model.predict(results)
-                        # smallest mean and highest variance points
-                        best_pred_id = np.argmin(mu)
-                        best_unce_id = np.argmax(var)
-                        #print('Mu min, max var',min(mu),max(var))
-                        #Add them to the first and second position.
-                        if best_unce_id not in select_id:
-                            select_id[0]= best_unce_id
-                        if best_pred_id not in select_id:
-                            select_id[1]= best_pred_id
-                        x_next_multiple = results.iloc[select_id].values.tolist()
-
-                        
-                    end_time=time.time() - start_time
-
-                    self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
-
-                    #convert configuration.
-                    if self.batch_size ==1 :
-                        config = self.vector_to_configspace( X_next )
-                    else:
-                        configs = [self.vector_to_configspace( config ) for config in x_next_multiple]
-                    
-                    #Run objective -- SANITY CHECK
-                    start_time = time.time()
-                    if self.batch_size ==1 :
-                        res = 0 
-                        for f in range(0,fold):
-                            res += self.f(config,f)['function_value']
-                        res /= fold
-                    else:
-                        results = []
-                        for config in configs:
-                            res = 0
-                            for f in range(0,fold):
-                                res += self.f(config,f)['function_value']
-                            res/=fold
-                            results.append(res)
-                    end_time=time.time() - start_time
-                    
-                    self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
-
-                    #Lot's of sanity needed here.
-                    if self.batch_size ==1:
-                        fX_next = [res]
-
-                        if fX_next[0] < self.inc_score:
-                            self.inc_score = fX_next[0]
-                            self.inc_config = config
-                            if self.verbose:
-                                print(f"{self.n_evals}) New best: {self.inc_score:.4}")
-
-                        self.X = np.vstack((self.X, deepcopy(X_next)))
-                        self.fX = np.concatenate((self.fX, fX_next))
-
-                    else:
-                        for res in results:
-                            fX_next = [res]
-                            if fX_next[0] < self.inc_score:
-                                self.inc_score = fX_next[0]
-                                self.inc_config = config
-                                if self.verbose:
-                                    print(f"{self.n_evals}) New best: {self.inc_score:.4}")
-                        #Add all feature points
-                        self.X = np.vstack((self.X, deepcopy(x_next_multiple)))
-                        #Add all result points. SANITY HERE.
-                        #res_points = [res['function_value'] for res in results]
-                        self.fX = np.concatenate((self.fX, results))
-                            
-
-                    #self.fX = np.vstack((self.fX, deepcopy(fX_next)))
-                    #self.fX = np.concatenate((self.fX, fX_next))
+                #Turn the vector [0,1] to a configspace object.
+                config = self.vector_to_configspace( X_next )
+                fX_next = [self.run_objective_on_previous_folds(config,iterator_fold)]
+                
+                end_time=time.time() - start_time
+                self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
 
 
-                    end_time_total =  time.time() - start_time_total
-                    self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
+                #Check if better than current incumberment.
+
+                if fX_next[0] < self.inc_score:
+                    self.inc_score = fX_next[0]
+                    self.inc_config = config
+                    if self.verbose:
+                        print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+
+                #Keep the curr_eval infold iterator updated
+                #keep n_evals global iterator updated
+                self.n_evals += self.batch_size
+                curr_eval += self.batch_size
+
+                # This is fine
+                self.X = np.vstack((self.X, deepcopy(X_next)))
+                self.fX = np.concatenate((self.fX, fX_next))
+
+                end_time_total =  time.time() - start_time_total
+                self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
+
         return self.inc_score
     

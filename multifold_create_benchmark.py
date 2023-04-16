@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from BayesianOptimizers.SMAC.Random_Search import Random_Search
 from BayesianOptimizers.SMAC.smac_base import Bayesian_Optimization
+from BayesianOptimizers.SMAC.smac_base_multifold import Bayesian_Optimization_MultiFold
 import os
 import sys
 sys.path.insert(0, '..')
@@ -91,6 +92,8 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 #Get the benchmark.
                 objective_function = benchmark_.objective_function
                 
+                #Get the objective_function per fold.
+                objective_function_per_fold = benchmark_.objective_function_per_fold
 
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
@@ -98,11 +101,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     Optimization = Random_Search(f=objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
                 # Single k-Fold Validation.
                 elif opt == 'RF_Local':
-                    Optimization = Bayesian_Optimization(f=benchmark_.objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
                 elif opt == 'Multi_RF_Local':
-                    #Optimization = MultiFold_Bayesian_Optimization()
-                    pass
+                    Optimization = Bayesian_Optimization_MultiFold(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -153,7 +156,7 @@ def get_openml_data():
 
 #
 def get_jad_data():
-    interesting_Data = [851,842,1114,839,847,843,883,850] #,866
+    interesting_Data = [851,842,1114,839,847,850,843] #,866, 883, 
     #interesting_Data = [866]
     return interesting_Data
 
@@ -164,9 +167,10 @@ if __name__ == '__main__':
                             'OpenML': {'data_ids':get_openml_data}      }
 
     #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
-    opt_list = ['RF_Local','Random_Search']
-
-    for repo in ['Jad','OpenML']:
+    opt_list = ['RF_Local']
+    #'Multi_RF_Local','
+    #'Random_Search'
+    for repo in ['OpenML','Jad']:
         #XGBoost Benchmark    
         xgb_bench_config =  {
             'n_init' : 10,
