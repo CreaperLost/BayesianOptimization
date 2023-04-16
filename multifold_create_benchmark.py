@@ -153,8 +153,8 @@ def get_openml_data():
 
 #
 def get_jad_data():
-    interesting_Data = [851,842,1114,839,847,843,883,850] #,866
-    #interesting_Data = [866]
+    interesting_Data = [851,842,1114,839,847,850,843] #,866,843,883, 850,843,
+    #interesting_Data = [883]
     return interesting_Data
 
 if __name__ == '__main__':
@@ -166,7 +166,8 @@ if __name__ == '__main__':
     #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
     opt_list = ['Random_Search']
 
-    for repo in ['OpenML','Jad']:
+    #'OpenML',
+    for repo in ['OpenML']:
         #XGBoost Benchmark    
         xgb_bench_config =  {
             'n_init' : 10,
