@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0, '..')
 from global_utilities.global_util import directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from jadbio_api.api_client import ApiClient
+from benchmarks.get_pass import get_pass
 
 
 #A function that opens the desired configuration,
@@ -62,7 +63,8 @@ def get_jad_data_list():
 
     # # # Select dataset # # #
     # Initialise client
-    jad = ApiClient('https://exp.jadbio.com:4443', 'pkatsogr@gmail.com', '22222222')
+    ip, email, password =  get_pass()
+    jad = ApiClient(ip, email, password)
 
     project = jad.project.find_project('jad_research')
     # Load dataset list

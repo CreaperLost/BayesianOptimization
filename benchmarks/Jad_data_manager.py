@@ -12,7 +12,7 @@ from sklearn.preprocessing import LabelEncoder
 from jadbio_api.api_client import ApiClient
 import os
 from hpobench.util.data_manager import DataManager
-
+from get_pass import get_pass
 
 class JadDataManager(DataManager):
 
@@ -175,7 +175,8 @@ class JadDataManager(DataManager):
     def __download_data(self,file_path:str, verbose: bool):
         assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
-        self.Client = ApiClient('https://exp.jadbio.com:4443', 'pkatsogr@gmail.com', '22222222')
+        ip, email, password =  get_pass()
+        self.Client = ApiClient(ip, email, password)
         tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
         self.Client.project.download_dataset(self.task_id,tmp_file_loc)
         dataset = pd.read_csv(tmp_file_loc)
