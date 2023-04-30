@@ -23,7 +23,7 @@ import numpy as np
 from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel
 
 class  Simple_RF(BaseModel):
-    def __init__(self, config_space, rng=None,n_estimators= 30):
+    def __init__(self, config_space, rng=None,n_estimators= 100):
         
         self.config_space = config_space
 
@@ -33,7 +33,7 @@ class  Simple_RF(BaseModel):
             self.rng = rng
 
         self.n_estimators =  n_estimators
-        self.rf = RandomForestRegressor(n_estimators = self.n_estimators,random_state=rng)
+        self.rf = RandomForestRegressor(n_estimators = self.n_estimators,random_state=rng,n_jobs=-1)
         
         super(Simple_RF, self).__init__()
 

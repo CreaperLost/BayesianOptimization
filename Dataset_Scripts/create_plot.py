@@ -12,6 +12,9 @@ sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
 import os
+
+
+
 def get_results_per_optimizer(config={},accumulate='none'):
     assert config!={}
     assert accumulate == 'none' or accumulate =='min' or accumulate =='addition'
@@ -94,10 +97,6 @@ def get_dataset_name(dataset_id, config):
     # Briskomaste sto fakelo me kathe dataset kai ta results tou.
     path= parse_directory(wanted_directory_attributes)
 
-    #print(path)
-
-    
-
     if data_repo == 'Jad':
         path = parse_directory([main_directory,'Jad_Full_List.csv'])
         return get_dataset_name_Jad(dataset_id,path)
@@ -117,7 +116,7 @@ def get_dataset_name_Jad(dataset,path):
     data_id = dataset.split('Dataset')[1] 
     if not Path(path).exists():
         #fetch_jad_list()
-        print('oops')
+        pass
     jad_datasets = pd.read_csv(path)    
     name = filter_datasets(jad_datasets,[int(data_id)],'Jad')['name']
     return name.values[0]
@@ -141,7 +140,6 @@ def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
     l_eval = time_evals.to_list()
     extra_l=list(itertools.chain.from_iterable(itertools.repeat(x, step) for x in l_eval[initial_config:]))
     full_eval=l_eval[:initial_config] + extra_l
-    #print(full_eval)
     return full_eval
 
 def get_Jad_avg_score(dataset_name):
@@ -215,16 +213,21 @@ def plot_per_dataset(config):
 
                 #The configuration list of results for the specific metric
                 config_list_score = configuration_results['Metric']
+                #replace this with the acquisition etc. for the multi-fold...
+                
                 config_list_time = configuration_results['Total_Time']
 
                 # The configuration list of optimizers used for specific metric
                 config_list_per_optimizer = total_config_dictionary['Metric']
 
-    
+
                 #Get the optimizers.
                 opt = config_list_per_optimizer[config_result_idx]['optimizer_type']
                 
-                
+                """if 'Multi_Fold' in opt:
+                    config_list_time = configuration_results['Surrogate_Time'] + configuration_results['Objective_Time'] + configuration_results['Acquisition_Time']
+                """
+
 
                 #Get the confidence and means for the specific dataset.
                 confidence,means = create_plot_per_optimizer(config_list_score[config_result_idx][dataset])
@@ -276,7 +279,6 @@ def plot_per_dataset(config):
                             ax2.plot(x,means,'yellow',label='Mean-Acquisition Time')
                         #Plot the mean and the confidence on axis 2.
                         elif metric_measured == 'Surrogate_Time':
-                            #print(x,means)
                             ax2.plot(x,means,opt_colors[opt],label=opt)
                             ax2.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
                 
@@ -315,9 +317,7 @@ def plot_per_dataset(config):
             Path(results_directory).mkdir(parents=True, exist_ok=False)
         except FileExistsError:
             pass
-            #print("Folder is already there")
         else:
-            #print("Folder was created")
             pass
         
         plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
@@ -398,13 +398,10 @@ def plot_average(config):
             time_mean = pd.concat(means_time_total, axis = 1).mean(axis=1)
             x = time_mean
 
-            #print(opt, x)
-
             if opt == 'HEBO_RF5':
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)
-        #print(opt,means_normalized.iloc[0:100:30],means_normalized.iloc[19])
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -435,9 +432,9 @@ def plot_average(config):
     try:
         Path(results_directory).mkdir(parents=True, exist_ok=False)
     except FileExistsError:
-        print("Folder is already there")
+        pass
     else:
-        print("Folder was created")
+        pass 
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 #Get the mean  on all datasets, all optimizers
@@ -452,7 +449,6 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
         opt = opt_list[opt_index]
         total_data = pd.concat((data1[opt_index],data2[opt_index]),axis=1)
         
-        #print(total_data)
         a,b=stats.norm.interval(0.95, loc=total_data.mean(axis=1), scale=total_data.std(axis=1)/np.sqrt(total_data.shape[0]))
         confidence_normalized,means_normalized = pd.DataFrame(np.vstack((a,b))) , total_data.mean(axis=1)
 
@@ -468,8 +464,13 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)"""
-        print(opt,means_normalized.iloc[199],means_normalized.iloc[99])
+            print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
+                Performance at 100 iter {np.round(means_normalized.iloc[99],4)}, \
+                Performance at 200 iter {np.round(means_normalized.iloc[199],4)}, \
+                Performance at 300 iter {np.round(means_normalized.iloc[299],4)}, \
+                Performance at 400 iter {np.round(means_normalized.iloc[399],4)} ')
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
+        plt.grid(True, which='major')
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
     if time_plot_bool == 'False':
@@ -501,9 +502,9 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
     try:
         Path(results_directory).mkdir(parents=True, exist_ok=False)
     except FileExistsError:
-        print("Folder is already there")
+        pass
     else:
-        print("Folder was created")
+        pass
     plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 def get_average_per_category(config):
@@ -563,7 +564,6 @@ def get_average_per_category(config):
             confidence_time,means_time = create_plot_per_optimizer(configuration_results['Total_Time'][config_result_idx][dataset])
             means_time_total.append(means_time)
 
-        
 
         means_total_Dataframe = pd.concat(means_total, axis = 1)
         means_time_total_Dataframe = pd.concat(means_time_total, axis = 1)
@@ -579,26 +579,6 @@ def get_average_per_category(config):
 
 colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 
-"""opt_colors= {
-    'RS':colors[0],
-    'RF':colors[1],
-    'GP':'green',
-    'HEBO_RF':'black',
-    'HEBO_GP':'purple',
-    'HEBO_RF5':'orange',
-    'HEBO_RF10':'grey',
-    'Sobol':'purple',
-    'HEBO_RF_ACQ100':'orange',
-    'HEBO_RF_ACQ500':'blue',
-    'HEBO_RF_Scipy':'cyan',
-    'HEBO_RF_DE':'orange',
-    'GP_INIT10' : 'orange',
-    'GP_INIT50' : 'cyan',
-    'HEBO_RF_INIT10':'grey',
-    'HEBO_RF_INIT50':'blue',
-}"""
-
-
 
 data_repo = 'Jad'
 n_seeds=  3
@@ -606,9 +586,9 @@ metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_
 time_plot = True
 double_plot = False
 #How many initial configurations we have run.
-interval = 20
-result_space = 'Single_Space_Results'
-optimizers = ['RF','RF_Local','RF_NTREE_500'] 
+interval = 50
+result_space = 'Multi_Fold_Single_Space_Results'
+optimizers = ['Multi_RF_Local','RF_Local','Random_Search'] 
 
 opt_colors = dict()
 clr_pos = 0
@@ -662,7 +642,6 @@ for bool_flag in ['False','True']:
 
         #plot_per_dataset(general_config)
         opt, opt_time  = get_average_per_category(general_config)
-        print('Time',opt)
         means_per_cat.append( opt )
         means_per_cat_time.append( opt_time )
     plt.clf()

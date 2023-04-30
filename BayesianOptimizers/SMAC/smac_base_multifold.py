@@ -283,9 +283,13 @@ class Bayesian_Optimization_MultiFold:
             new_config[hyper.name] = param_value
         # the mapping from unit hypercube to the actual config space may lead to illegal
         # configurations based on conditions defined, which need to be deactivated/removed
-        new_config = deactivate_inactive_hyperparameters(
+        try:
+            new_config = deactivate_inactive_hyperparameters(
             configuration = new_config, configuration_space=self.config_space
-        )
+            )
+        except:
+            new_config = Configuration(configuration_space=self.config_space, values = new_config,allow_inactive_with_values = True)
+            print(new_config)
         return new_config
 
 
@@ -425,7 +429,7 @@ class Bayesian_Optimization_MultiFold:
         # Get the mean of each ROW (Config)
         # Store in fX :)
         
-        print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
+        #print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
         self.fX = np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0)
 
 
@@ -455,19 +459,19 @@ class Bayesian_Optimization_MultiFold:
 
         for fold in range(0,self.n_folds):
             assert self.n_evals <= self.max_evals
-            print(f"Current fold : {fold}, Total Folds {self.n_folds}")
-            print(f"N_Evals : {self.n_evals}, Maximum Evals {self.max_evals}")
+            #print(f"Current fold : {fold}, Total Folds {self.n_folds}")
+            #print(f"N_Evals : {self.n_evals}, Maximum Evals {self.max_evals}")
             #Run the initial configurations (Sobol) for first fold.
             #Only runs ONCE.
 
             iterator_fold = fold+1
             if fold==0:
                 self.run_initial_configurations(fold=fold)
-            print('Run Just Initials.')
-            print('Len X, Len FX',len(self.X),len(self.fX))
-            print(f"Iterator Fold : {iterator_fold}")
+            #print('Run Just Initials.')
+            #print('Len X, Len FX',len(self.X),len(self.fX))
+            #print(f"Iterator Fold : {iterator_fold}")
             # Prota run ta configurations eos tora sto 2o fold ktlp kai average out.
-            start_time_total = time.time()
+            
 
             #From the 2nd fold onwards do this for the previous configurations
             if fold != 0 :
@@ -492,18 +496,20 @@ class Bayesian_Optimization_MultiFold:
                 curr_eval = self.n_init
 
             while curr_eval< self.max_evals_per_fold:
+                start_time_total = time.time()
                 # Just set tmp input
                 X = self.X  
                 # Get the current input
                 fX = self.fX
 
-                print('Len X, Len FX',len(self.X),len(self.fX))
+                #print('Len X, Len FX',len(self.X),len(self.fX))
                 # Train the surrogate
                 start_time = time.time()
 
                 self.model.train(X,fX)
 
                 end_time=time.time() - start_time
+                print('Surrogate time',end_time)
                 self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
                 #If we want more candidates we need to remove [0]
@@ -520,6 +526,7 @@ class Bayesian_Optimization_MultiFold:
                 end_time=time.time() - start_time
                 self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
+                print('Acquisition time',end_time)
 
                 #Run objective -- SANITY CHECK
                 start_time = time.time()
@@ -529,6 +536,8 @@ class Bayesian_Optimization_MultiFold:
                 fX_next = [self.run_objective_on_previous_folds(config,iterator_fold)]
                 
                 end_time=time.time() - start_time
+
+                print('Objective_Time',end_time)
                 self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
 
 
@@ -550,6 +559,8 @@ class Bayesian_Optimization_MultiFold:
                 self.fX = np.concatenate((self.fX, fX_next))
 
                 end_time_total =  time.time() - start_time_total
+                
+                print('Total_Time',end_time_total)
                 self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
 
         return self.inc_score

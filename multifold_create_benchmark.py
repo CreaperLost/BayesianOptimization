@@ -10,6 +10,11 @@ import os
 import sys
 sys.path.insert(0, '..')
 from benchmarks.MultiFold_XGBoostBenchmark import MultiFold_XGBoostBenchmark
+from benchmarks.MultiFold_RFBenchmark import MultiFold_RFBenchmark
+from benchmarks.MultiFold_LRBenchmark import MultiFold_LRBenchmark
+from benchmarks.MultiFold_LinearSVMBenchmark import MultiFold_LinearSVMBenchmark
+from benchmarks.MultiFold_RBFSVMBenchmark import MultiFold_RBFSVMBenchmark
+from benchmarks.MultiFold_PolySVMBenchmark import MultiFold_PolySVMBenchmark
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 
@@ -95,7 +100,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 #Get the objective_function per fold.
                 objective_function_per_fold = benchmark_.objective_function_per_fold
 
-                print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
+                print('Optimizing:  ' + benchmark_name +' Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
                 if opt == 'Random_Search':
                     Optimization = Random_Search(f=objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
@@ -150,14 +155,14 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
 def get_openml_data():
     tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910] #,167125,9976
-    #tasks = [167125,9976]
+    #tasks = [167125,9976] 
     return tasks
 
 
 #
 def get_jad_data():
-    interesting_Data = [851,842,1114,839,847,850,843] #,866, 883, 
-    #interesting_Data = [866]
+    interesting_Data = [851,842,1114,839,847,850] #,866, 883, ,843
+    #interesting_Data = [883,866]
     return interesting_Data
 
 if __name__ == '__main__':
@@ -166,24 +171,31 @@ if __name__ == '__main__':
     config_of_data = {      'Jad':{'data_ids':get_jad_data},
                             'OpenML': {'data_ids':get_openml_data}      }
 
-    #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)]
-    opt_list = ['RF_Local']
+
+    
+
+    opt_list = ['Random_Search','RF_Local'] #'Multi_RF_Local',
     #'Multi_RF_Local','
     #'Random_Search'
-    for repo in ['OpenML','Jad']:
+
+    group_tuple = [('LinearSVM',MultiFold_LinearSVMBenchmark),('RBF_SVM',MultiFold_RBFSVMBenchmark),\
+                   ('Poly_SVM',MultiFold_PolySVMBenchmark),('RF',MultiFold_RFBenchmark)] #('XGB',MultiFold_XGBoostBenchmark) #,('LR',MultiFold_LRBenchmark),\
+
+    for repo in ['OpenML']: #'Jad',
         #XGBoost Benchmark    
-        xgb_bench_config =  {
-            'n_init' : 10,
-            'max_evals' : 500,
-            'n_datasets' : 1000,
-            'data_ids' :  config_of_data[repo]['data_ids'](),
-            'n_seeds' : [1,2,3],
-            'type_of_bench': 'Multi_Fold_Single_Space_Results',
-            'bench_name' :'XGB',
-            'bench_class' : MultiFold_XGBoostBenchmark,
-            'data_repo' : repo
-        }
-        run_benchmark_total(opt_list,xgb_bench_config)
+        for group_name,group_benchmark in group_tuple:
+            xgb_bench_config =  {
+                'n_init' : 10,
+                'max_evals' : 200,
+                'n_datasets' : 1000,
+                'data_ids' :  config_of_data[repo]['data_ids'](),
+                'n_seeds' : [1,2,3], #
+                'type_of_bench': 'Multi_Fold_Single_Space_Results',
+                'bench_name' :group_name,
+                'bench_class' :group_benchmark,
+                'data_repo' : repo
+            }
+            run_benchmark_total(opt_list,xgb_bench_config)
 
     
 

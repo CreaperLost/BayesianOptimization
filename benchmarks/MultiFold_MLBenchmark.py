@@ -160,8 +160,8 @@ class MultiFold_MLBenchmark():
         """
         raise NotImplementedError()
 
-    def get_meta_information(self):
-        """ Returns the meta information for the benchmark """
+    """def get_meta_information(self):
+         Returns the meta information for the benchmark 
         return {
             'name': 'XGB',
             'shape of train data': self.train_X[0].shape,
@@ -169,7 +169,7 @@ class MultiFold_MLBenchmark():
             'shape of valid data': self.valid_X[0].shape,
             'initial random seed': self.seed,
             'task_id': self.task_id
-        }
+        }"""
 
     def init_model(self, config: Union[CS.Configuration, Dict],
                    fidelity: Union[CS.Configuration, Dict, None] = None,
@@ -178,13 +178,13 @@ class MultiFold_MLBenchmark():
         """
         raise NotImplementedError()
 
-    def get_config(self, size: Union[int, None] = None):
-        """Samples configuration(s) from the (hyper) parameter space
-        """
+    """def get_config(self, size: Union[int, None] = None):
+        #Samples configuration(s) from the (hyper) parameter space
+        
         if size is None:  # return only one config
             return self.configuration_space.sample_configuration()
         return [self.configuration_space.sample_configuration() for i in range(size)]
-
+    """
 
     """def shuffle_data_idx(self, train_idx: Iterable = None, rng: Union[np.random.RandomState, None] = None) -> Iterable:
         print('This should never run')
@@ -376,7 +376,6 @@ class MultiFold_MLBenchmark():
         else:
             raise TypeError(f'Configuration has to be from type List, np.ndarray, dict, or '
                             f'ConfigSpace.Configuration but was {type(configuration)}')
-
         all_hps = set(configuration_space.get_hyperparameter_names())
         active_hps = configuration_space.get_active_hyperparameters(configuration)
         inactive_hps = all_hps - active_hps
@@ -418,8 +417,10 @@ class MultiFold_MLBenchmark():
             for model_fold in range(len(model)-1):
                 val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
             #Average validation score.
+                #print(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]))
             val_scores[k] /= (len(model)-1)
             val_score_cost[k] = time.time() - _start
+        #print(val_scores['auc'])
         val_loss = 1 - val_scores["auc"]
 
 

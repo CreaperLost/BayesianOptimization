@@ -279,9 +279,13 @@ class Bayesian_Optimization:
             new_config[hyper.name] = param_value
         # the mapping from unit hypercube to the actual config space may lead to illegal
         # configurations based on conditions defined, which need to be deactivated/removed
-        new_config = deactivate_inactive_hyperparameters(
+        try:
+            new_config = deactivate_inactive_hyperparameters(
             configuration = new_config, configuration_space=self.config_space
-        )
+            )
+        except:
+            new_config = Configuration(configuration_space=self.config_space, values = new_config,allow_inactive_with_values = True)
+            print(new_config)
         return new_config
 
 
