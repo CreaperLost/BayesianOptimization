@@ -464,11 +464,11 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)"""
-            print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
+            """print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
                 Performance at 100 iter {np.round(means_normalized.iloc[99],4)}, \
                 Performance at 200 iter {np.round(means_normalized.iloc[199],4)}, \
                 Performance at 300 iter {np.round(means_normalized.iloc[299],4)}, \
-                Performance at 400 iter {np.round(means_normalized.iloc[399],4)} ')
+                Performance at 400 iter {np.round(means_normalized.iloc[399],4)} ')"""
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.grid(True, which='major')
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
@@ -586,9 +586,9 @@ metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_
 time_plot = True
 double_plot = False
 #How many initial configurations we have run.
-interval = 50
+interval = 10
 result_space = 'Multi_Fold_Single_Space_Results'
-optimizers = ['Multi_RF_Local','RF_Local','Random_Search'] 
+optimizers = ['Multi_RF_Local','RF_Local']  #,'Random_Search'
 
 opt_colors = dict()
 clr_pos = 0
@@ -596,8 +596,8 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-
-for data_repo in ['Jad','OpenML']:
+    #,'OpenML'
+for data_repo in ['Jad']:
     
 
     for bool_flag in ['False','True']:
@@ -619,7 +619,7 @@ for data_repo in ['Jad','OpenML']:
         plot_per_dataset(general_config)
         plt.clf()
 
-
+    #,
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
