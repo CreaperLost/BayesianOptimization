@@ -16,20 +16,20 @@ from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
+"""from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
-from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
+from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer"""
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
 
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
-from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
+"""from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
 from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
-from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate
+from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate"""
 
 
 import pandas as pd
@@ -179,14 +179,14 @@ class Bayesian_Optimization:
             if 'NTREE_500' in model:
                 n_est = 500
             self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=n_est)
-        elif 'HEBO_GP' in model:
+        """elif 'HEBO_GP' in model:
             self.model = HEBO_GP(self.config_space,rng=random_seed)
         elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
         elif 'BNN' in model:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
-            self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)
+            self.model = NGBoost_Surrogate(self.config_space,rng=random_seed)"""
 
 
         """ elif 'HEBO_RF' in model:
@@ -200,21 +200,22 @@ class Bayesian_Optimization:
             
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
-            elif maximizer == 'Random':
-                self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
-            elif maximizer == 'DE':
-                self.maximize_func  = DE_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
-            elif maximizer == 'Scipy':
-                self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Sobol_Local':
                 self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             else:
                 raise RuntimeError
+            """elif maximizer == 'Random':
+                self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'DE':
+                self.maximize_func  = DE_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Scipy':
+                self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)"""
+            
 
-        elif acq_funct == "Multi5" or acq_funct == "Multi10":
+        """elif acq_funct == "Multi5" or acq_funct == "Multi10":
             self.acquisition_function = MACE(self.model)
             self.maximize_func  = EvolutionOpt(self.config_space,self.acquisition_function,pop=100,iters=100,change_to_vector = self.configspace_to_vector)
-
+        """
 
 
         #Check batch_size
@@ -436,12 +437,12 @@ class Bayesian_Optimization:
 
             end_time=time.time() - start_time
 
-            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
+            
 
             #If we want more candidates we need to remove [0]
             self.acquisition_function.update(self.model)
 
-
+            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
             #Hm.
             start_time = time.time()
             

@@ -154,8 +154,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
             break 
 
 def get_openml_data():
-    tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910] #,167125,9976
+    tasks = [11,14954,43,3021,3917,3918,9952,167141] #,167125,9976 , ,2074,9910
     #tasks = [167125,9976] 
+    
     return tasks
 
 
@@ -179,9 +180,9 @@ if __name__ == '__main__':
     #'Random_Search'
 
     #group_tuple = [('LinearSVM',MultiFold_LinearSVMBenchmark),('RBF_SVM',MultiFold_RBFSVMBenchmark),\
-    #              ('Poly_SVM',MultiFold_PolySVMBenchmark),('RF',MultiFold_RFBenchmark)] # #,('LR',MultiFold_LRBenchmark),\
-
-    group_tuple = [('XGB',MultiFold_XGBoostBenchmark)]
+    #               ('Poly_SVM',MultiFold_PolySVMBenchmark),] #('XGB',MultiFold_XGBoostBenchmark) #,('LR',MultiFold_LRBenchmark),\
+    
+    group_tuple = [(('RF',MultiFold_RFBenchmark))]
     for repo in ['OpenML']: #'Jad',
         #XGBoost Benchmark    
         for group_name,group_benchmark in group_tuple:
