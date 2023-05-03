@@ -34,10 +34,7 @@ class MultiFold_LinearSVMBenchmark(MultiFold_MLBenchmark):
         """
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
-            CS.UniformFloatHyperparameter("C", 2**-10, 2**10, log=True, default_value=1.0),
-            CS.UniformFloatHyperparameter("gamma", 2**-10, 2**10, log=True, default_value=0.1),
-            CS.UniformIntegerHyperparameter('degree', lower = 2, upper = 3, default_value = 2 ,log =False),
-            CS.UniformFloatHyperparameter('coef0',0.0,1.0,log=False,default_value = 0.0)
+            CS.UniformFloatHyperparameter("C", 2**-10, 2**10, log=True, default_value=1.0)
         ])
         return cs
 

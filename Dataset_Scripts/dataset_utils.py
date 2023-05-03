@@ -91,7 +91,6 @@ def filter_datasets(datalist,data_ids,repo):
 #Filtering out the UN-WANTED ids from the OpenMl CSV.
 def filter_openml_datasets(datalist,data_ids):
     #Return--Save only the datasets we already run.. :)
-    
     return datalist[datalist['did'].isin(data_ids)]
     
 
@@ -120,3 +119,19 @@ def save_info(data_info,config):
         print("Folder was created")
             
     data_info.to_csv(results_directory + directory_notation + 'dataset_characteristics.csv',index=False)
+
+
+
+def save_info_simple(data_info,repo):
+    
+    #Get the main Bayesian Optimization directory.
+    #Keep this a global.
+    main_directory =  getcwd()
+    if repo =='OpenML':
+        features_kept = ['did','name','MinorityClassSize','NumberOfClasses','NumberOfFeatures','NumberOfInstances','NumberOfNumericFeatures','NumberOfSymbolicFeatures']
+        data_info = data_info.reindex(columns = features_kept)
+    
+    data_info.to_csv(main_directory +'/' + repo +  '_dataset_characteristics.csv',index=True)
+
+
+

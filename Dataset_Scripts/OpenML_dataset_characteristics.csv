@@ -1,0 +1,13 @@
+,did,name,MinorityClassSize,NumberOfClasses,NumberOfFeatures,NumberOfInstances,NumberOfNumericFeatures,NumberOfSymbolicFeatures
+11,11,balance-scale,49,3,5,625,4,1
+43,44,spambase,1813,2,58,4601,57,1
+2074,182,satimage,625,6,37,6430,36,1
+3021,38,sick,231,2,30,3772,7,23
+3917,1067,kc1,326,2,22,2109,21,1
+3918,1068,pc1,77,2,22,1109,21,1
+9910,4134,Bioresponse,1717,2,1777,3751,1776,1
+9952,1489,phoneme,1586,2,6,5404,5,1
+9976,1485,madelon,1300,2,501,2600,500,1
+14954,6332,cylinder-bands,228,2,40,540,18,22
+167125,40978,Internet-Advertisements,459,2,1559,3279,3,1556
+167141,40701,churn,707,2,21,5000,16,5

@@ -40,6 +40,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
             CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
+            #Bgazo auta
             CS.UniformIntegerHyperparameter('min_samples_split',lower=2, upper=128, default_value=32, log=True),
             CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
             CS.CategoricalHyperparameter('max_features',choices = ['sqrt','log2','auto'],default_value = 'sqrt'),

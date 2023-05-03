@@ -1,0 +1,10 @@
+,Unnamed: 0,id,pid,name,description,createdAt,size,samples,features,type
+4,4,1114,52,nki70_arff_v1_did1228,,2023-02-13,104311,144,77,General
+18,18,883,52,kits-subset_v3_did42764,,2023-02-13,10690367,100,27649,General
+24,24,866,52,christine_v1_did41142,,2023-02-13,49883772,5418,1637,General
+38,38,851,52,white-clover_v2_did1009,,2023-02-13,11165,63,32,General
+39,39,850,52,fl2000_v2_did988,,2023-02-13,5996,67,16,General
+41,41,847,52,lungcancer_GSE31210_v1_did1412,,2023-02-13,46649,226,24,General
+44,44,843,52,langLog_v1_did40593,,2023-02-13,6541528,1460,1079,General
+45,45,842,52,squash-stored_v2_did972,,2023-02-13,7536,52,25,General
+46,46,839,52,meta_v2_did757,,2023-02-13,74788,528,22,General

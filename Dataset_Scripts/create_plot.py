@@ -85,7 +85,7 @@ def get_seeds_per_dataset(seeds):
     a,b=stats.norm.interval(0.95, loc=df_concat.mean(axis=1), scale=df_concat.std(axis=1)/np.sqrt(len(seeds)))
     return pd.DataFrame(np.vstack((a,b))) , df_concat.mean(axis=1)
 
-
+ 
 def get_dataset_name(dataset_id, config):
     result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
     #Get us the main file
@@ -464,11 +464,11 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
                 x= propagate_batch(x,5,interval)
             elif opt == 'HEBO_RF10':
                 x= propagate_batch(x,10,interval)"""
-            print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
+            """print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
                 Performance at 100 iter {np.round(means_normalized.iloc[99],4)}, \
                 Performance at 200 iter {np.round(means_normalized.iloc[199],4)}, \
                 Performance at 300 iter {np.round(means_normalized.iloc[299],4)}, \
-                Performance at 400 iter {np.round(means_normalized.iloc[399],4)} ')
+                Performance at 400 iter {np.round(means_normalized.iloc[399],4)} ')"""
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.grid(True, which='major')
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
@@ -588,7 +588,7 @@ double_plot = False
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Multi_Fold_Single_Space_Results'
-optimizers = ['Multi_RF_Local','RF_Local','Random_Search'] 
+optimizers = ['RF_Local','Random_Search' ] # 'Multi_RF_Local',
 
 opt_colors = dict()
 clr_pos = 0
@@ -596,7 +596,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-
+"""
 for data_repo in ['Jad','OpenML']:
     
 
@@ -647,6 +647,55 @@ for bool_flag in ['False','True']:
     plt.clf()
     #One category is for JAD, the other is for OpenML.
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
+"""
 
-
+for data_repo in ['Jad','OpenML']:
     
+
+    for bool_flag in ['False','True']:
+        time_plot = bool_flag
+        double_plot = False
+
+        general_config = {
+        'classifier':'LinearSVM',
+        'result_space':result_space,
+        'optimizers' : optimizers,
+        'n_seeds' : n_seeds,
+        'data_repo':data_repo,
+        'double_plot':double_plot,
+        'metrics': metrics,
+        'time_plot':time_plot,
+        }
+    
+
+        plot_per_dataset(general_config)
+        plt.clf()
+
+
+for bool_flag in ['False','True']:
+    means_per_cat = []
+    means_per_cat_time = []
+    for data_repo in ['Jad','OpenML']:
+    
+        time_plot = bool_flag
+        double_plot = False
+
+        general_config = {
+        'classifier':'LinearSVM',
+        'result_space':result_space,
+        'optimizers' : optimizers,
+        'n_seeds' : n_seeds,
+        'data_repo':data_repo,
+        'double_plot':double_plot,
+        'metrics': metrics,
+        'time_plot':time_plot,
+        }
+    
+
+        #plot_per_dataset(general_config)
+        opt, opt_time  = get_average_per_category(general_config)
+        means_per_cat.append( opt )
+        means_per_cat_time.append( opt_time )
+    plt.clf()
+    #One category is for JAD, the other is for OpenML.
+    plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])

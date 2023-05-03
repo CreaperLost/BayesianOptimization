@@ -34,8 +34,8 @@ class MultiFold_RBFSVMBenchmark(MultiFold_MLBenchmark):
         """
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
-            CS.UniformFloatHyperparameter("C", 2**-10, 2**10, log=True, default_value=1.0),
-            CS.UniformFloatHyperparameter("gamma", 2**-10, 2**10, log=True, default_value=0.1),
+            CS.UniformFloatHyperparameter("rbf_C", 2**-10, 2**10, log=True, default_value=1.0),
+            CS.UniformFloatHyperparameter("rbf_gamma", 2**-10, 2**10, log=True, default_value=0.1),
         ])
         return cs
 
