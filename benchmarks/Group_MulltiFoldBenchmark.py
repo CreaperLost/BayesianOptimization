@@ -41,18 +41,17 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
             CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
-            #Bgazo auta
-            CS.UniformIntegerHyperparameter('min_samples_split',lower=2, upper=128, default_value=32, log=True),
             CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
             CS.CategoricalHyperparameter('max_features',choices = ['sqrt','log2','auto'],default_value = 'sqrt'),
+            CS.UniformIntegerHyperparameter('n_estimators', lower=100, upper=1000, default_value=500, log=False)
         ])
         return cs
     
     def get_DT_configuration_space(self,seed) -> CS.ConfigurationSpace:
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
-            CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
-            CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
+            CS.UniformIntegerHyperparameter('dt_min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
+            CS.UniformIntegerHyperparameter('dt_max_depth', lower=1, upper=50, default_value=10, log=True),
         ])
         return cs
 
@@ -155,7 +154,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
 
     def init_rf(self,config : Union[CS.Configuration, Dict],rng : Union[int, np.random.RandomState, None] = None):
         #print(config)
-        model = RandomForestClassifier(n_estimators=250,**config,  bootstrap=True,random_state=rng,n_jobs=-1)
+        model = RandomForestClassifier(min_samples_split=2,**config,  bootstrap=True,random_state=rng,n_jobs=-1)
         return model
 
     def init_lr(self,config : Union[CS.Configuration, Dict],rng : Union[int, np.random.RandomState, None] = None):
@@ -187,7 +186,6 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         return model
 
 
-
     def init_dt(self, config: Union[CS.Configuration, Dict],
                    fidelity: Union[CS.Configuration, Dict, None] = None,
                    rng: Union[int, np.random.RandomState, None] = None , n_feat = 1):
@@ -201,8 +199,8 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
 
         new_config = config.copy()
        
-        new_config['max_depth'] = new_config.pop('XGB_max_depth')
-        new_config['n_estimators'] = new_config.pop('XGB_n_estimators')
+        new_config['max_depth'] = new_config.pop('dt_max_depth')
+        new_config['min_samples_leaf'] = new_config.pop('dt_min_samples_leaf')
 
         model = DecisionTreeClassifier(min_samples_split=2,**config,random_state=rng)
 
@@ -223,9 +221,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
 
         tmp_config = config.copy()
         
-        
         model_type = tmp_config.pop('model')
-
 
         if model_type == XGB_NAME:
             model = self.init_xgb(tmp_config,rng)

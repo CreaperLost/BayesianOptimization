@@ -152,42 +152,42 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         if curr_dataset >= n_datasets:
             break 
 
-def get_openml_data():
-    tasks = [11,14954,43,3021,3917,3918,9952,167141,2074,9910] #,167125,9976
-    #tasks = [167125,9976]
-    return tasks
+def get_openml_data(speed = None):
+    assert speed !=None
+    if speed == 'fast':
+        return [14954,11,3918,3917,9976,167125,3021,43,167141,9952,2074]
+    return [9910]
+    
 
 
 #
-def get_jad_data():
-    interesting_Data = [851,842,1114,839,847,850,843] #,866, 883, 
-    #interesting_Data = [883,866]
-    return interesting_Data
+def get_jad_data(speed = None):
+    assert speed !=None
+    if speed == 'fast':
+        return [842,851,850,1114,847,839]
+    return [843,883,866]
+    
 
 if __name__ == '__main__':
-
+    config_of_data = { 'Jad':{'data_ids':get_jad_data},
+                        'OpenML': {'data_ids':get_openml_data}      }
+    opt_list = ['Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
+    for speed in ['fast','slow']:
      # obtain the benchmark suite    
-    config_of_data = {      'Jad':{'data_ids':get_jad_data},
-                            'OpenML': {'data_ids':get_openml_data}      }
-
-    #opt_list = [('HEBO_RF_Local',Bayesian_Optimization)] 
-    opt_list = ['RF_Local','Random_Search'] # ,'Multi_RF_Local' ,'Random_Search',
-    #'Multi_RF_Local','
-    #'Random_Search'
-    for repo in ['OpenML','Jad']:
-        #XGBoost Benchmark    
-        xgb_bench_config =  {
-            'n_init' : 10,
-            'max_evals' : 100,
-            'n_datasets' : 1000,
-            'data_ids' :  config_of_data[repo]['data_ids'](),
-            'n_seeds' : [1], #,2,3
-            'type_of_bench': 'Multi_Fold_Group_Space_Results',
-            'bench_name' :'GROUP',
-            'bench_class' : Group_MultiFold_Space,
-            'data_repo' : repo
-        }
-        run_benchmark_total(opt_list,xgb_bench_config)
+        for repo in ['OpenML','Jad']:
+            #XGBoost Benchmark    
+            xgb_bench_config =  {
+                'n_init' : 10,
+                'max_evals' : 550,
+                'n_datasets' : 1000,
+                'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
+                'n_seeds' : [1,2,3], 
+                'type_of_bench': 'Multi_Fold_Group_Space_Results',
+                'bench_name' :'GROUP',
+                'bench_class' : Group_MultiFold_Space,
+                'data_repo' : repo
+            }
+            run_benchmark_total(opt_list,xgb_bench_config)
 
     
 
