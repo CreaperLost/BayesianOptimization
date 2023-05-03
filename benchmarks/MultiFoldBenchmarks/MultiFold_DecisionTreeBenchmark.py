@@ -6,26 +6,30 @@ Changelog:
 0.0.1:
 * First implementation of the RF Benchmarks.
 """
-import xgboost as xgb
-from typing import Union, Dict
+
+from copy import deepcopy
+from typing import Union, Tuple, Dict
+
 import ConfigSpace as CS
 import numpy as np
-from benchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
+from ConfigSpace.hyperparameters import Hyperparameter
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from benchmarks.MultiFoldBenchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
 
 __version__ = '0.0.1'
 
 
-
-class MultiFold_RFBenchmark(MultiFold_MLBenchmark):
+class MultiFold_DecisionTreeBenchmark(MultiFold_MLBenchmark):
     def __init__(self,
                  task_id: int,
                  rng: Union[np.random.RandomState, int, None] = None,
                  data_path: Union[str, None] = None,
                  data_repo:str = 'Jad',
                  use_holdout =False
+                 
                  ):
-        super(MultiFold_RFBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
+        super(MultiFold_DecisionTreeBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout) 
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
@@ -34,22 +38,25 @@ class MultiFold_RFBenchmark(MultiFold_MLBenchmark):
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
             CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
-            CS.UniformIntegerHyperparameter('min_samples_split',lower=2, upper=128, default_value=32, log=True),
             CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
-            CS.CategoricalHyperparameter('max_features',choices = ['sqrt','log2','auto'],default_value = 'sqrt'),
         ])
         return cs
 
-    def init_model(self, config: Union[CS.Configuration, Dict],fidelity: Union[CS.Configuration, Dict, None] = None,
-                   rng: Union[int, np.random.RandomState, None] = None,n_feat=1):
+    def init_model(self, config: Union[CS.Configuration, Dict],
+                   fidelity: Union[CS.Configuration, Dict, None] = None,
+                   rng: Union[int, np.random.RandomState, None] = None , n_feat = 1):
         """ Function that returns the model initialized based on the configuration and fidelity
         """
         rng = self.rng if rng is None else rng
         if isinstance(config, CS.Configuration):
             config = config.get_dictionary()
+        if isinstance(fidelity, CS.Configuration):
+            fidelity = fidelity.get_dictionary()
 
-        rng = rng if (rng is None or isinstance(rng, int)) else self.seed
+        config = deepcopy(config)
+       
+        
+        model = DecisionTreeClassifier(min_samples_split=2,**config,random_state=rng)
 
-        model = RandomForestClassifier(n_estimators=250,**config,  bootstrap=True,random_state=rng,n_jobs=-1)
         return model
 

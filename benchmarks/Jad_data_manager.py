@@ -175,7 +175,8 @@ class JadDataManager(DataManager):
     def __download_data(self,file_path:str, verbose: bool):
         assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
-        ip, email, password =  get_pass()
+        ip, email, password =  get_pass('Good')
+        print(ip, email, password)
         self.Client = ApiClient(ip, email, password)
         tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
         self.Client.project.download_dataset(self.task_id,tmp_file_loc)

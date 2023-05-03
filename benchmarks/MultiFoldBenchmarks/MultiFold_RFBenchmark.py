@@ -10,15 +10,14 @@ import xgboost as xgb
 from typing import Union, Dict
 import ConfigSpace as CS
 import numpy as np
-from benchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
-from sklearn.svm import SVC
-
+from benchmarks.MultiFoldBenchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
+from sklearn.ensemble import RandomForestClassifier
 
 __version__ = '0.0.1'
 
 
 
-class MultiFold_RBFSVMBenchmark(MultiFold_MLBenchmark):
+class MultiFold_RFBenchmark(MultiFold_MLBenchmark):
     def __init__(self,
                  task_id: int,
                  rng: Union[np.random.RandomState, int, None] = None,
@@ -26,7 +25,7 @@ class MultiFold_RBFSVMBenchmark(MultiFold_MLBenchmark):
                  data_repo:str = 'Jad',
                  use_holdout =False
                  ):
-        super(MultiFold_RBFSVMBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
+        super(MultiFold_RFBenchmark, self).__init__(task_id, rng, data_path,data_repo,use_holdout)
 
     @staticmethod
     def get_configuration_space(seed: Union[int, None] = None) -> CS.ConfigurationSpace:
@@ -34,8 +33,10 @@ class MultiFold_RBFSVMBenchmark(MultiFold_MLBenchmark):
         """
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
-            CS.UniformFloatHyperparameter("rbf_C", 2**-10, 2**10, log=True, default_value=1.0),
-            CS.UniformFloatHyperparameter("rbf_gamma", 2**-10, 2**10, log=True, default_value=0.1),
+            CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
+            CS.UniformIntegerHyperparameter('min_samples_split',lower=2, upper=128, default_value=32, log=True),
+            CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
+            CS.CategoricalHyperparameter('max_features',choices = ['sqrt','log2','auto'],default_value = 'sqrt'),
         ])
         return cs
 
@@ -49,7 +50,6 @@ class MultiFold_RBFSVMBenchmark(MultiFold_MLBenchmark):
 
         rng = rng if (rng is None or isinstance(rng, int)) else self.seed
 
-        #print(new_config)
-        model = SVC(**config,random_state=rng,probability=True)
+        model = RandomForestClassifier(n_estimators=250,**config,  bootstrap=True,random_state=rng,n_jobs=-1)
         return model
 

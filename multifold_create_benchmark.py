@@ -9,12 +9,13 @@ from BayesianOptimizers.SMAC.smac_base_multifold import Bayesian_Optimization_Mu
 import os
 import sys
 sys.path.insert(0, '..')
-from benchmarks.MultiFold_XGBoostBenchmark import MultiFold_XGBoostBenchmark
+"""from benchmarks.MultiFold_XGBoostBenchmark import MultiFold_XGBoostBenchmark
 from benchmarks.MultiFold_RFBenchmark import MultiFold_RFBenchmark
 from benchmarks.MultiFold_LRBenchmark import MultiFold_LRBenchmark
 from benchmarks.MultiFold_LinearSVMBenchmark import MultiFold_LinearSVMBenchmark
 from benchmarks.MultiFold_RBFSVMBenchmark import MultiFold_RBFSVMBenchmark
-from benchmarks.MultiFold_PolySVMBenchmark import MultiFold_PolySVMBenchmark
+from benchmarks.MultiFold_PolySVMBenchmark import MultiFold_PolySVMBenchmark"""
+from benchmarks.MultiFold_DecisionTreeBenchmark import MultiFold_DecisionTreeBenchmark
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 
@@ -100,6 +101,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 #Get the objective_function per fold.
                 objective_function_per_fold = benchmark_.objective_function_per_fold
 
+                
                 print('Optimizing:  ' + benchmark_name +' Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
                 if opt == 'Random_Search':
@@ -175,15 +177,15 @@ if __name__ == '__main__':
 
     
 
-    opt_list = ['Multi_RF_Local','RF_Local'] #'Multi_RF_Local', 'Random_Search',
+    opt_list = ['Multi_RF_Local'] #,'RF_Local' #'Multi_RF_Local', 'Random_Search',
     #,'
     #'Random_Search'
 
     #group_tuple = [('LinearSVM',MultiFold_LinearSVMBenchmark),('RBF_SVM',MultiFold_RBFSVMBenchmark),\
     #               ('Poly_SVM',MultiFold_PolySVMBenchmark),] #('XGB',MultiFold_XGBoostBenchmark) #,('LR',MultiFold_LRBenchmark),\
-    
-    group_tuple = [(('RF',MultiFold_RFBenchmark))]
-    for repo in ['OpenML']: #'Jad',
+    print(opt_list)
+    group_tuple = [('DT',MultiFold_DecisionTreeBenchmark)]
+    for repo in ['Jad','OpenML']: #
         #XGBoost Benchmark    
         for group_name,group_benchmark in group_tuple:
             xgb_bench_config =  {

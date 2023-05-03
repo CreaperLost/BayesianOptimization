@@ -16,20 +16,11 @@ from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
-from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
-from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
-from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer
+
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
 
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
-from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
-from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
-from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
-from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
-from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
-from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate
 
 from BayesianOptimizers.Conditional_BayesianOptimization.per_group_smac import Per_Group_Bayesian_Optimization
 
@@ -40,7 +31,7 @@ import pandas as pd
 
 
 class Group_Bayesian_Optimization:
-    """The Random Forest Based Regression Local Bayesian Optimization.
+    """The Random Forest Based Regression Local Bayesian Optimization.udnn-cu11, minio, kiwisolver, Jinja2, importlib-metadata, emcee, Deprecated, autograd, alive-progress, xgboost, torch, stevedore, scikit-learn, requests-toolbelt, paramz, pandas, matplotlib, george, debtcollector, dask, ConfigSpace, click, autograd-gamma, torchvision, statsmodels, pymoo, oslo.utils, oslo.config, openml, gpytorch, GPy, formulaic, 
     
     Parameters
     ----------

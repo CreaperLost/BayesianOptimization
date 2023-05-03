@@ -10,7 +10,7 @@ import xgboost as xgb
 from typing import Union, Dict
 import ConfigSpace as CS
 import numpy as np
-from benchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
+from benchmarks.MultiFoldBenchmarks.MultiFold_MLBenchmark import MultiFold_MLBenchmark
 from sklearn.linear_model import SGDClassifier
 
 

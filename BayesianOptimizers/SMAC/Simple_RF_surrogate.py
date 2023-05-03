@@ -33,7 +33,7 @@ class  Simple_RF(BaseModel):
             self.rng = rng
 
         self.n_estimators =  n_estimators
-        self.rf = RandomForestRegressor(n_estimators = self.n_estimators,random_state=rng,n_jobs=-1)
+        self.rf = RandomForestRegressor(n_estimators = 100,random_state=rng,n_jobs=-1)
         
         super(Simple_RF, self).__init__()
 

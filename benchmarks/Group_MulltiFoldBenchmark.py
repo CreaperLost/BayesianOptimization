@@ -15,15 +15,16 @@ from sklearn.svm import SVC
 import xgboost as xgb
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+
 __version__ = '0.0.1'
 
 
 XGB_NAME = 'XGB'
 RF_NAME = 'RF'
-LR_NAME = 'LR'
 LINEAR_SVM_NAME = 'linearSVM'
 RBF_SVM_NAME = 'rbfSVM'
-POLY_SVM_NAME = 'polySVM'
+DT_NAME = 'DT'
 
 class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
     def __init__(self,
@@ -46,13 +47,12 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
             CS.CategoricalHyperparameter('max_features',choices = ['sqrt','log2','auto'],default_value = 'sqrt'),
         ])
         return cs
-
-    def get_LR_configuration_space(self,seed) -> CS.ConfigurationSpace:
+    
+    def get_DT_configuration_space(self,seed) -> CS.ConfigurationSpace:
         cs = CS.ConfigurationSpace(seed=seed)
         cs.add_hyperparameters([
-            CS.UniformFloatHyperparameter("alpha", 1e-5, 1, log=True, default_value=1e-3),
-            CS.UniformFloatHyperparameter("eta0", 1e-5, 1, log=True, default_value=1e-2),
-            CS.UniformIntegerHyperparameter('max_iter', lower=10, upper=1000, default_value=1000, log=False)
+            CS.UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=20, default_value=1, log=False),
+            CS.UniformIntegerHyperparameter('max_depth', lower=1, upper=50, default_value=10, log=True),
         ])
         return cs
 
@@ -68,16 +68,6 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         cs.add_hyperparameters([
             CS.UniformFloatHyperparameter("rbf_C", 2**-10, 2**10, log=True, default_value=1.0),
             CS.UniformFloatHyperparameter("rbf_gamma", 2**-10, 2**10, log=True, default_value=0.1),
-        ])
-        return cs
-    
-    def get_polySVM_configuration_space(self,seed) -> CS.ConfigurationSpace:
-        cs = CS.ConfigurationSpace(seed=seed)
-        cs.add_hyperparameters([
-            CS.UniformFloatHyperparameter("poly_C", 2**-10, 2**10, log=True, default_value=1.0),
-            CS.UniformFloatHyperparameter("poly_gamma", 2**-10, 2**10, log=True, default_value=0.1),
-            CS.UniformIntegerHyperparameter('poly_degree', lower = 2, upper = 3, default_value = 2 ,log =False),
-            CS.UniformFloatHyperparameter('poly_coef0',0.0,1.0,log=False,default_value = 0.0)
         ])
         return cs
     
@@ -107,7 +97,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         cs = CS.ConfigurationSpace(seed=seed)
         config_dict = {}
 
-        model_list = [XGB_NAME,LINEAR_SVM_NAME,RF_NAME,LR_NAME,POLY_SVM_NAME,RBF_SVM_NAME]
+        model_list = [XGB_NAME,LINEAR_SVM_NAME,RF_NAME,DT_NAME,RBF_SVM_NAME]
         cs.add_hyperparameters([CS.CategoricalHyperparameter('model', choices = model_list,default_value='XGB')])
         
         # We set the prefix and delimiter to be empty string "" so that we don't have to do
@@ -118,26 +108,26 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
                 xgb_space = self.get_XGB_configuration_space(seed=seed)
                 cs.add_configuration_space(prefix="",delimiter="",configuration_space=xgb_space,parent_hyperparameter={"parent": cs["model"], "value": XGB_NAME})
                 config_dict[XGB_NAME] = xgb_space
+
             elif model_name == RF_NAME:
                 rf_space = self.get_RF_configuration_space(seed=seed)
                 cs.add_configuration_space(prefix="",delimiter="",configuration_space=rf_space,parent_hyperparameter={"parent": cs["model"], "value": RF_NAME})
                 config_dict[RF_NAME] = rf_space
-            elif model_name == LR_NAME:
-                lr_space = self.get_LR_configuration_space(seed=seed)
-                cs.add_configuration_space(prefix="",delimiter="",configuration_space=lr_space,parent_hyperparameter={"parent": cs["model"], "value": LR_NAME})
-                config_dict[LR_NAME] = lr_space
+
+            elif model_name == DT_NAME:
+                dt_space = self.get_DT_configuration_space(seed=seed)
+                cs.add_configuration_space(prefix="",delimiter="",configuration_space=dt_space,parent_hyperparameter={"parent": cs["model"], "value": DT_NAME})
+                config_dict[DT_NAME] = dt_space
+
             elif model_name == LINEAR_SVM_NAME:
                 linear_svm_space = self.get_linearSVM_configuration_space(seed=seed)
                 cs.add_configuration_space(prefix="",delimiter="",configuration_space=linear_svm_space,parent_hyperparameter={"parent": cs["model"], "value": LINEAR_SVM_NAME})
                 config_dict[LINEAR_SVM_NAME] = linear_svm_space
+            
             elif model_name == RBF_SVM_NAME:
                 rbf_svm_space = self.get_rbfSVM_configuration_space(seed=seed)
                 cs.add_configuration_space(prefix="",delimiter="",configuration_space=rbf_svm_space,parent_hyperparameter={"parent": cs["model"], "value": RBF_SVM_NAME})
                 config_dict[RBF_SVM_NAME] = rbf_svm_space
-            elif model_name == POLY_SVM_NAME:
-                poly_svm_space = self.get_polySVM_configuration_space(seed=seed)
-                cs.add_configuration_space(prefix="",delimiter="",configuration_space=poly_svm_space,parent_hyperparameter={"parent": cs["model"], "value": POLY_SVM_NAME})
-                config_dict[POLY_SVM_NAME] = poly_svm_space
             else:
                 raise RuntimeError
 
@@ -153,10 +143,11 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
             new_config['C'] = new_config.pop('rbf_C')
             new_config['gamma'] = new_config.pop('rbf_gamma')
         else:
-            new_config['C'] = new_config.pop('poly_C')
+            raise RuntimeError
+            """new_config['C'] = new_config.pop('poly_C')
             new_config['gamma'] = new_config.pop('poly_gamma')
             new_config['degree'] = new_config.pop('poly_degree')
-            new_config['coef0'] = new_config.pop('poly_coef0')
+            new_config['coef0'] = new_config.pop('poly_coef0')"""
         # initializing model           
         #print(new_config)
         model = SVC(**new_config,random_state=rng,probability=True)
@@ -164,7 +155,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
 
     def init_rf(self,config : Union[CS.Configuration, Dict],rng : Union[int, np.random.RandomState, None] = None):
         #print(config)
-        model = RandomForestClassifier(n_estimators=250,**config,  bootstrap=True,random_state=rng)
+        model = RandomForestClassifier(n_estimators=250,**config,  bootstrap=True,random_state=rng,n_jobs=-1)
         return model
 
     def init_lr(self,config : Union[CS.Configuration, Dict],rng : Union[int, np.random.RandomState, None] = None):
@@ -195,6 +186,29 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         model = xgb.XGBClassifier(**new_config,**extra_args)
         return model
 
+
+
+    def init_dt(self, config: Union[CS.Configuration, Dict],
+                   fidelity: Union[CS.Configuration, Dict, None] = None,
+                   rng: Union[int, np.random.RandomState, None] = None , n_feat = 1):
+        """ Function that returns the model initialized based on the configuration and fidelity
+        """
+        rng = self.rng if rng is None else rng
+        if isinstance(config, CS.Configuration):
+            config = config.get_dictionary()
+        if isinstance(fidelity, CS.Configuration):
+            fidelity = fidelity.get_dictionary()
+
+        new_config = config.copy()
+       
+        new_config['max_depth'] = new_config.pop('XGB_max_depth')
+        new_config['n_estimators'] = new_config.pop('XGB_n_estimators')
+
+        model = DecisionTreeClassifier(min_samples_split=2,**config,random_state=rng)
+
+        return model
+
+
     def init_model(self, config: Union[CS.Configuration, Dict],fidelity: Union[CS.Configuration, Dict, None] = None,
                    rng: Union[int, np.random.RandomState, None] = None,n_feat=1):
         """ Function that returns the model initialized based on the configuration and fidelity
@@ -208,23 +222,19 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         rng = rng if (rng is None or isinstance(rng, int)) else self.seed
 
         tmp_config = config.copy()
-        #print(tmp_config['model'])
-        #print('Current Model is : ' , tmp_config['model'])
-        #print(tmp_config)
-        #Model_type is kept on variable,removed from config.
+        
         
         model_type = tmp_config.pop('model')
 
-        #print('Current Config with model popped is : ' , config)
 
         if model_type == XGB_NAME:
             model = self.init_xgb(tmp_config,rng)
         elif model_type == RF_NAME:
             model = self.init_rf(tmp_config,rng)
-        elif model_type == LR_NAME:
-            model = self.init_lr(tmp_config,rng)
-        elif model_type in [LINEAR_SVM_NAME,RBF_SVM_NAME,POLY_SVM_NAME]:
+        elif model_type in [LINEAR_SVM_NAME,RBF_SVM_NAME]:
             model = self.init_svm(tmp_config,rng,model_type)
+        elif model_type == DT_NAME:
+            model = self.init_dt(tmp_config,rng)
         else:
             raise RuntimeError
         return model
