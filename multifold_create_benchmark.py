@@ -175,8 +175,8 @@ if __name__ == '__main__':
 
     
 
-    opt_list = ['Random_Search','RF_Local'] #'Multi_RF_Local',
-    #'Multi_RF_Local','
+    opt_list = ['Multi_RF_Local','RF_Local'] #'Multi_RF_Local', 'Random_Search',
+    #,'
     #'Random_Search'
 
     #group_tuple = [('LinearSVM',MultiFold_LinearSVMBenchmark),('RBF_SVM',MultiFold_RBFSVMBenchmark),\
@@ -188,7 +188,7 @@ if __name__ == '__main__':
         for group_name,group_benchmark in group_tuple:
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 200,
+                'max_evals' : 500,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](),
                 'n_seeds' : [1,2,3], #

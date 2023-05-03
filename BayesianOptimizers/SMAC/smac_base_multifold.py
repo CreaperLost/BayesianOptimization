@@ -458,6 +458,7 @@ class Bayesian_Optimization_MultiFold:
         
 
         for fold in range(0,self.n_folds):
+            print('Currently Optimizing Fold  : ' , fold)
             assert self.n_evals <= self.max_evals
             #print(f"Current fold : {fold}, Total Folds {self.n_folds}")
             #print(f"N_Evals : {self.n_evals}, Maximum Evals {self.max_evals}")
@@ -472,9 +473,10 @@ class Bayesian_Optimization_MultiFold:
             #print(f"Iterator Fold : {iterator_fold}")
             # Prota run ta configurations eos tora sto 2o fold ktlp kai average out.
             
-
+            re_run_cost_start =  time.time()
             #From the 2nd fold onwards do this for the previous configurations
             if fold != 0 :
+                
                 #Run the previous optimized configurations on current fold.
                 self.run_on_current_fold(fold)
 
@@ -484,6 +486,10 @@ class Bayesian_Optimization_MultiFold:
 
                 #And compute the incumberment on the folds using an averaging., before running BO again
                 self.compute_current_inc_after_avg()
+            re_run_cost_end = time.time() - re_run_cost_start
+            
+            #Initial Overhead for next fold
+            
 
             """After training everything on the specified folds run BO.
                 #Recheck for the per x case.
@@ -494,6 +500,8 @@ class Bayesian_Optimization_MultiFold:
             # Only for the first fold, we have some initials.
             if fold == 0:
                 curr_eval = self.n_init
+                re_run_cost_end = 0
+
 
             while curr_eval< self.max_evals_per_fold:
                 start_time_total = time.time()
@@ -509,7 +517,7 @@ class Bayesian_Optimization_MultiFold:
                 self.model.train(X,fX)
 
                 end_time=time.time() - start_time
-                print('Surrogate time',end_time)
+                #print('Surrogate time',end_time)
                 self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
 
                 #If we want more candidates we need to remove [0]
@@ -526,7 +534,7 @@ class Bayesian_Optimization_MultiFold:
                 end_time=time.time() - start_time
                 self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
-                print('Acquisition time',end_time)
+                #print('Acquisition time',end_time)
 
                 #Run objective -- SANITY CHECK
                 start_time = time.time()
@@ -537,7 +545,7 @@ class Bayesian_Optimization_MultiFold:
                 
                 end_time=time.time() - start_time
 
-                print('Objective_Time',end_time)
+                #print('Objective_Time',end_time)
                 self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
 
 
@@ -559,9 +567,16 @@ class Bayesian_Optimization_MultiFold:
                 self.fX = np.concatenate((self.fX, fX_next))
 
                 end_time_total =  time.time() - start_time_total
-                
-                print('Total_Time',end_time_total)
-                self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
 
+                #If we got initial cost.
+                if re_run_cost_end != 0:    
+                    #Add it to the total time.
+                    end_time_total+= re_run_cost_end
+                    #make it zero till we move to next fold.
+                    re_run_cost_end = 0
+                    
+                #print('Total_Time',end_time_total)
+                self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
+                
         return self.inc_score
     

@@ -586,7 +586,7 @@ metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_
 time_plot = True
 double_plot = False
 #How many initial configurations we have run.
-interval = 50
+interval = 10
 result_space = 'Multi_Fold_Single_Space_Results'
 optimizers = ['RF_Local','Random_Search' ] # 'Multi_RF_Local',
 
@@ -619,7 +619,7 @@ for data_repo in ['Jad','OpenML']:
         plot_per_dataset(general_config)
         plt.clf()
 
-
+    #,
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
