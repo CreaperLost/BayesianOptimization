@@ -126,7 +126,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 acquisition_time_evaluations = Optimization.acquisition_time
                 total_time_evaluations = Optimization.total_time
                 
-
+                print(Optimization.fX_per_group, Optimization.X_per_group)
                 if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
@@ -178,7 +178,7 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 100,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], 

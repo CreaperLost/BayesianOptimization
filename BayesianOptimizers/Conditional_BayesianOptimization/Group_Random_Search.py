@@ -56,7 +56,6 @@ class Group_Random_Search():
 
         for config in configurations:
 
-            
             #Measure Objective Time
             start_time = time()
             result_dict = self.objective_function(config.get_dictionary())

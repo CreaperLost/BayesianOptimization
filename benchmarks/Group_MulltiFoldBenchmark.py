@@ -202,7 +202,7 @@ class Group_MultiFold_Space(Group_MultiFold_MLBenchmark):
         new_config['max_depth'] = new_config.pop('dt_max_depth')
         new_config['min_samples_leaf'] = new_config.pop('dt_min_samples_leaf')
 
-        model = DecisionTreeClassifier(min_samples_split=2,**config,random_state=rng)
+        model = DecisionTreeClassifier(min_samples_split=2,**new_config,random_state=rng)
 
         return model
 
