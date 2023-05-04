@@ -11,7 +11,7 @@ sys.path.insert(0, '..')
 from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
-
+import numpy as np
 
 
 
@@ -124,7 +124,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 
 
                 best_score = Optimization.run()
-
+                print('Total Time',np.sum(Optimization.total_time))
                 print(Optimization.inc_score,Optimization.inc_config)
 
                 #Get the evaluatinons.
@@ -175,8 +175,8 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [14954,11,3918,3917,9976,167125,3021,43,167141,9952,2074]
-    return [9910]
+        return [14954,11,3918,3917,3021,43,167141,9952]
+    return [2074,9976,9910,167125]
     
 
 
@@ -192,13 +192,13 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     opt_list = ['Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
-    for speed in ['fast','slow']:
+    for speed in ['fast']:
      # obtain the benchmark suite    
-        for repo in ['OpenML','Jad']:
+        for repo in ['OpenML','jad']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 100,
+                'max_evals' : 110,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], 
