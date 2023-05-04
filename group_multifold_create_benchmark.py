@@ -55,6 +55,10 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     #Directory to save time for the optimizers
     total_time_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Total_Time'])
 
+    #Directory to save configurations per group
+    config_directory = parse_directory([main_directory,type_of_bench,benchmark_name,'Configurations'])
+
+
     curr_dataset = 0
 
     #Add the type of Dataset repo before.
@@ -63,7 +67,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     objective_time_directory = parse_directory([objective_time_directory,data_repo])
     acquisition_time_directory = parse_directory([acquisition_time_directory,data_repo])
     total_time_directory = parse_directory([total_time_directory,data_repo])
-
+    config_directory = parse_directory([config_directory,data_repo])
 
     for task_id in data_ids:
         
@@ -73,6 +77,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         objective_time_per_seed_directory  = parse_directory([objective_time_directory, 'Dataset' +str(task_id)])
         acquisition_time_per_seed_directory  = parse_directory([acquisition_time_directory, 'Dataset' +str(task_id)])
         total_time_per_seed_directory  = parse_directory([total_time_directory, 'Dataset' +str(task_id)])
+        config_per_seed_directory = parse_directory([config_directory,'Dataset' +str(task_id)])
+
+
 
         for seed in n_seeds:
 
@@ -81,6 +88,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
             objective_time_per_optimizer_directory = parse_directory([objective_time_per_seed_directory,'Seed' + str(seed) ])
             acquisition_time_per_optimizer_directory = parse_directory([acquisition_time_per_seed_directory,'Seed' + str(seed) ])
             total_time_per_optimizer_directory = parse_directory([total_time_per_seed_directory,'Seed' + str(seed) ])
+            
+            config_per_optimizer_directory = parse_directory([config_per_seed_directory,'Seed' + str(seed) ])
+
 
             for opt in optimizers_list: 
                 
@@ -126,7 +136,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 acquisition_time_evaluations = Optimization.acquisition_time
                 total_time_evaluations = Optimization.total_time
                 
-                print(Optimization.fX_per_group, Optimization.X_per_group)
+                
+                #The file path for current optimizer.
+                config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
+                
+                
                 if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
@@ -134,18 +148,24 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         Path(objective_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
                         Path(acquisition_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
                         Path(total_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
+                        Path(config_per_group_directory).mkdir(parents=True, exist_ok=True)
                     except FileExistsError:
                         print("Folder is already there")
-                        """"""
+                        
                     else:
                         print("Folder is created there")
-                        """"""
-                        #print("Folder was created")
+                        
                     pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(surrogate_time_evaluations).to_csv( parse_directory([ surrogate_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
+                    #Save configurations and y results for each group.
+                    for group in Optimization.fX_per_group:
+                        X_df = Optimization.X_per_group[group]
+                        y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
+                        pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+
 
         # Just in case we want less.
         curr_dataset+=1

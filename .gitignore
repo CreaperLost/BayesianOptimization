@@ -3,7 +3,6 @@ Datasets/
 Multi_Fold_Datasets/
 classification_typical/
 Multi_Fold_Single_Space_Results/
-Multi_Fold_Group_Space_Results/
 security/
 HPOBench/
 *.pyc
