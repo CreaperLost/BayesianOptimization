@@ -198,10 +198,10 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 110,
+                'max_evals' : 550,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
-                'n_seeds' : [1,2,3], 
+                'n_seeds' : [1], #2,3
                 'type_of_bench': 'Multi_Fold_Group_Space_Results',
                 'bench_name' :'GROUP',
                 'bench_class' : Group_MultiFold_Space,
