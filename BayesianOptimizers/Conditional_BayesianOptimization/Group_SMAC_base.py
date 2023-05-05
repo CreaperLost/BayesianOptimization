@@ -240,7 +240,6 @@ class Group_Bayesian_Optimization:
             #Select group with highest acquisition --> check code.
             acquisition_values_sorted = sorted(acquisition_values, key=lambda x: x[2],reverse=True)
             
-
             best_next_classifier = acquisition_values_sorted[0][0]
             best_next_config = acquisition_values_sorted[0][1]
 

@@ -16,27 +16,27 @@ from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-"""from BayesianOptimizers.SMAC.ExtraMethods.RandomMaximizer import RandomMaximizer
+"""from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer"""
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
+
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
-"""
-from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
+"""from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
 from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
-from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate
-"""
+from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate"""
+
 
 import pandas as pd
 
 
 
-class Bayesian_Optimization_MultiFold:
+class MultiFold_Per_Group_Bayesian_Optimization:
     """The Random Forest Based Regression Local Bayesian Optimization.
     
     Parameters
@@ -72,9 +72,7 @@ class Bayesian_Optimization_MultiFold:
         random_seed = int(1e6),
         acq_funct = 'EI',
         model = 'RF',
-        maximizer  = 'Sobol',
-        n_folds = 10,
-        per_fold = 1,
+        maximizer  = 'Sobol',group_name = '',n_folds = 10
     ):
 
         # Very basic input checks
@@ -87,15 +85,10 @@ class Bayesian_Optimization_MultiFold:
         assert isinstance(verbose, bool) 
         assert isinstance(batch_size, int)
         assert max_evals > n_init and max_evals > batch_size
-
+        assert group_name != ''
         # Save function information
         #Objective function
         self.f = f
-
-
-        self.n_folds = n_folds
-        #Run BO per folds.
-        self.per_fold = per_fold
 
         #Set a seed.
         self.seed = random_seed
@@ -147,44 +140,37 @@ class Bayesian_Optimization_MultiFold:
         
         self.n_init = n_init #Initial configurations
         self.max_evals = max_evals #Maxmimum evaluations
-        #max evaluations per fold. if we got 10 folds, 500 total then we do 50 per fold. but if we go every 2 folds, we can do 100.
-        self.max_evals_per_fold = (self.per_fold * self.max_evals ) / self.n_folds
-        #Ensure in a loop that the batch_size won't exceed the allowed iterations per fold.
-        assert self.max_evals_per_fold >= batch_size
-        self.batch_size = batch_size #Number of points to maximize  acquisition for.
-        self.verbose = verbose #hm
 
         # Best configuration and the score of the best configuration.
         self.inc_score = np.inf
         self.inc_config = None
 
-        
+        self.n_folds = n_folds
+
+
         #Keep score of each fold in here...
         self.y = [list() for _ in range(self.n_folds)]
 
-
         # Save the full history
         self.X = np.zeros((0, self.dim))
-        #Keep the average in self.fX
-        self.fX = np.zeros((0, 1))
+        self.fX = np.array([])
 
         self.surrogate_time = np.array([])
         self.acquisition_time = np.array([])
         self.objective_time = np.array([])
+        self.checks_time = np.array([])
         self.total_time = np.array([])
 
         #Number of current evaluations!
         self.n_evals = 0 
+        
+        #Save the group name here in order to use on configuration objects.
+        self.group_name = group_name
 
-        # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
-   
         self.n_cand = min(100 * self.dim, 10000)
 
 
         self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
-        
-        
-     
         
 
         if acq_funct == "EI":
@@ -197,11 +183,9 @@ class Bayesian_Optimization_MultiFold:
             else:
                 raise RuntimeError
 
-
+        
         self.batch_size = 1
         
-
-
 
 
     def vector_to_configspace(self, vector: np.array,from_normalized = True) -> ConfigurationSpace:
@@ -342,212 +326,150 @@ class Bayesian_Optimization_MultiFold:
         return np.array([config.get_array() for config in configs], dtype=np.float64)
 
 
-    # Run some random initial configurations on fold 
-    def run_initial_configurations(self,fold=None):
-        '''Creates new population of 'pop_size' and evaluates individuals.
-        '''
-        assert fold!=None
+    def add_group_name_to_config(self,config:Configuration):
+        new_config =config.get_dictionary().copy()
+        new_config['model'] = self.group_name
+        return new_config
+
+    
+    def run_initial_configurations(self,fold = 0):
+        """
+        Runs the initial (Sobol) configurations at the specified folds.
+        #And sets the X,Y,Fx arrays.
+        #Computes the starting incumberment as well.
+        """
 
         initial_configurations = self.load_initial_design_configurations(self.n_init)
-        objective_value_per_configuration = np.array([np.inf for i in range(self.n_init)])
 
-
+        #Run each initial configuration on fold specified.
         for i in range(self.n_init):
-            start_time_total = time.time()
-            
-            #get the initial configuration
-            
-            config = self.vector_to_configspace( initial_configurations[i])
-            
-            #Run the objective function on it.
-            start_time = time.time()
-            
-            objective_value_per_configuration[i] = self.f(config,fold=fold)['function_value']
-
-            end_time=time.time() - start_time
-
-            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
-
+            fX_next=self.run_objective(initial_configurations[i],fold)
+            self.check_if_incumberment(self.vector_to_configspace( initial_configurations[i] ),fX_next)
+            #measure the time.
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
 
-            # If this is better than the overall best score then replace.
-            if objective_value_per_configuration[i] < self.inc_score:
-                self.inc_score = objective_value_per_configuration[i]
+        #After running all initials save the results on fX
+        self.fX = np.array(deepcopy(self.y[fold]))
+        
+
+    # Returns the best configuration of this specific group along with the score.
+    def return_incumberment(self):
+        return ( self.inc_config, self.inc_score)
+    
+
+
+    #Trains the surrogate model.
+    def train_surrogate(self):
+
+        start_time = time.time()
+
+        # Warp inputs
+        X = self.X  
+        # Standardize values
+        fX = self.fX
+        
+        print(X.shape)
+        print(fX.shape)
+        print(len(self.y[0]))
+
+        #here we train...
+        self.model.train(X,fX)
+
+        #Always update the acquisition function with the new surrogate model.
+        self.acquisition_function.update(self.model)
+
+        end_time=time.time() - start_time
+
+        #Add the extra time here.
+        self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
+
+        
+
+    # Runs the surrogate on the points provided, computes the acquisition value per point and returns the suggested point + its value.
+    def suggest_next_point(self, global_eta:float):
+        
+        #Currently only works with batch_size = 1 for simplicity.
+        assert self.batch_size == 1
+
+        start_time = time.time()
+
+        #Search around my current best -- even though I compete against the global best.
+        if isinstance(self.maximize_func,Sobol_Local_Maximizer):
+            X_next,acquisition_value = self.maximize_func.maximize(self.configspace_to_vector,eta = global_eta,best_config = self.inc_config)
+        else:
+            X_next,acquisition_value = self.maximize_func.maximize(self.configspace_to_vector,eta = global_eta)
+
+        end_time=time.time() - start_time
+
+        #Add the acquisition time here.
+        self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
+
+        return (X_next,acquisition_value)
+
+
+    # Runs the objective function on the specified point.
+    def run_objective(self,X_next:Configuration,fold = None):
+
+        assert self.batch_size == 1
+        assert fold != None
+        #Run objective
+
+        start_time = time.time()
+        
+        ## Make sure the vector is in config_space, in order to be run fast by the model
+        config = self.vector_to_configspace( X_next )
+
+        #Run the objective function
+        res = self.f(self.add_group_name_to_config(config),fold=fold)
+        
+        #Get the AUC - R2 etc.
+        fX_next = res['function_value']
+
+        #Increase the number of evaluations
+        self.n_evals+=self.batch_size
+
+        #Add to X and fX vectors.
+        self.X = np.vstack((self.X, deepcopy(X_next)))
+        self.y[fold].append(fX_next)
+
+        end_time=time.time() - start_time
+        self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+
+        return fX_next
+     
+    # Checks if the current configuration is the incumberment.
+    def check_if_incumberment(self,config:Configuration,fX_next:float):
+
+        start_time = time.time()
+
+        
+
+        if fX_next < self.inc_score:
+            self.inc_score = fX_next
+            if isinstance(config,Configuration):
                 self.inc_config = config
+            else:
+                print('Not Configuration')
+                self.inc_config = self.vector_to_configspace( config )
+            print(f"{self.group_name} {self.n_evals}) New best: {self.inc_score:.4}")
 
-            end_time_total =  time.time() - start_time_total
-            self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
+        end_time=time.time() - start_time
+
+        self.checks_time = np.concatenate((self.checks_time,np.array([end_time])))
 
 
-        #Sanity check.
-        self.y[fold] = (self.y[fold] + objective_value_per_configuration.flatten().tolist())
+    # Computes the total_time cost for this optimization group.
+    def compute_total_time(self):
+
+        time_metrics = [
+            self.acquisition_time,
+            self.surrogate_time,
+            self.objective_time,
+            self.checks_time
+        ]
+
+        self.total_time = np.sum(time_metrics, axis=0)
+        print(self.total_time)
+
         
-        #Save the new runs to both X and fX
-        self.X = deepcopy(initial_configurations)
-        self.fX = deepcopy(objective_value_per_configuration)
-        #change the n_evals.
-        self.n_evals += self.n_init
-
-
-    def run_on_current_fold(self,fold):
-        #Run the previous on the new fold. and add the results to the list
-        self.y[fold] = [self.f(self.vector_to_configspace( config ),fold=fold)['function_value'] for config in self.X]
-
-    # This will be gready, as we should only care about the current fold avg. Not the previous
-    def compute_avg_performance(self,iter_fold):
-        # Store the current predictions in np.array
-        # Get the mean of each ROW (Config)
-        # Store in fX :)
-        
-        #print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
-        self.fX = np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0)
-
-
-    def compute_current_inc_after_avg(self):
-        self.inc_score = np.min(self.fX)
-        #Here we store a config space object
-        self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
-        if self.verbose:
-            print(f"{self.n_evals}) New best: {self.inc_score:.4}")
-
-
-    # Get the score per fold, and return the avg.
-    def run_objective_on_previous_folds(self,config,iter_fold):
-        #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
-        per_fold_auc = [self.f(config,fold=f)['function_value'] for f in range(iter_fold)]
-        # each list increase by 1 config for each fold.
-        for f in range(iter_fold):
-            self.y[f] = self.y[f] + [per_fold_auc[f]]
-        return np.mean(per_fold_auc)
-    
-    # Save the performance per fold. Per self.max_evals_per_fold...
-    def save_performance_history_between_folds(self):
-        pass
-
-    def run(self):
-        
-
-        for fold in range(0,self.n_folds):
-            print('Currently Optimizing Fold  : ' , fold)
-            assert self.n_evals <= self.max_evals
-            #print(f"Current fold : {fold}, Total Folds {self.n_folds}")
-            #print(f"N_Evals : {self.n_evals}, Maximum Evals {self.max_evals}")
-            #Run the initial configurations (Sobol) for first fold.
-            #Only runs ONCE.
-
-            iterator_fold = fold+1
-            if fold==0:
-                self.run_initial_configurations(fold=fold)
-            #print('Run Just Initials.')
-            #print('Len X, Len FX',len(self.X),len(self.fX))
-            #print(f"Iterator Fold : {iterator_fold}")
-            # Prota run ta configurations eos tora sto 2o fold ktlp kai average out.
-            
-            re_run_cost_start =  time.time()
-            #From the 2nd fold onwards do this for the previous configurations
-            if fold != 0 :
-                
-                #Run the previous optimized configurations on current fold.
-                self.run_on_current_fold(fold)
-
-                #After running the previous on the new fold.
-                #We have to get some average scores.
-                self.compute_avg_performance(iterator_fold)
-
-                #And compute the incumberment on the folds using an averaging., before running BO again
-                self.compute_current_inc_after_avg()
-            re_run_cost_end = time.time() - re_run_cost_start
-            
-            #Initial Overhead for next fold
-            
-
-            """After training everything on the specified folds run BO.
-                #Recheck for the per x case.
-
-                #Measure time as well as fitting
-                #max_evals_per_fold per fold iteration, forxample 50 per 1 fold, 100 per 2 folds etc."""
-            curr_eval = 0
-            # Only for the first fold, we have some initials.
-            if fold == 0:
-                curr_eval = self.n_init
-                re_run_cost_end = 0
-
-
-            while curr_eval< self.max_evals_per_fold:
-                start_time_total = time.time()
-                # Just set tmp input
-                X = self.X  
-                # Get the current input
-                fX = self.fX
-
-                #print('Len X, Len FX',len(self.X),len(self.fX))
-                # Train the surrogate
-                start_time = time.time()
-
-                self.model.train(X,fX)
-
-                end_time=time.time() - start_time
-                #print('Surrogate time',end_time)
-                self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
-
-                #If we want more candidates we need to remove [0]
-                self.acquisition_function.update(self.model)
-
-                #Start the Acquisition maximization procedure.
-                start_time = time.time()
-                    
-                if isinstance(self.maximize_func,Sobol_Local_Maximizer):
-                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score,best_config = self.inc_config)
-                else:
-                    X_next,acquistion_value = self.maximize_func.maximize(self.configspace_to_vector,eta = self.inc_score)
-                        
-                end_time=time.time() - start_time
-                self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
-
-                #print('Acquisition time',end_time)
-
-                #Run objective -- SANITY CHECK
-                start_time = time.time()
-                
-                #Turn the vector [0,1] to a configspace object.
-                config = self.vector_to_configspace( X_next )
-                fX_next = [self.run_objective_on_previous_folds(config,iterator_fold)]
-                
-                end_time=time.time() - start_time
-
-                #print('Objective_Time',end_time)
-                self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
-
-
-                #Check if better than current incumberment.
-
-                if fX_next[0] < self.inc_score:
-                    self.inc_score = fX_next[0]
-                    self.inc_config = config
-                    if self.verbose:
-                        print(f"{self.n_evals}) New best: {self.inc_score:.4}")
-
-                #Keep the curr_eval infold iterator updated
-                #keep n_evals global iterator updated
-                self.n_evals += self.batch_size
-                curr_eval += self.batch_size
-
-                # This is fine
-                self.X = np.vstack((self.X, deepcopy(X_next)))
-                self.fX = np.concatenate((self.fX, fX_next))
-
-                end_time_total =  time.time() - start_time_total
-
-                #If we got initial cost.
-                if re_run_cost_end != 0:    
-                    #Add it to the total time.
-                    end_time_total+= re_run_cost_end
-                    #make it zero till we move to next fold.
-                    re_run_cost_end = 0
-                    
-                #print('Total_Time',end_time_total)
-                self.total_time = np.concatenate((self.total_time,np.array([end_time_total])))
-                
-        return self.inc_score
-    
