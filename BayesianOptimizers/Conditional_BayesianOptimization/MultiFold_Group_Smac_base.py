@@ -123,9 +123,7 @@ class MultiFold_Group_Bayesian_Optimization:
                     #Track here how many evaluations we conducted by initialization!
                     self.n_evals = self.n_init * len(self.object_per_group)
                     print('Change the current evaluations to the initial run on all groups :',self.n_evals)
-                    #This allows us to pool the performance and configurations per group
-                    #And add the best configuration and score to our self.X , self.fX for tracking.
-                    self.compute_initial_configurations_curve()
+                    
                 else:
                     print('Re-run previous configurations on new fold.',classifier_name)
                     #Runs the previous configurations on the current fold
@@ -138,7 +136,10 @@ class MultiFold_Group_Bayesian_Optimization:
                 print('Train Surrogate for group :' ,classifier_name)
                 self.object_per_group[classifier_name].train_surrogate()
             
-            
+            if fold == 0 :
+                #This allows us to pool the performance and configurations per group
+                #And add the best configuration and score to our self.X , self.fX for tracking.
+                self.compute_initial_configurations_curve()
 
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
@@ -233,7 +234,6 @@ class MultiFold_Group_Bayesian_Optimization:
         #Save configurations per group.
         for i in range(len(min_group_per_iter)):
             group_name = min_group_per_iter[i]
-            
             self.X.append(self.object_per_group[group_name].X[i])
             
     #Compute the best configuration overall.
