@@ -154,6 +154,7 @@ class MultiFold_Group_Bayesian_Optimization:
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
+                print('currently running iter',iter)
                 #Sanity check.
                 assert self.n_evals <= self.max_evals
                 if changed == 1:
