@@ -10,7 +10,7 @@ from ConfigSpace.util import impute_inactive_values,deactivate_inactive_hyperpar
 
 from typing import List
 import typing
-
+ 
 from acquisition_functions.ei_mine import EI
 from acquisition_functions.mace import MACE
 
@@ -358,7 +358,6 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         return ( self.inc_config, self.inc_score)
     
 
-
     #Trains the surrogate model.
     def train_surrogate(self):
 
@@ -368,6 +367,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         X = self.X  
         # Standardize values
         fX = self.fX
+        
         
         print(X.shape)
         print(fX.shape)
@@ -443,8 +443,6 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         start_time = time.time()
 
-        
-
         if fX_next < self.inc_score:
             self.inc_score = fX_next
             if isinstance(config,Configuration):
@@ -471,5 +469,37 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         self.total_time = np.sum(time_metrics, axis=0)
         print(self.total_time)
+
+
+    def run_old_configs_on_current_fold(self,fold):
+        #Run the previous on the new fold. and add the results to the list
+        self.y[fold] = [self.f(self.vector_to_configspace( config ),fold=fold)['function_value'] for config in self.X]
+
+    # This will be gready, as we should only care about the current fold avg. Not the previous
+    def compute_avg_performance(self,iter_fold):
+        # Store the current predictions in np.array
+        # Get the mean of each ROW (Config)
+        # Store in fX :)
+        
+        #print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
+        self.fX = np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0)
+
+
+    def compute_current_inc_after_avg(self):
+        self.inc_score = np.min(self.fX)
+        #Here we store a config space object
+        self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
+        if self.verbose:
+            print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+
+
+    # This runs a new configuration on all the previous folds. --> Return the average
+    def run_objective_on_previous_folds(self,config,iter_fold):
+        #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
+        per_fold_auc = [self.f(config,fold=f)['function_value'] for f in range(iter_fold)]
+        # each list increase by 1 config for each fold.
+        for f in range(iter_fold):
+            self.y[f] = self.y[f] + [per_fold_auc[f]]
+        return np.mean(per_fold_auc)
 
         

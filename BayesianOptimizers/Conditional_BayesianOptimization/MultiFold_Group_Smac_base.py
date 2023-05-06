@@ -123,16 +123,22 @@ class MultiFold_Group_Bayesian_Optimization:
                     #Track here how many evaluations we conducted by initialization!
                     self.n_evals = self.n_init * len(self.object_per_group)
                     print('Change the current evaluations to the initial run on all groups :',self.n_evals)
+                    #This allows us to pool the performance and configurations per group
+                    #And add the best configuration and score to our self.X , self.fX for tracking.
+                    self.compute_initial_configurations_curve()
                 else:
                     print('Re-run previous configurations on new fold.',classifier_name)
-                    self.object_per_group[classifier_name].rerun_previous_configurations_on_current_fold(fold)
+                    #Runs the previous configurations on the current fold
+                    self.object_per_group[classifier_name].run_old_configs_on_current_fold(fold)
+                    #Computes the average performance on the folds up to the current fold.
+                    self.object_per_group[classifier_name].compute_avg_performance(fold)
+                    #Compute the best local configuration for each group
+                    self.object_per_group[classifier_name].compute_current_inc_after_avg()
                 #Train each group's surrogate.
                 print('Train Surrogate for group :' ,classifier_name)
                 self.object_per_group[classifier_name].train_surrogate()
             
-            #This allows us to pool the performance and configurations per group
-            #And add the best configuration and score to our self.X , self.fX for tracking.
-            self.compute_initial_configurations_curve()
+            
 
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
@@ -143,7 +149,7 @@ class MultiFold_Group_Bayesian_Optimization:
             print('Second best overall : ', self.inc_config)
             print('Second best overall performance: ', self.inc_score)
             print('=====THEY SHOULD MATCH=====')
-
+ 
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
