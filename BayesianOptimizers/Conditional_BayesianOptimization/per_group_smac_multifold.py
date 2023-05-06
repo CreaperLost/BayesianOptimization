@@ -494,12 +494,25 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
 
     # This runs a new configuration on all the previous folds. --> Return the average
-    def run_objective_on_previous_folds(self,config,iter_fold):
+    def run_objective_on_previous_folds(self,X_next,iter_fold):
+
+        ## Make sure the vector is in config_space, in order to be run fast by the model
+        config = self.vector_to_configspace( X_next )
+
         #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
-        per_fold_auc = [self.f(config,fold=f)['function_value'] for f in range(iter_fold)]
+        per_fold_auc = [self.f(self.add_group_name_to_config(config),fold=f)['function_value'] for f in range(iter_fold)]
+        
+        self.n_evals+=self.batch_size
+        #Add to X and fX vectors.
+        self.X = np.vstack((self.X, deepcopy(X_next)))
+
         # each list increase by 1 config for each fold.
+        # Try with append.
         for f in range(iter_fold):
             self.y[f] = self.y[f] + [per_fold_auc[f]]
+        
+        self.fX = np.vstack((self.fX,np.mean(per_fold_auc)))
+
         return np.mean(per_fold_auc)
 
         

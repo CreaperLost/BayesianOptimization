@@ -179,17 +179,20 @@ class MultiFold_Group_Bayesian_Optimization:
                 #Get the best configuration using the best group.
                 best_next_config = self.max_acquisitions_configs[best_next_classifier]
                 
-                #Evaluate the new configuration on all folds up to fold.
-                #GENERALISE TO MULTIPLE FOLDS.
-                #Run objective on this group.
-                fX_next = self.object_per_group[best_next_classifier].run_objective(best_next_config,fold)
+                # Evaluate the new configuration on all folds up to fold. Run objective on this group.
+                # Add also to the self.fX of the group internally.
+                fX_next = self.object_per_group[best_next_classifier].run_objective_on_previous_folds(best_next_config,fold)
+                # Check if incumberment of the group.
+                self.object_per_group[best_next_classifier].compute_current_inc_after_avg()
+
                 #Append on this the results
                 self.X.append(best_next_config)
+                #Add the score into fX here. --> at each fold this becomes new.
                 self.fX = np.concatenate((self.fX, [fX_next]))
 
                 self.n_evals += 1
                 
-                print(self.X,self.fX)
+                print(pd.DataFrame(data = [self.X,self.fX]))
                 #Train the surrogate model for the specific group ONLY.
                 self.object_per_group[best_next_classifier].train_surrogate()
 
