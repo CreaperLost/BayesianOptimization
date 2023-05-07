@@ -172,8 +172,12 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                             X_df = Optimization.X_per_group[group]
                             y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
                             pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
-                    else:
-                        pass
+                    elif opt == 'Multi_RF_Local':
+                        for group in Optimization.object_per_group:
+                            X_df = pd.DataFrame(Optimization.object_per_group[group].X)
+                            y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
 
         # Just in case we want less.
         curr_dataset+=1
@@ -192,21 +196,21 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [842,851,850,1114,847,839]
+        return [850,1114,847,839] #842,851,
     return [843,883,866]
     
 
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['Multi_RF_Local'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
+    opt_list = ['Multi_RF_Local','Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',] #
     for speed in ['fast']:
      # obtain the benchmark suite    
         for repo in ['OpenML','Jad']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 100,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], #2,3

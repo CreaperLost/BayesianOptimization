@@ -111,50 +111,48 @@ class MultiFold_Group_Bayesian_Optimization:
                                                                                     initial_design=initial_design,n_init=n_init,max_evals=max_evals,
                                                                                     batch_size=batch_size,random_seed=random_seed,\
                                                                                       acq_funct=acq_funct,model=model,maximizer=maximizer,group_name =classifier_name,n_folds = self.n_folds )
-
+        #Store the group that was selected at each iteration.
+        self.X_group = []
 
     def run(self):
         for fold in range(0,self.n_folds):
             print('Currently Running fold : ', fold)
             for classifier_name in self.object_per_group:
                 if fold == 0:
-                    print('Initializing Group : ', classifier_name)
+                    #print('Initializing Group : ', classifier_name)
                     self.object_per_group[classifier_name].run_initial_configurations(fold)
                     #Track here how many evaluations we conducted by initialization!
                     self.n_evals = self.n_init * len(self.object_per_group)
-                    print('Change the current evaluations to the initial run on all groups :',self.n_evals)
+                    #print('Change the current evaluations to the initial run on all groups :',self.n_evals)
                     
                 else:
-                    print('Re-run previous configurations on new fold.',classifier_name)
+                    #print('Re-run previous configurations on new fold.',classifier_name)
                     #Runs the previous configurations on the current fold
                     self.object_per_group[classifier_name].run_old_configs_on_current_fold(fold)
                     #Computes the average performance on the folds up to the current fold.
                     self.object_per_group[classifier_name].compute_avg_performance(fold)
                     #Compute the best local configuration for each group
-                    self.object_per_group[classifier_name].compute_current_inc_after_avg()
+                    self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
                 #Train each group's surrogate.
-                print('Train Surrogate for group :' ,classifier_name)
+                #print('Train Surrogate for group :' ,classifier_name)
                 self.object_per_group[classifier_name].train_surrogate()
             
             if fold == 0 :
                 #This allows us to pool the performance and configurations per group
                 #And add the best configuration and score to our self.X , self.fX for tracking.
-                self.compute_initial_configurations_curve()
+                #self.compute_initial_configurations_curve()
+                self.track_initial_groups()
 
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
 
-            print('First best overall : ', self.inc_config)
-            print('First best overall performance: ', self.inc_score)
-            self.compute_incumberment_overall()
-            print('Second best overall : ', self.inc_config)
-            print('Second best overall performance: ', self.inc_score)
-            print('=====THEY SHOULD MATCH=====')
- 
+            #print('Best config after initial : ', self.inc_config)
+            #print('Best score after initial  : ', self.inc_score)
+
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
-                print('currently running iter',iter)
+                print(f'currently running iter {iter}, inc score is : {self.inc_score}')
                 #Sanity check.
                 assert self.n_evals <= self.max_evals
                 if changed == 1:
@@ -175,6 +173,8 @@ class MultiFold_Group_Bayesian_Optimization:
                 #Get the maximum acquisition for all.
                 #Select group with highest acquisition --> check code.
                 best_next_classifier = max(self.max_acquisitions_score, key=lambda k: self.max_acquisitions_score.get(k))
+                #Just add the next group here.
+                self.X_group.append(best_next_classifier)
 
                 #Get the best configuration using the best group.
                 best_next_config = self.max_acquisitions_configs[best_next_classifier]
@@ -185,22 +185,43 @@ class MultiFold_Group_Bayesian_Optimization:
                 # Check if incumberment of the group.
                 self.object_per_group[best_next_classifier].compute_current_inc_after_avg()
 
+
+                #print('Performance of propose config',fX_next)
+                #print('Performance of best config till now',self.inc_score )
+                #print('New best print below if proposed < best.')
+                
                 #Append on this the results
-                self.X.append(best_next_config)
+                #self.X.append(best_next_config)
                 #Add the score into fX here. --> at each fold this becomes new.
-                self.fX = np.concatenate((self.fX, [fX_next]))
+                #self.fX = np.concatenate((self.fX, [fX_next]))
 
                 self.n_evals += 1
                 
-                print(pd.DataFrame(data = [self.X,self.fX]))
+                #print(pd.DataFrame(data = [self.X,self.fX]))
                 #Train the surrogate model for the specific group ONLY.
                 self.object_per_group[best_next_classifier].train_surrogate()
 
                 #Check if new configuration is the incumberment. 
                 #Check incumberment
-                self.compute_incumberment_overall()
+                changed = self.compute_incumberment_overall()
         
+
+        #Makes the final fX score progression
+        self.make_X_Y()
         return self.inc_score        
+    
+    def make_X_Y(self):
+
+        # Current configuration iterator in each group.
+        counter_per_group = {}
+        for classifier_name in self.object_per_group:
+            counter_per_group[classifier_name] = 0
+
+        #Get each group
+        for group in self.X_group:
+            counter = counter_per_group[group]
+            self.fX = np.append(self.fX, self.object_per_group[group].fX[counter])
+            counter_per_group[group]+=1
 
     # Compute the best configuration.
     def compute_best_config_on_new_fold(self):
@@ -215,6 +236,12 @@ class MultiFold_Group_Bayesian_Optimization:
         self.inc_score = sorted_list[0][1]
 
         return 1
+    
+    def track_initial_groups(self):
+        for i in range(0,self.n_init):
+            for group_name in self.object_per_group:
+                self.X_group.append(group_name)
+        
 
     # for each classifier, get the history, 
     # and keep only the best fX for each step. (To make the error curve + the config.)
@@ -223,6 +250,8 @@ class MultiFold_Group_Bayesian_Optimization:
         #stack fX values per group
         for classifier_name in self.object_per_group:
             df[classifier_name] = self.object_per_group[classifier_name].fX
+
+        
         
         #print('Performance of all Groups:  ')
         #print(df)
@@ -242,6 +271,20 @@ class MultiFold_Group_Bayesian_Optimization:
             
     #Compute the best configuration overall.
     def compute_incumberment_overall(self):
-        self.inc_config = self.X[np.argmin(self.fX)]
-        self.inc_score = min(self.fX)
-        print(f'Best score so far : {self.inc_score}')
+        inc_score_list = []
+        for classifier_name in self.object_per_group:
+            inc_score_list.append((self.object_per_group[classifier_name].inc_config , self.object_per_group[classifier_name].inc_score))
+        
+        # Sort the list by the first element of each tuple
+        # Reverse = False means that the min is first element ( LOWEST ERROR  )
+        sorted_list = sorted(inc_score_list, key=lambda x: x[1],reverse=False)
+        potential_config = sorted_list[0][0]
+        potential_score = sorted_list[0][1]
+
+
+        if self.inc_score > potential_score:
+            self.inc_config = potential_config
+            self.inc_score = potential_score
+            print(f'Best score so far : {self.inc_score}')
+            return 1
+        return 0

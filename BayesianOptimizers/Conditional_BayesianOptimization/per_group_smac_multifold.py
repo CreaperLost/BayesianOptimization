@@ -167,7 +167,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Save the group name here in order to use on configuration objects.
         self.group_name = group_name
 
-        self.n_cand = min(100 * self.dim, 10000)
+        self.n_cand = 900 #min(100 * self.dim, 10000)
 
 
         self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
@@ -344,7 +344,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Run each initial configuration on fold specified.
         for i in range(self.n_init):
             fX_next=self.run_objective(initial_configurations[i],fold)
-            self.check_if_incumberment(self.vector_to_configspace( initial_configurations[i] ),fX_next)
+            self.check_if_incumberment_initial_configs(self.vector_to_configspace( initial_configurations[i] ),fX_next)
             #measure the time.
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
@@ -369,9 +369,9 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         fX = self.fX
         
         
-        print(X.shape)
-        print(fX.shape)
-        print(len(self.y[0]))
+        #print(X.shape)
+        #print(fX.shape)
+        #print(self.y)
 
         #here we train...
         self.model.train(X,fX)
@@ -393,7 +393,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         assert self.batch_size == 1
 
         start_time = time.time()
-
+        
         #Search around my current best -- even though I compete against the global best.
         if isinstance(self.maximize_func,Sobol_Local_Maximizer):
             X_next,acquisition_value = self.maximize_func.maximize(self.configspace_to_vector,eta = global_eta,best_config = self.inc_config)
@@ -432,6 +432,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
         self.y[fold].append(fX_next)
+        
 
         end_time=time.time() - start_time
         self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
@@ -439,7 +440,8 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         return fX_next
      
     # Checks if the current configuration is the incumberment.
-    def check_if_incumberment(self,config:Configuration,fX_next:float):
+    # Only in initial configurations
+    def check_if_incumberment_initial_configs(self,config:Configuration,fX_next:float):
 
         start_time = time.time()
 
@@ -448,7 +450,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
             if isinstance(config,Configuration):
                 self.inc_config = config
             else:
-                print('Not Configuration')
+                #print('Not Configuration')
                 self.inc_config = self.vector_to_configspace( config )
             print(f"{self.group_name} {self.n_evals}) New best: {self.inc_score:.4}")
 
@@ -468,12 +470,13 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         ]
 
         self.total_time = np.sum(time_metrics, axis=0)
-        print(self.total_time)
+        #print(self.total_time)
 
 
     def run_old_configs_on_current_fold(self,fold):
         #Run the previous on the new fold. and add the results to the list
-        self.y[fold] = [self.f(self.vector_to_configspace( config ),fold=fold)['function_value'] for config in self.X]
+
+        self.y[fold] = [self.f(self.add_group_name_to_config(self.vector_to_configspace( config) ),fold=fold)['function_value'] for config in self.X]
 
     # This will be gready, as we should only care about the current fold avg. Not the previous
     def compute_avg_performance(self,iter_fold):
@@ -482,16 +485,23 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         # Store in fX :)
         
         #print(np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0).shape)
-        self.fX = np.array([self.y[i] for i in range(iter_fold)]).mean(axis=0)
+        self.fX = np.array([self.y[i] for i in range(iter_fold+1)]).mean(axis=0)
 
-
-    def compute_current_inc_after_avg(self):
+    # When you run on next fold --> reset the incumberment no matter what.
+    def compute_next_fold_current_inc_after_avg(self):
         self.inc_score = np.min(self.fX)
         #Here we store a config space object
         self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
-        if self.verbose:
-            print(f"{self.n_evals}) New best: {self.inc_score:.4}")
+        print(f"{self.group_name} at eval : {self.n_evals}) New best: {self.inc_score:.4}")
 
+
+    # When running on the same folds, check whether the incumberment changes.
+    def compute_current_inc_after_avg(self):
+        if np.min(self.fX) < self.inc_score:
+            self.inc_score = np.min(self.fX)
+            #Here we store a config space object
+            self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
+            print(f"{self.group_name} at eval : {self.n_evals}) New best: {self.inc_score:.4}")
 
     # This runs a new configuration on all the previous folds. --> Return the average
     def run_objective_on_previous_folds(self,X_next,iter_fold):
@@ -499,20 +509,26 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         ## Make sure the vector is in config_space, in order to be run fast by the model
         config = self.vector_to_configspace( X_next )
 
+        #print(config)
         #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
-        per_fold_auc = [self.f(self.add_group_name_to_config(config),fold=f)['function_value'] for f in range(iter_fold)]
-        
+        per_fold_auc = [self.f(self.add_group_name_to_config(config),fold=f)['function_value'] for f in range(iter_fold+1)]
+        #print(iter_fold)
+        #print(per_fold_auc)
         self.n_evals+=self.batch_size
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
 
         # each list increase by 1 config for each fold.
         # Try with append.
-        for f in range(iter_fold):
+        for f in range(iter_fold+1):
             self.y[f] = self.y[f] + [per_fold_auc[f]]
-        
-        self.fX = np.vstack((self.fX,np.mean(per_fold_auc)))
+            
+            
 
+        #print(np.mean(per_fold_auc))
+        self.fX = np.concatenate((self.fX,np.array([np.mean(per_fold_auc)])))
+        #print('Average over folds.')
+        #print(self.fX)
         return np.mean(per_fold_auc)
 
         

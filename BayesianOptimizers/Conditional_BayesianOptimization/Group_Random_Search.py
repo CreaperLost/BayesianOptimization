@@ -56,6 +56,8 @@ class Group_Random_Search():
 
         for config in configurations:
 
+            print(f'Current iteration {self.n_evals}')
+            
             #Measure Objective Time
             start_time = time()
             result_dict = self.objective_function(config.get_dictionary())
