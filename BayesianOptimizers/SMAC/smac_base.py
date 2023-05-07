@@ -16,16 +16,17 @@ from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-"""from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
+"""
 from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
-from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer"""
+"""
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-
+from BayesianOptimizers.SMAC.Extramethods.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
+from BayesianOptimizers.SMAC.Extramethods.Scipy_Maximizer import Scipy_Maximizer
+from BayesianOptimizers.SMAC.Extramethods.RandomMaximizer import RandomMaximizer
 
 """from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
-from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
 from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
 from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
@@ -166,23 +167,17 @@ class Bayesian_Optimization:
         # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
         if 'ACQ10000' in model:
             self.n_cand = 10000
-        elif 'ACQ100' in model:
-            self.n_cand =100
-        elif 'ACQ500' in model:
-            self.n_cand =500
         else:
-            self.n_cand = min(100 * self.dim, 10000)
+            self.n_cand = 900
 
 
         if 'RF' in model:
-            n_est = 30
-            if 'NTREE_500' in model:
-                n_est = 500
-            self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=n_est)
-        """elif 'HEBO_GP' in model:
-            self.model = HEBO_GP(self.config_space,rng=random_seed)
+            self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
         elif 'GP' in model:
             self.model = GaussianProcess(self.config_space,seed=random_seed)
+        """elif 'HEBO_GP' in model:
+            self.model = HEBO_GP(self.config_space,rng=random_seed)
+        
         elif 'BNN' in model:
             self.model = BNN_Surrogate(config_space = self.config_space,rng=random_seed)
         elif 'NGBOOST' in model:
@@ -202,14 +197,16 @@ class Bayesian_Optimization:
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Sobol_Local':
                 self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Random':
+                self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+            elif maximizer == 'Scipy':
+                self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             else:
                 raise RuntimeError
-            """elif maximizer == 'Random':
-                self.maximize_func = RandomMaximizer(self.acquisition_function, self.config_space, self.n_cand)
+            """
             elif maximizer == 'DE':
                 self.maximize_func  = DE_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
-            elif maximizer == 'Scipy':
-                self.maximize_func  = Scipy_Maximizer(self.acquisition_function, self.config_space, self.n_cand)"""
+            """
             
 
         """elif acq_funct == "Multi5" or acq_funct == "Multi10":
