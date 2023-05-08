@@ -197,7 +197,7 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [839, 847,1114] #842,851,850
+        return [839, 847,1114,842,851,850] #
     #  on all seeds 
     return [843,883,866]
     
@@ -205,7 +205,7 @@ def get_jad_data(speed = None):
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['Multi_RF_Local' ] # ,,'Random_Search','RF_Local',]
+    opt_list = ['Multi_RF_Local','Random_Search'] # ,,'Random_Search','RF_Local',]
     for speed in ['fast']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:
