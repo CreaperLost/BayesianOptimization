@@ -74,6 +74,7 @@ class JadDataManager(DataManager):
 
         #Check if we locally have the specific dataset.
         data_set_path = self.data_path + "/datasets/" + str(self.task_id)
+
         successfully_loaded = self.try_to_load_data(data_set_path)
 
         
@@ -116,7 +117,7 @@ class JadDataManager(DataManager):
                 self.train_y.append( pd.read_parquet(data_path + path_str.format("train", "y",str(fold))).squeeze(axis=1))
                 self.valid_X.append( pd.read_parquet(data_path + path_str.format("valid", "x",str(fold))).to_numpy())
                 self.valid_y.append(pd.read_parquet(data_path + path_str.format("valid", "y",str(fold))).squeeze(axis=1))
-            
+                
             #Don't Load test-data any more --
             if self.use_holdout == True:
                 self.test_X = pd.read_parquet(data_path + path_str2.format("test", "x")).to_numpy()
@@ -125,6 +126,8 @@ class JadDataManager(DataManager):
             self.n_classes = self.find_number_of_target(self.train_y[0],self.valid_y[0])
             
         except FileNotFoundError:
+            return False
+        except:
             return False
         return True
 
@@ -175,17 +178,20 @@ class JadDataManager(DataManager):
     def __download_data(self,file_path:str, verbose: bool):
         assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
-        ip, email, password =  get_pass('Good')
-        print(ip, email, password)
-        self.Client = ApiClient(ip, email, password)
-        tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
-        self.Client.project.download_dataset(self.task_id,tmp_file_loc)
+                
+        tmp_file_loc= file_path + '/' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
+        print(tmp_file_loc)
+        if os.path.exists(tmp_file_loc):
+            print('exists')
+        else:
+            ip, email, password =  get_pass('Good')
+            self.Client = ApiClient(ip, email, password)
+            self.Client.project.download_dataset(self.task_id,tmp_file_loc)
+
         dataset = pd.read_csv(tmp_file_loc)
         
 
         X, y, categorical_ind,continuous_ind = self.preprocess_data(dataset)
-        
-
         self.n_classes = y.nunique()
 
         #Label encode y.
@@ -268,8 +274,11 @@ class JadDataManager(DataManager):
 
         for fold in range(self.n_folds):
             # preprocessor fit only on the training set
+            print(pd.DataFrame(self.train_X[fold]))
             self.train_X[fold] = self.preprocessor.fit_transform(self.train_X[fold])
+            print(pd.DataFrame(self.train_X[fold]))
             # applying preprocessor built on the training set, across validation and test splits
+            print(pd.DataFrame(self.valid_X[fold]))
             self.valid_X[fold] = self.preprocessor.transform(self.valid_X[fold])
             # converting boolean labels to strings
             self.train_y[fold] = self._convert_labels(self.train_y[fold])
