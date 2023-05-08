@@ -80,7 +80,7 @@ class EI(BaseAcquisitionFunction):
             raise ValueError
 
         s = np.sqrt(v)
-
+        
         if (s == 0).any():
             f = np.array([[0]])
             df = np.zeros((1, X.shape[1]))
@@ -97,7 +97,6 @@ class EI(BaseAcquisitionFunction):
         else:
             z = (self.eta - m - self.par) / s
             f = s * (z * norm.cdf(z) + norm.pdf(z))
-
             if derivative:
                 dmdx, ds2dx = self.model.predictive_gradients(X)
                 dmdx = dmdx[0]

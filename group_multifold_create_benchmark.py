@@ -5,6 +5,8 @@ import pandas as pd
 from pathlib import Path
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
+from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
+
 import os
 import sys
 sys.path.insert(0, '..')
@@ -112,6 +114,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'RF_Local':
                     Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
+                elif opt == 'Multi_RF_Local':
+                    Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=10)
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -160,12 +165,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
-                    #Save configurations and y results for each group.
-                    for group in Optimization.fX_per_group:
-                        X_df = Optimization.X_per_group[group]
-                        y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
-                        pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
-
+                    
+                    if opt =='Random_Search':
+                        #Save configurations and y results for each group.
+                        for group in Optimization.fX_per_group:
+                            X_df = Optimization.X_per_group[group]
+                            y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                    elif opt == 'Multi_RF_Local':
+                        for group in Optimization.object_per_group:
+                            X_df = Optimization.object_per_group[group].X_df
+                            y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
 
         # Just in case we want less.
         curr_dataset+=1
@@ -200,7 +212,7 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 60,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #

@@ -13,7 +13,7 @@ from BayesianOptimizers.SMAC.utils import Prior,SoftTopHatPrior,TophatPrior
 import sklearn.gaussian_process
 from sklearn.gaussian_process.kernels import Kernel, KernelOperator
 from sklearn.gaussian_process import GaussianProcessRegressor
-from BayesianOptimizers.SMAC.kernels import (ConstantKernel,
+from BayesianOptimizers.SMAC.Extramethods.kernels import (ConstantKernel,
     HammingKernel,
     Matern,
     WhiteKernel,)

@@ -9,16 +9,16 @@ from BayesianOptimizers.SMAC.smac_base_multifold import Bayesian_Optimization_Mu
 import os
 import sys
 sys.path.insert(0, '..')
-"""from benchmarks.MultiFold_XGBoostBenchmark import MultiFold_XGBoostBenchmark
+"""
 from benchmarks.MultiFold_RFBenchmark import MultiFold_RFBenchmark
 from benchmarks.MultiFold_LRBenchmark import MultiFold_LRBenchmark
 from benchmarks.MultiFold_LinearSVMBenchmark import MultiFold_LinearSVMBenchmark
 from benchmarks.MultiFold_RBFSVMBenchmark import MultiFold_RBFSVMBenchmark
 from benchmarks.MultiFold_PolySVMBenchmark import MultiFold_PolySVMBenchmark"""
-from benchmarks.MultiFold_DecisionTreeBenchmark import MultiFold_DecisionTreeBenchmark
+#from benchmarks.MultiFold_DecisionTreeBenchmark import MultiFold_DecisionTreeBenchmark
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
-
+from benchmarks.MultiFoldBenchmarks.MultiFold_XGBoostBenchmark import MultiFold_XGBoostBenchmark
 
 
 
@@ -110,6 +110,21 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'RF_Local':
                     Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
+                elif opt == 'RF_Sobol':
+                    Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
+                elif opt == 'RF_ACQ10000':
+                    Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
+                elif opt == 'RF_Random':
+                    Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Random')
+                elif opt == 'RF_Scipy':
+                    Optimization = Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Scipy')
+                elif opt == 'GP_Sobol':
+                    Optimization = Bayesian_Optimization(f=objective_function, model='GP' ,lb= None, ub =None , configuration_space= configspace ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol')
                 elif opt == 'Multi_RF_Local':
                     Optimization = Bayesian_Optimization_MultiFold(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= configspace ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
@@ -155,54 +170,43 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         if curr_dataset >= n_datasets:
             break 
 
-def get_openml_data():
-    tasks = [11,14954,43,3021,3917,3918,9952,167141] #,167125,9976 , ,2074,9910
-    #tasks = [167125,9976] 
     
-    return tasks
+
+def get_openml_data(speed = None):
+    assert speed !=None
+    if speed == 'fast':
+        return [9952] #14954, 11,3918,3917,3021,43,167141,
+    return [2074,9976,9910,167125]
+    
 
 
 #
-def get_jad_data():
-    interesting_Data = [851,842,1114,839,847,850] #,866, 883, ,843
-    #interesting_Data = [883,866]
-    return interesting_Data
-
-if __name__ == '__main__':
-
-     # obtain the benchmark suite    
-    config_of_data = {      'Jad':{'data_ids':get_jad_data},
-                            'OpenML': {'data_ids':get_openml_data}      }
-
-
+def get_jad_data(speed = None):
+    assert speed !=None
+    if speed == 'fast':
+        return [850,1114,847,839] #842,851,
+    return [843,883,866]
     
 
-    opt_list = ['Multi_RF_Local'] #,'RF_Local' #'Multi_RF_Local', 'Random_Search',
-    #,'
-    #'Random_Search'
-
-    #group_tuple = [('LinearSVM',MultiFold_LinearSVMBenchmark),('RBF_SVM',MultiFold_RBFSVMBenchmark),\
-    #               ('Poly_SVM',MultiFold_PolySVMBenchmark),] #('XGB',MultiFold_XGBoostBenchmark) #,('LR',MultiFold_LRBenchmark),\
-    print(opt_list)
-    group_tuple = [('DT',MultiFold_DecisionTreeBenchmark)]
-    for repo in ['Jad','OpenML']: #
-        #XGBoost Benchmark    
-        for group_name,group_benchmark in group_tuple:
+if __name__ == '__main__':
+    config_of_data = { 'Jad':{'data_ids':get_jad_data},
+                        'OpenML': {'data_ids':get_openml_data}      }
+    
+    opt_list = ['Random_Search','RF_Local','RF_Sobol','GP_Sobol','RF_ACQ10000','RF_Random'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',] #
+    
+    for speed in ['fast']:
+     # obtain the benchmark suite    
+        for repo in ['OpenML','Jad']:
+            #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 500,
+                'max_evals' : 100,
                 'n_datasets' : 1000,
-                'data_ids' :  config_of_data[repo]['data_ids'](),
+                'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #
                 'type_of_bench': 'Multi_Fold_Single_Space_Results',
-                'bench_name' :group_name,
-                'bench_class' :group_benchmark,
+                'bench_name' :'XGB',
+                'bench_class' : MultiFold_XGBoostBenchmark,
                 'data_repo' : repo
             }
             run_benchmark_total(opt_list,xgb_bench_config)
-
-    
-
-
-
-    
