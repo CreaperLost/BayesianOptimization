@@ -206,13 +206,13 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     opt_list = ['Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
-    for speed in ['slow']:
+    for speed in ['fast']:
      # obtain the benchmark suite    
-        for repo in ['OpenML']: #,'Jad' ,
+        for repo in ['Jad' ,'OpenML']: #,,
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 60,
+                'max_evals' : 550,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #
