@@ -13,8 +13,6 @@ from ConfigSpace.hyperparameters import (
 )
 from ConfigSpace.util import ForbiddenValueError, deactivate_inactive_hyperparameters
 
-from smac.utils.io.traj_logging import TrajLogger
-
 __author__ = "Marius Lindauer"
 __copyright__ = "Copyright 2019, AutoML"
 __license__ = "3-clause BSD"
@@ -59,7 +57,7 @@ class InitialDesign:
         self,
         cs: ConfigurationSpace,
         rng: np.random.RandomState,
-        traj_logger: TrajLogger,
+        traj_logger,
         ta_run_limit: int,
         configs: Optional[List[Configuration]] = None,
         n_configs_x_params: Optional[int] = 10,
