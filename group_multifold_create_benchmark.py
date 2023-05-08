@@ -5,6 +5,8 @@ import pandas as pd
 from pathlib import Path
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
+from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
+
 import os
 import sys
 sys.path.insert(0, '..')
@@ -112,6 +114,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'RF_Local':
                     Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
+                elif opt == 'Multi_RF_Local':
+                    Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=10)
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -160,12 +165,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
-                    #Save configurations and y results for each group.
-                    for group in Optimization.fX_per_group:
-                        X_df = Optimization.X_per_group[group]
-                        y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
-                        pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
-
+                    
+                    if opt =='Random_Search':
+                        #Save configurations and y results for each group.
+                        for group in Optimization.fX_per_group:
+                            X_df = Optimization.X_per_group[group]
+                            y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                    elif opt == 'Multi_RF_Local':
+                        for group in Optimization.object_per_group:
+                            X_df = Optimization.object_per_group[group].X_df
+                            y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
 
         # Just in case we want less.
         curr_dataset+=1
@@ -173,18 +185,20 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
             break 
 
 def get_openml_data(speed = None):
+    # 2074 needs 15 hours for 3 seeds per optimizer.
     assert speed !=None
     if speed == 'fast':
         return [14954,11,3918,3917,3021,43,167141,9952]
     return [2074,9976,9910,167125]
     
-
+    
 
 #
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [842,851,850,1114,847,839]
+        return [839, 847,1114] #842,851,850
+    #  on all seeds 
     return [843,883,866]
     
 
@@ -192,17 +206,17 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     opt_list = ['Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
-    for speed in ['fast']:
+    for speed in ['slow']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 60,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #
-                'type_of_bench': 'Multi_Fold_Group_Space_Results',
+                'type_of_bench': 'Main_Multi_Fold_Group_Space_Results',
                 'bench_name' :'GROUP',
                 'bench_class' : Group_MultiFold_Space,
                 'data_repo' : repo

@@ -60,5 +60,5 @@ class SobolMaximizer():
         self.objective_function.update(eta)
         y = self.objective_function(X_candidates)
         #Find the point of X_candidates with maximum Acquisition function.
-        return X_candidates[y.argmax()],y.argmax()
+        return X_candidates[y.argmax()],np.max(y)
 

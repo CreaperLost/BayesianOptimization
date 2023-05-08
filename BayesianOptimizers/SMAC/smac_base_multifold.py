@@ -158,8 +158,7 @@ class Bayesian_Optimization_MultiFold:
         self.inc_score = np.inf
         self.inc_config = None
 
-        #History of actions. Complementary to the X,fx
-        self.history = []
+        
         #Keep score of each fold in here...
         self.y = [list() for _ in range(self.n_folds)]
 
