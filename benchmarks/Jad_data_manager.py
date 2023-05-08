@@ -74,7 +74,6 @@ class JadDataManager(DataManager):
 
         #Check if we locally have the specific dataset.
         data_set_path = self.data_path + "/datasets/" + str(self.task_id)
-
         successfully_loaded = self.try_to_load_data(data_set_path)
 
         
@@ -124,10 +123,7 @@ class JadDataManager(DataManager):
                 self.test_y = pd.read_parquet(data_path + path_str2.format("test", "y")).squeeze(axis=1)
 
             self.n_classes = self.find_number_of_target(self.train_y[0],self.valid_y[0])
-            
         except FileNotFoundError:
-            return False
-        except:
             return False
         return True
 
@@ -180,9 +176,8 @@ class JadDataManager(DataManager):
         #self.logger.info('Start to download the OpenML dataset')
                 
         tmp_file_loc= file_path + '/' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
-        print(tmp_file_loc)
         if os.path.exists(tmp_file_loc):
-            print('exists')
+            print('Dataset Exists on DB.')
         else:
             ip, email, password =  get_pass('Good')
             self.Client = ApiClient(ip, email, password)
@@ -274,11 +269,8 @@ class JadDataManager(DataManager):
 
         for fold in range(self.n_folds):
             # preprocessor fit only on the training set
-            print(pd.DataFrame(self.train_X[fold]))
             self.train_X[fold] = self.preprocessor.fit_transform(self.train_X[fold])
-            print(pd.DataFrame(self.train_X[fold]))
             # applying preprocessor built on the training set, across validation and test splits
-            print(pd.DataFrame(self.valid_X[fold]))
             self.valid_X[fold] = self.preprocessor.transform(self.valid_X[fold])
             # converting boolean labels to strings
             self.train_y[fold] = self._convert_labels(self.train_y[fold])

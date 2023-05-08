@@ -12,7 +12,6 @@ from typing import List
 import typing
 
 from acquisition_functions.ei_mine import EI
-from acquisition_functions.mace import MACE
 
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
