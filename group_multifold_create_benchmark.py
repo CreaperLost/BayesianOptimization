@@ -174,7 +174,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                             pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                     elif opt == 'Multi_RF_Local':
                         for group in Optimization.object_per_group:
-                            X_df = pd.DataFrame(Optimization.object_per_group[group].X)
+                            X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
                             pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
@@ -210,7 +210,7 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 100,
+                'max_evals' : 60,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], #2,3

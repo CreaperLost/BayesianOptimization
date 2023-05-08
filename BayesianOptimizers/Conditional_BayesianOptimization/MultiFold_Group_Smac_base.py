@@ -1,7 +1,7 @@
 import numpy as np
 from BayesianOptimizers.Conditional_BayesianOptimization.per_group_smac_multifold import MultiFold_Per_Group_Bayesian_Optimization
 import pandas as pd
-
+import time
 
 
 
@@ -116,16 +116,30 @@ class MultiFold_Group_Bayesian_Optimization:
 
     def run(self):
         for fold in range(0,self.n_folds):
-            print('Currently Running fold : ', fold)
-            for classifier_name in self.object_per_group:
-                if fold == 0:
+            #print('Currently Running fold : ', fold)
+            init_overhead = 0
+            if fold == 0:
+                initial_time = []
+                for classifier_name in self.object_per_group:
                     #print('Initializing Group : ', classifier_name)
                     self.object_per_group[classifier_name].run_initial_configurations(fold)
-                    #Track here how many evaluations we conducted by initialization!
-                    self.n_evals = self.n_init * len(self.object_per_group)
-                    #print('Change the current evaluations to the initial run on all groups :',self.n_evals)
+                    #Train the surrogate model
+                    self.object_per_group[classifier_name].train_surrogate()
+
+                    total_time = self.object_per_group[classifier_name].total_time
+                    total_time[-1] += self.object_per_group[classifier_name].surrogate_time[-1]
                     
-                else:
+                    initial_time.append(total_time)
+                self.total_time = np.array(initial_time).flatten()
+                
+                #This allows us to pool the performance and configurations per group
+                #And add the best configuration and score to our self.X , self.fX for tracking.
+                #self.compute_initial_configurations_curve()
+                self.n_evals = self.n_init * len(self.object_per_group)
+                self.track_initial_groups()
+            else:
+                start_time = time.time()
+                for classifier_name in self.object_per_group:
                     #print('Re-run previous configurations on new fold.',classifier_name)
                     #Runs the previous configurations on the current fold
                     self.object_per_group[classifier_name].run_old_configs_on_current_fold(fold)
@@ -133,26 +147,21 @@ class MultiFold_Group_Bayesian_Optimization:
                     self.object_per_group[classifier_name].compute_avg_performance(fold)
                     #Compute the best local configuration for each group
                     self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
-                #Train each group's surrogate.
-                #print('Train Surrogate for group :' ,classifier_name)
-                self.object_per_group[classifier_name].train_surrogate()
-            
-            if fold == 0 :
-                #This allows us to pool the performance and configurations per group
-                #And add the best configuration and score to our self.X , self.fX for tracking.
-                #self.compute_initial_configurations_curve()
-                self.track_initial_groups()
+                    #Train the surrogate model.
+                    self.object_per_group[classifier_name].train_surrogate()
+                init_overhead = time.time() - start_time
 
+            start_time = time.time()
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
-
-            #print('Best config after initial : ', self.inc_config)
-            #print('Best score after initial  : ', self.inc_score)
+            init_overhead += time.time() - start_time
+            
 
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
-                print(f'currently running iter {iter}, inc score is : {self.inc_score}')
+                start_iter_time = time.time()
+                #print(f'currently running iter {iter}, inc score is : {self.inc_score}')
                 #Sanity check.
                 assert self.n_evals <= self.max_evals
                 if changed == 1:
@@ -185,27 +194,26 @@ class MultiFold_Group_Bayesian_Optimization:
                 # Check if incumberment of the group.
                 self.object_per_group[best_next_classifier].compute_current_inc_after_avg()
 
-
-                #print('Performance of propose config',fX_next)
-                #print('Performance of best config till now',self.inc_score )
-                #print('New best print below if proposed < best.')
-                
-                #Append on this the results
-                #self.X.append(best_next_config)
-                #Add the score into fX here. --> at each fold this becomes new.
-                #self.fX = np.concatenate((self.fX, [fX_next]))
-
                 self.n_evals += 1
                 
-                #print(pd.DataFrame(data = [self.X,self.fX]))
                 #Train the surrogate model for the specific group ONLY.
                 self.object_per_group[best_next_classifier].train_surrogate()
 
                 #Check if new configuration is the incumberment. 
-                #Check incumberment
                 changed = self.compute_incumberment_overall()
-        
 
+                end_iter_time = time.time() - start_iter_time
+
+                if init_overhead!=-1:
+                    end_iter_time += init_overhead
+                    init_overhead = -1
+                #print(best_next_config)
+                #print(f'currently running iter {iter}, cost of iter is : {end_iter_time}')
+                self.total_time = np.concatenate((self.total_time,np.array([end_iter_time])))
+                        
+        self.acquisition_time = np.array([0 for i in range(self.max_evals)])
+        self.surrogate_time = np.array([0 for i in range(self.max_evals)])
+        self.objective_time = np.array([0 for i in range(self.max_evals)])
         #Makes the final fX score progression
         self.make_X_Y()
         return self.inc_score        

@@ -136,7 +136,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
             self.initial_design = SobolDesign(**init_design_def_kwargs)
         
         
-        # Settings
+        # Settings 
         
         self.n_init = n_init #Initial configurations
         self.max_evals = max_evals #Maxmimum evaluations
@@ -153,6 +153,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         # Save the full history
         self.X = np.zeros((0, self.dim))
+        self.X_df = pd.DataFrame()
         self.fX = np.array([])
 
         self.surrogate_time = np.array([])
@@ -340,14 +341,19 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         """
 
         initial_configurations = self.load_initial_design_configurations(self.n_init)
-
+        curr_time = []
         #Run each initial configuration on fold specified.
         for i in range(self.n_init):
+            time_start = time.time()
             fX_next=self.run_objective(initial_configurations[i],fold)
             self.check_if_incumberment_initial_configs(self.vector_to_configspace( initial_configurations[i] ),fX_next)
             #measure the time.
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
+            end_time = time.time() - time_start
+            curr_time.append(end_time)
+            
+        self.total_time = np.concatenate((self.total_time,np.array(curr_time)))
 
         #After running all initials save the results on fX
         self.fX = np.array(deepcopy(self.y[fold]))
@@ -432,6 +438,12 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
         self.y[fold].append(fX_next)
+
+
+        #This is a better interpretable form of storing the configurations.
+        new_row = pd.DataFrame(config.get_dictionary().copy(),index=[0])
+        self.X_df = self.X_df.append(new_row,ignore_index=True)
+        
         
 
         end_time=time.time() - start_time
@@ -517,6 +529,10 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         self.n_evals+=self.batch_size
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
+
+        #This is a better interpretable form of storing the configurations.
+        new_row = pd.DataFrame(config.get_dictionary().copy(),index=[0])
+        self.X_df = self.X_df.append(new_row,ignore_index=True)
 
         # each list increase by 1 config for each fold.
         # Try with append.

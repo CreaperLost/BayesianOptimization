@@ -175,7 +175,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [14954,11,3918,3917,3021,43,167141,9952]
+        return [9952] #14954, 11,3918,3917,3021,43,167141,
     return [2074,9976,9910,167125]
     
 
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     
-    opt_list = ['Random_Search','RF_Local','RF_Sobol','GP_Sobol','RF_ACQ10000','RF_Random','RF_Scipy'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',] #
+    opt_list = ['Random_Search','RF_Local','RF_Sobol','GP_Sobol','RF_ACQ10000','RF_Random'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',] #
     
     for speed in ['fast']:
      # obtain the benchmark suite    
