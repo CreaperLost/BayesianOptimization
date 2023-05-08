@@ -205,10 +205,10 @@ def get_jad_data(speed = None):
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['Random_Search'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
+    opt_list = ['Multi_RF_Local' ] # ,,'Random_Search','RF_Local',]
     for speed in ['fast']:
      # obtain the benchmark suite    
-        for repo in ['Jad' ,'OpenML']: #,,
+        for repo in ['Jad','OpenML']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
