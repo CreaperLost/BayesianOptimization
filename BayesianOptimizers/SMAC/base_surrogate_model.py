@@ -9,13 +9,7 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
 import numpy as np
 import typing
 
-from smac.configspace import (
-    CategoricalHyperparameter,
-    ConfigurationSpace,
-    Constant,
-    UniformFloatHyperparameter,
-    UniformIntegerHyperparameter,
-) 
+
 
 
 
