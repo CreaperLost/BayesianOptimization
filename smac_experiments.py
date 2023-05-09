@@ -109,18 +109,18 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 configspace,config_dict = benchmark_.get_configuration_space()
 
                 #Get the benchmark.
-                objective_function = benchmark_.objective_function
+                objective_function = benchmark_.smac_objective_function
                 
                 #Get the objective_function per fold.
-                objective_function_per_fold = benchmark_.objective_function_per_fold
+                objective_function_per_fold = benchmark_.smac_objective_function_per_fold
 
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
                 # Scenario object specifying the optimization environment
-                scenario = Scenario(configspace, n_trials=5)
+                scenario = Scenario(configspace,name='Smac on dataset '+str(task_id) + 'seed ' + str(seed), n_trials=max_evals,deterministic=True,seed=seed)
 
                 # Use SMAC to find the best configuration/hyperparameters
-                smac = HyperparameterOptimizationFacade(scenario, objective_function)
+                smac = HyperparameterOptimizationFacade(scenario, objective_function,seed=seed)
                 incumbent = smac.optimize()
                 print(incumbent)
                 
