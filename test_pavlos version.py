@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
-from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
+from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 
 import os
 import sys
@@ -115,7 +115,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
                 elif opt == 'Multi_RF_Local':
-                    Optimization = Experimental_MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    Optimization = Pavlos_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=10)
                 else: 
                     print(opt)
