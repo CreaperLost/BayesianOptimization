@@ -22,6 +22,7 @@ from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
+from smac import MultiFidelityFacade as MFFacade
 
 
 
@@ -123,6 +124,26 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 smac = HyperparameterOptimizationFacade(scenario, objective_function,seed=seed)
                 incumbent = smac.optimize()
                 print(incumbent)
+
+
+                scenario = Scenario(
+                        configspace,
+                        n_trials=550,  # We want to try max 5000 different trials
+                        min_budget=1,  # Use min 1 fold.
+                        max_budget=10,  # Use max 10 folds. 
+                        instances=[0,1,2,3,4,5,6,7,8,9],
+                    )
+                # Create our SMAC object and pass the scenario and the train method
+                smac = MFFacade(
+                    scenario,
+                    objective_function_per_fold,
+                    overwrite=True,
+                )
+
+                # Now we start the optimization process
+                incumbent = smac.optimize()
+                print(incumbent)
+
                 
                 #The file path for current optimizer.
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
