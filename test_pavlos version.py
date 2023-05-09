@@ -115,7 +115,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local')
                 elif opt == 'Multi_RF_Local':
-                    Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    Optimization = Experimental_MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=10)
                 else: 
                     print(opt)
@@ -145,44 +145,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 #The file path for current optimizer.
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
                 
-                
-                if save == True:
-                    try:
-                        Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
-                        Path(surrogate_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
-                        Path(objective_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
-                        Path(acquisition_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
-                        Path(total_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
-                        Path(config_per_group_directory).mkdir(parents=True, exist_ok=True)
-                    except FileExistsError:
-                        print("Folder is already there")
-                        
-                    else:
-                        print("Folder is created there")
-                        
-                    pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt+csv_postfix ]))
-                    pd.DataFrame(surrogate_time_evaluations).to_csv( parse_directory([ surrogate_time_per_optimizer_directory, opt+csv_postfix ]))
-                    pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt+csv_postfix ]))
-                    pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
-                    pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
-                    
-                    if opt =='Random_Search':
-                        #Save configurations and y results for each group.
-                        for group in Optimization.fX_per_group:
-                            X_df = Optimization.X_per_group[group]
-                            y_df = pd.DataFrame({'y':Optimization.fX_per_group[group]})
-                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local':
-                        for group in Optimization.object_per_group:
-                            X_df = Optimization.object_per_group[group].X_df
-                            y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
-                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
-                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
 
-        # Just in case we want less.
-        curr_dataset+=1
-        if curr_dataset >= n_datasets:
-            break 
 
 def get_openml_data(speed = None):
     # 2074 needs 15 hours for 3 seeds per optimizer.
@@ -197,7 +160,7 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [847,842,851,850,839,1114] #
+        return [839, 847,1114,842,851,850] #
     #  on all seeds 
     return [843,883,866]
     
