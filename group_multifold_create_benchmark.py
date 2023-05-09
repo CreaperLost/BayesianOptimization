@@ -197,7 +197,7 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [839, 847,1114] #842,851,850
+        return [847,842,851,850,839,1114] #
     #  on all seeds 
     return [843,883,866]
     

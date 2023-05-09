@@ -10,3 +10,7 @@ Single_Space_Results/
 Multi_Fold_Datasets.rar
 Main_Multi_Fold_Group_Space_Results/
 acquisition_functions/__pycache__/
+
+single_smac/
+
+per_instance_smac/

@@ -14,7 +14,8 @@ from pathlib import Path
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
-
+import warnings
+warnings.filterwarnings("ignore")
 import os
 import sys
 sys.path.insert(0, '..')
@@ -22,6 +23,7 @@ from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
+from smac import MultiFidelityFacade as MFFacade
 
 
 
@@ -109,21 +111,50 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 configspace,config_dict = benchmark_.get_configuration_space()
 
                 #Get the benchmark.
-                objective_function = benchmark_.objective_function
+                objective_function = benchmark_.smac_objective_function
                 
                 #Get the objective_function per fold.
-                objective_function_per_fold = benchmark_.objective_function_per_fold
+                objective_function_per_fold = benchmark_.smac_objective_function_per_fold
 
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
                 # Scenario object specifying the optimization environment
-                scenario = Scenario(configspace, n_trials=5)
+                single_scenario = Scenario(configspace,name='Dataset'+str(task_id),
+                                           output_directory='single_smac/'+repo,
+                                     n_trials=max_evals,deterministic=True,seed=seed,n_workers = 4 )
 
                 # Use SMAC to find the best configuration/hyperparameters
-                smac = HyperparameterOptimizationFacade(scenario, objective_function)
-                incumbent = smac.optimize()
-                print(incumbent)
-                
+                smac_single = HyperparameterOptimizationFacade(single_scenario, objective_function,overwrite=True)
+                incumbent_single = smac_single.optimize()
+                print(incumbent_single)
+                # Let's calculate the cost of the incumbent
+                single_incumbent_cost = smac_single.validate(incumbent_single)
+                print(f"Single Instance Incumbent cost: {single_incumbent_cost}")
+
+                quit()
+                per_instance_scenario = Scenario(
+                        configspace,
+                        name='Dataset'+str(task_id),
+                        output_directory = 'per_instance_smac/'+repo,
+                        n_trials=max_evals,  # We want to try max 5000 different trials
+                        min_budget=1,  # Use min 1 fold.
+                        max_budget=10,  # Use max 10 folds. 
+                        instances=[0,1,2,3,4,5,6,7,8,9],
+                        deterministic=True,seed=seed,n_workers = 4
+                    )
+                # Create our SMAC object and pass the scenario and the train method
+                per_instance_smac = MFFacade(
+                    per_instance_scenario,
+                    objective_function_per_fold,
+                    overwrite=True,
+                )
+
+                # Now we start the optimization process
+                instance_incumbent = per_instance_smac.optimize()
+                print(instance_incumbent)
+                # Let's calculate the cost of the incumbent
+                instance_incumbent_cost = per_instance_smac.validate(instance_incumbent)
+                print(f"Instance Incumbent cost: {instance_incumbent_cost}")
                 #The file path for current optimizer.
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
                 
@@ -182,7 +213,7 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 250,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #
