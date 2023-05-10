@@ -93,7 +93,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
             
             config_per_optimizer_directory = parse_directory([config_per_seed_directory,'Seed' + str(seed) ])
 
-
+ 
             for opt in optimizers_list: 
                 
                 benchmark_ = benchmark_class(task_id=task_id,rng=seed,data_repo=data_repo)

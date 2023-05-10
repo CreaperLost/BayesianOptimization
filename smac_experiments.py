@@ -1,7 +1,6 @@
 from ConfigSpace import Configuration, ConfigurationSpace
 
 import numpy as np
-from smac import HyperparameterOptimizationFacade, Scenario
 from sklearn import datasets
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
@@ -23,7 +22,7 @@ from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
-from smac import MultiFidelityFacade as MFFacade
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
 
 
 
@@ -118,47 +117,31 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
-                # Scenario object specifying the optimization environment
-                single_scenario = Scenario(configspace,name='Dataset'+str(task_id),
-                                           output_directory='single_smac/'+repo,
-                                     n_trials=max_evals,deterministic=True,seed=seed,n_workers = 4 )
+                
+                if opt == 'SMAC':
+                    Optimization=SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function)
+                    Optimization.run()
+    
+                elif opt == 'SMAC_Single':
+                    pass
+                else: 
+                    print(opt)
+                    raise RuntimeError
+                
+                print('Total Time',np.sum(Optimization.total_time))
+                print(Optimization.inc_score,Optimization.inc_config)
+                
 
-                # Use SMAC to find the best configuration/hyperparameters
-                smac_single = HyperparameterOptimizationFacade(single_scenario, objective_function,overwrite=True)
-                incumbent_single = smac_single.optimize()
-                print(incumbent_single)
-                # Let's calculate the cost of the incumbent
-                single_incumbent_cost = smac_single.validate(incumbent_single)
-                print(f"Single Instance Incumbent cost: {single_incumbent_cost}")
-
-                quit()
-                per_instance_scenario = Scenario(
-                        configspace,
-                        name='Dataset'+str(task_id),
-                        output_directory = 'per_instance_smac/'+repo,
-                        n_trials=max_evals,  # We want to try max 5000 different trials
-                        min_budget=1,  # Use min 1 fold.
-                        max_budget=10,  # Use max 10 folds. 
-                        instances=[0,1,2,3,4,5,6,7,8,9],
-                        deterministic=True,seed=seed,n_workers = 4
-                    )
-                # Create our SMAC object and pass the scenario and the train method
-                per_instance_smac = MFFacade(
-                    per_instance_scenario,
-                    objective_function_per_fold,
-                    overwrite=True,
-                )
-
-                # Now we start the optimization process
-                instance_incumbent = per_instance_smac.optimize()
-                print(instance_incumbent)
-                # Let's calculate the cost of the incumbent
-                instance_incumbent_cost = per_instance_smac.validate(instance_incumbent)
-                print(f"Instance Incumbent cost: {instance_incumbent_cost}")
-                #The file path for current optimizer.
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
                 
-                
+                #Change this.
+                y_evaluations = Optimization.fX
+                surrogate_time_evaluations = Optimization.surrogate_time
+                objective_time_evaluations= Optimization.objective_time
+                acquisition_time_evaluations = Optimization.acquisition_time
+                total_time_evaluations = Optimization.total_time
+
                 if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
@@ -173,13 +156,17 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     else:
                         print("Folder is created there")
                         
-                    """pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt+csv_postfix ]))
+                    pd.DataFrame(y_evaluations).to_csv( parse_directory([ score_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(surrogate_time_evaluations).to_csv( parse_directory([ surrogate_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(objective_time_evaluations).to_csv( parse_directory([ objective_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
-                    """
 
+                    if opt =='SMAC':
+                        #Save configurations and y results for each group.
+                        for group in Optimization.save_configuration:
+                            Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
 
 
 
@@ -201,19 +188,19 @@ def get_jad_data(speed = None):
         return [839, 847,1114] #842,851,850
     #  on all seeds 
     return [843,883,866]
-    
+    6
 
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['SMAC' ] # ,,'Random_Search','RF_Local',]
+    opt_list = ['SMAC' ] # ,,'Random_Search','RF_Local',] 'SMAC_Single'
     for speed in ['fast']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 250,
+                'max_evals' : 550,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1,2,3], #
