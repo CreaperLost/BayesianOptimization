@@ -290,10 +290,12 @@ class Group_MultiFold_MLBenchmark():
         if rng is not None:
             rng = get_rng(rng, self.rng)
 
-        
+        if isinstance(fold,str):
+            fold = int(fold)       
+
         if evaluation == "val":
             model_fit_time = 0
-            
+            print('FOLD IS LIKE THAT.',int(fold))
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[fold].shape[1])
             # preparing data -- Select the fold
@@ -469,6 +471,9 @@ class Group_MultiFold_MLBenchmark():
         """Function that evaluates a 'config' on a 'fidelity' on the validation set
         """
         assert fold!= None
+
+        
+
         self._check_and_cast_configuration(configuration, self.configuration_space)
         #Get a model trained on the fold.
         model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective_per_fold(
@@ -596,7 +601,8 @@ class Group_MultiFold_MLBenchmark():
         """Function that evaluates a 'config' on a 'fidelity' on the validation set
         """
         assert instance!= None
-        fold = instance
+        if isinstance(instance,str):
+            fold = int(instance)
         self._check_and_cast_configuration(configuration, self.configuration_space)
         #Get a model trained on the fold.
         model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective_per_fold(

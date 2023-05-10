@@ -23,7 +23,7 @@ from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
 from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
-
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_instance_hpo import SMAC_Instance_HPO
 
 
 def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
@@ -123,8 +123,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                              repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function)
                     Optimization.run()
     
-                elif opt == 'SMAC_Single':
-                    pass
+                elif opt == 'SMAC_Instance':
+                    Optimization=SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function_per_fold)
+                    Optimization.run()
+                    
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -162,7 +165,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
 
-                    if opt =='SMAC':
+                    if opt =='SMAC' or opt=='SMAC_Instance':
                         #Save configurations and y results for each group.
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
@@ -193,7 +196,7 @@ def get_jad_data(speed = None):
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['SMAC' ] # ,,'Random_Search','RF_Local',] 'SMAC_Single'
+    opt_list = ['SMAC_Instance' ] # ,,'Random_Search','RF_Local',] 'SMAC_Instance'
     for speed in ['fast']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:
