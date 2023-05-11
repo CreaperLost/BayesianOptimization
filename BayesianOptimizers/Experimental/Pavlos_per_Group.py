@@ -420,9 +420,9 @@ class Pavlos_PerGroup:
         X_next_old,acquisition_value_old=self.pass_current_configurations_on_ACQ(eta=global_eta)
 
         if acquisition_value_old > acquisition_value:
-            print(f'Old Configuration Re-Selected {self.group_name}')
-            print(f'Old Acq {acquisition_value_old} , New Acq{acquisition_value}')
-            
+            #print(f'Old Configuration Re-Selected {self.group_name}')
+            #print(f'Old Acq {acquisition_value_old} , New Acq{acquisition_value}')
+            return X_next_old,acquisition_value_old,1
 
 
         end_time=time.time() - start_time
@@ -430,7 +430,7 @@ class Pavlos_PerGroup:
         #Add the acquisition time here.
         self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
-        return (X_next,acquisition_value)
+        return (X_next,acquisition_value,0)
 
 
     # Runs the objective function on the specified point.
@@ -536,9 +536,32 @@ class Pavlos_PerGroup:
 
     # This runs a new configuration on all the previous folds. --> Return the average
     def run_objective_on_previous_folds(self,X_next,iter_fold):
-
+        
         ## Make sure the vector is in config_space, in order to be run fast by the model
         config = self.vector_to_configspace( X_next )
+
+        """if any( (X_next==x).all() for x in self.X):
+            print('Already Run this. --> Run only on new fold.')
+            print(X_next)
+            print(self.X)
+            idx=np.where( self.X == X_next )
+            actual_index = idx[0][0]
+            print('Index of old config',actual_index)
+            print('Config ' , self.X[actual_index])
+            print('===========')
+            #This just re-runs on previous folds.
+            per_fold_auc= [self.f(self.add_group_name_to_config(config),fold=f)['function_value'] for f in range(iter_fold+1)]
+            print('per fold auc',per_fold_auc)
+            print('Previour Y ',self.y)
+            for f in range(iter_fold+1):
+                self.y[f][actual_index] = per_fold_auc[f]
+            
+            print('After Y',self.y)
+            print('Previous fx', self.fX)
+            self.fX[actual_index] = np.mean(per_fold_auc)
+            print('After fX', self.fX)
+            return np.mean(per_fold_auc)"""
+        
 
         #print(config)
         #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
