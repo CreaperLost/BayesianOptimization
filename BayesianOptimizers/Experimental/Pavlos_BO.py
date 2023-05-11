@@ -116,27 +116,32 @@ class Pavlos_BO:
 
     def run(self):
         for fold in range(0,self.n_folds):
-            #print('Currently Running fold : ', fold)
+            print('Currently Running fold : ', fold)
             if fold == 0:
-                initial_time = []
                 for classifier_name in self.object_per_group:
                     #print('Initializing Group : ', classifier_name)
                     self.object_per_group[classifier_name].run_initial_configurations(fold)
                     #Train the surrogate model
                     self.object_per_group[classifier_name].train_surrogate()
-
-                    total_time = self.object_per_group[classifier_name].total_time
-                    total_time[-1] += self.object_per_group[classifier_name].surrogate_time[-1]
-                    
-                    initial_time.append(total_time)
-                self.total_time = np.array(initial_time).flatten()
                 
                 #This allows us to pool the performance and configurations per group
                 #And add the best configuration and score to our self.X , self.fX for tracking.
                 #self.compute_initial_configurations_curve()
                 self.n_evals = self.n_init * len(self.object_per_group)
                 self.track_initial_groups()
-                
+            else:
+                for classifier_name in self.object_per_group:
+                    #print('Re-run previous configurations on new fold.',classifier_name)
+                    #Runs the previous configurations on the current fold
+                    self.object_per_group[classifier_name].run_old_configs_on_current_fold(fold)
+                    #Computes the average performance on the folds up to the current fold.
+                    self.object_per_group[classifier_name].compute_avg_performance(fold)
+                    #Compute the best local configuration for each group
+                    self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
+                    #Train the surrogate model.
+                    self.object_per_group[classifier_name].train_surrogate()
+
+
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
             
@@ -144,38 +149,55 @@ class Pavlos_BO:
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
-                #print(f'currently running iter {iter}, inc score is : {self.inc_score}')
+                print(f'currently running iter {iter}, inc score is : {self.inc_score}')
                 #Sanity check.
                 assert self.n_evals <= self.max_evals
                 if changed == 1:
                     #Compute acquisition per group. If incumberment has changed then compute acquisition again for all.
                     self.max_acquisitions_configs = {}
                     self.max_acquisitions_score = {}
+                    self.max_acquisitions_is_old = {}
                     for classifier_name in self.object_per_group:
-                        X_next,acquisition_value =self.object_per_group[classifier_name].suggest_next_point(self.inc_score)
+                        X_next,acquisition_value,is_old =self.object_per_group[classifier_name].suggest_next_point(self.inc_score)
                         self.max_acquisitions_configs[classifier_name] = X_next
                         self.max_acquisitions_score[classifier_name] = acquisition_value
+                        self.max_acquisitions_is_old[classifier_name] = is_old
                 else:
                     #Compute acquisition value only for the next new configuration if the incumberment has not changed.
-                    X_next,acquisition_value = self.object_per_group[best_next_classifier].suggest_next_point(self.inc_score)
+                    X_next,acquisition_value,is_old = self.object_per_group[best_next_classifier].suggest_next_point(self.inc_score)
                     self.max_acquisitions_configs[best_next_classifier] = X_next
                     self.max_acquisitions_score[best_next_classifier] = acquisition_value
+                    self.max_acquisitions_is_old[classifier_name] = is_old
                     #Make sure this updates correctly.
+
+
+
 
                 #Get the maximum acquisition for all.
                 #Select group with highest acquisition --> check code.
                 best_next_classifier = max(self.max_acquisitions_score, key=lambda k: self.max_acquisitions_score.get(k))
+                
+                
+                # If we already have implemented this, we move to the next fold.
+                if self.max_acquisitions_is_old[best_next_classifier] == 1:
+                    
+                    print('=====================================')
+                    print('Already run Configuration')
+                    print(best_next_classifier)
+                    print(X_next)
+                    break
+                
                 #Just add the next group here.
                 self.X_group.append(best_next_classifier)
 
-                print(best_next_classifier)
-
                 #Get the best configuration using the best group.
                 best_next_config = self.max_acquisitions_configs[best_next_classifier]
-                
+
                 # Evaluate the new configuration on all folds up to fold. Run objective on this group.
                 # Add also to the self.fX of the group internally.
                 fX_next = self.object_per_group[best_next_classifier].run_objective_on_previous_folds(best_next_config,fold)
+                
+                
                 # Check if incumberment of the group.
                 self.object_per_group[best_next_classifier].compute_current_inc_after_avg()
 
@@ -187,16 +209,7 @@ class Pavlos_BO:
                 #Check if new configuration is the incumberment. 
                 changed = self.compute_incumberment_overall()
 
-            for classifier_name in self.object_per_group:
-                #print('Re-run previous configurations on new fold.',classifier_name)
-                #Runs the previous configurations on the current fold
-                self.object_per_group[classifier_name].run_old_configs_on_current_fold(fold)
-                #Computes the average performance on the folds up to the current fold.
-                self.object_per_group[classifier_name].compute_avg_performance(fold)
-                #Compute the best local configuration for each group
-                self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
-                #Train the surrogate model.
-                self.object_per_group[classifier_name].train_surrogate()
+            
 
 
 

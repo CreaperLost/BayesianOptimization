@@ -16,9 +16,12 @@ from pathlib import Path
 import numpy as np
 from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
 from BayesianOptimizers.Conditional_BayesianOptimization.smac_instance_hpo import SMAC_Instance_HPO
+from BayesianOptimizers.Conditional_BayesianOptimization.random_smac import Random_SMAC
+from csv import writer
+import time 
 
 
-def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
+def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=True):
     assert optimizers_used != []
     assert bench_config != {}
 
@@ -109,23 +112,34 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
-                
+                start_time = time.time()
                 if opt == 'SMAC':
                     Optimization=SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                             repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function)
-                    Optimization.run()
-    
+                             repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function,n_workers=1)                
+                elif opt =='ROAR':
+                    Optimization=Random_SMAC(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function,n_workers=1)
                 elif opt == 'SMAC_Instance':
                     Optimization=SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
                              repo=repo,max_evals=max_evals,seed=seed,objective_function=objective_function_per_fold)
-                    Optimization.run()
+                elif opt == 'Multi_RF_Local':
+                    Optimization = MultiFold_Group_Bayesian_Optimization(f=benchmark_.objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=10)
                     
                 else: 
                     print(opt)
                     raise RuntimeError
                 
+                if load == False:
+                    Optimization.run()
+                else:
+                    Optimization.load()
+                
+                m_time = time.time()-start_time
+                print('Measured Total Time ',m_time)
                 print('Total Time',np.sum(Optimization.total_time))
                 print(Optimization.inc_score,Optimization.inc_config)
+                
                 
 
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
@@ -137,7 +151,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 acquisition_time_evaluations = Optimization.acquisition_time
                 total_time_evaluations = Optimization.total_time
 
-                if save == True:
+                if save == True and load == False:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
                         Path(surrogate_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
@@ -157,11 +171,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     pd.DataFrame(acquisition_time_evaluations).to_csv( parse_directory([ acquisition_time_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
 
-                    if opt =='SMAC' or opt=='SMAC_Instance':
+                    if 'SMAC' in opt or 'ROAR' in opt:
                         #Save configurations and y results for each group.
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
+                    elif opt == 'Multi_RF_Local':
+                        for group in Optimization.object_per_group:
+                            X_df = Optimization.object_per_group[group].X_df
+                            y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
+                            pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
+                        pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
+                elif load == True:
+                    pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
 
 
 
@@ -195,10 +217,10 @@ if __name__ == '__main__':
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 100,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
-                'n_seeds' : [1,2,3], #
+                'n_seeds' : [1], # ,2,3
                 'type_of_bench': 'Main_Multi_Fold_Group_Space_Results',
                 'bench_name' :'GROUP',
                 'bench_class' : Group_MultiFold_Space,

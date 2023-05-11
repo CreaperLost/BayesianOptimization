@@ -323,9 +323,6 @@ def plot_per_dataset(config):
         plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 
-
-
-
 def plot_average(config):
 
     clf_name = config['classifier']
