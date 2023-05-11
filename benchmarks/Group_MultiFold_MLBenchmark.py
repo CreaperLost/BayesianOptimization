@@ -295,7 +295,7 @@ class Group_MultiFold_MLBenchmark():
 
         if evaluation == "val":
             model_fit_time = 0
-            
+            #print('FOLD IS LIKE THAT.',int(fold))
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[fold].shape[1])
             # preparing data -- Select the fold
