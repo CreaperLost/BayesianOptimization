@@ -1,18 +1,10 @@
-from ConfigSpace import Configuration, ConfigurationSpace
-
 import numpy as np
-from sklearn import datasets
-from sklearn.svm import SVC
-from sklearn.model_selection import cross_val_score
 from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
 import openml
 import warnings
 warnings.simplefilter("ignore", UserWarning)
 import pandas as pd
 from pathlib import Path
-from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
-from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
-from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
 import warnings
 warnings.filterwarnings("ignore")
 import os
@@ -188,7 +180,7 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [839, 847,1114] #842,851,850
+        return [842,851,850,] #839, 847,1114
     #  on all seeds 
     return [843,883,866]
     6
@@ -196,7 +188,7 @@ def get_jad_data(speed = None):
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    opt_list = ['SMAC_Instance' ] # ,,'Random_Search','RF_Local',] 'SMAC_Instance'
+    opt_list = ['SMAC' ] # ,,'Random_Search','RF_Local',] 'SMAC_Instance'
     for speed in ['fast']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:
