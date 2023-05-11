@@ -29,7 +29,7 @@ from csv import writer
 import time 
 
 
-def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=False):
+def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=True):
     assert optimizers_used != []
     assert bench_config != {}
 
