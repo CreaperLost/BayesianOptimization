@@ -116,14 +116,13 @@ class JadDataManager(DataManager):
                 self.train_y.append( pd.read_parquet(data_path + path_str.format("train", "y",str(fold))).squeeze(axis=1))
                 self.valid_X.append( pd.read_parquet(data_path + path_str.format("valid", "x",str(fold))).to_numpy())
                 self.valid_y.append(pd.read_parquet(data_path + path_str.format("valid", "y",str(fold))).squeeze(axis=1))
-            
+                
             #Don't Load test-data any more --
             if self.use_holdout == True:
                 self.test_X = pd.read_parquet(data_path + path_str2.format("test", "x")).to_numpy()
                 self.test_y = pd.read_parquet(data_path + path_str2.format("test", "y")).squeeze(axis=1)
 
             self.n_classes = self.find_number_of_target(self.train_y[0],self.valid_y[0])
-            
         except FileNotFoundError:
             return False
         return True
@@ -175,17 +174,19 @@ class JadDataManager(DataManager):
     def __download_data(self,file_path:str, verbose: bool):
         assert file_path!=None
         #self.logger.info('Start to download the OpenML dataset')
-        ip, email, password =  get_pass('Good')
-        print(ip, email, password)
-        self.Client = ApiClient(ip, email, password)
-        tmp_file_loc= file_path + '\\' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
-        self.Client.project.download_dataset(self.task_id,tmp_file_loc)
+                
+        tmp_file_loc= file_path + '/' + 'data.csv' #os.getcwd() + '/Jad_Temp/'+ 'dataset'+ str(self.task_id) + '.csv'
+        if os.path.exists(tmp_file_loc):
+            print('Dataset Exists on DB.')
+        else:
+            ip, email, password =  get_pass('Good')
+            self.Client = ApiClient(ip, email, password)
+            self.Client.project.download_dataset(self.task_id,tmp_file_loc)
+
         dataset = pd.read_csv(tmp_file_loc)
         
 
         X, y, categorical_ind,continuous_ind = self.preprocess_data(dataset)
-        
-
         self.n_classes = y.nunique()
 
         #Label encode y.

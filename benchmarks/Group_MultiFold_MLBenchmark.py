@@ -290,10 +290,12 @@ class Group_MultiFold_MLBenchmark():
         if rng is not None:
             rng = get_rng(rng, self.rng)
 
-        
+        if isinstance(fold,str):
+            fold = int(fold)       
+
         if evaluation == "val":
             model_fit_time = 0
-            
+            #print('FOLD IS LIKE THAT.',int(fold))
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[fold].shape[1])
             # preparing data -- Select the fold
@@ -469,6 +471,9 @@ class Group_MultiFold_MLBenchmark():
         """Function that evaluates a 'config' on a 'fidelity' on the validation set
         """
         assert fold!= None
+
+        
+
         self._check_and_cast_configuration(configuration, self.configuration_space)
         #Get a model trained on the fold.
         model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective_per_fold(
@@ -521,6 +526,131 @@ class Group_MultiFold_MLBenchmark():
             'cost': model_fit_time + info['val_costs']['auc'],
             'info': info
         }
+
+
+    # The idea is that we run only on VALIDATION SET ON THIS ONE. (K-FOLD)
+    # pylint: disable=arguments-differ
+    def smac_objective_function(self,
+                           configuration: Union[CS.Configuration, Dict],
+                           fidelity: Union[CS.Configuration, Dict, None] = None,
+                           shuffle: bool = False,
+                           seed: Union[np.random.RandomState, int, None] = None,
+                           **kwargs) -> Dict:
+        """Function that evaluates a 'config' on a 'fidelity' on the validation set
+        """
+        self._check_and_cast_configuration(configuration, self.configuration_space)
+        #Get a x models trained.
+        model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective(
+            configuration, fidelity, shuffle, rng=seed, evaluation="val"
+        )
+
+        #Get the Validation Score (k-fold average)
+        val_scores = dict()
+        val_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Last model  is for the test set only!
+            val_scores[k] = 0.0
+            for model_fold in range(len(model)-1):
+                val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
+            #Average validation score.
+                #print(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]))
+            val_scores[k] /= (len(model)-1)
+            val_score_cost[k] = time.time() - _start
+        #print(val_scores['auc'])
+        val_loss = 1 - val_scores["auc"]
+
+
+        
+        #This shouldn't run in general. :)
+        #Get the Test Score, once.
+        test_scores = dict()
+        test_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
+            test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
+            test_score_cost[k] = time.time() - _start
+        test_loss = 1 - test_scores["auc"]
+
+        info = {
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'test_loss': test_loss,
+            'model_cost': model_fit_time,
+            'train_scores': train_scores,
+            'train_costs': train_score_cost,
+            'val_scores': val_scores,
+            'val_costs': val_score_cost,
+            'test_scores': test_scores,
+            'test_costs': test_score_cost,
+            # storing as dictionary and not ConfigSpace saves tremendous memory
+            'fidelity': fidelity,
+            'config': configuration,
+        }
+
+        return val_loss
+
+    #Get the current fold, train a model and then apply on validation set to get AUC score returned.
+    def smac_objective_function_per_fold(self,
+                           configuration: Union[CS.Configuration, Dict],
+                           fidelity: Union[CS.Configuration, Dict, None] = None,
+                           shuffle: bool = False,
+                           seed: Union[np.random.RandomState, int, None] = None,instance=None,
+                           **kwargs) -> Dict:
+        """Function that evaluates a 'config' on a 'fidelity' on the validation set
+        """
+        assert instance!= None
+        if isinstance(instance,str):
+            fold = int(instance)
+        self._check_and_cast_configuration(configuration, self.configuration_space)
+        #Get a model trained on the fold.
+        model, model_fit_time, train_loss, train_scores, train_score_cost = self._train_objective_per_fold(
+            configuration, fidelity, shuffle, rng=seed, evaluation="val",fold=fold
+        )
+
+        #Get the Validation Score - of 1 fold.
+        val_scores = dict()
+        val_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Get the score of a model on the specific set.
+            val_scores[k] = v(model, self.valid_X[fold], self.valid_y[fold])
+            #Average validation score. We only got 1 model.
+            #val_scores[k] /= len(model)
+            val_score_cost[k] = time.time() - _start
+        val_loss = 1 - val_scores["auc"]
+
+
+        
+        #This shouldn't run in general. :)
+        #Get the Test Score, once.
+        test_scores = dict()
+        test_score_cost = dict()
+        for k, v in self.scorers.items():
+            _start = time.time()
+            #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
+            test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
+            test_score_cost[k] = time.time() - _start
+        test_loss = 1 - test_scores["auc"]
+
+        info = {
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+            'test_loss': test_loss,
+            'model_cost': model_fit_time,
+            'train_scores': train_scores,
+            'train_costs': train_score_cost,
+            'val_scores': val_scores,
+            'val_costs': val_score_cost,
+            'test_scores': test_scores,
+            'test_costs': test_score_cost,
+            # storing as dictionary and not ConfigSpace saves tremendous memory
+            'fidelity': fidelity,
+            'config': configuration,
+        }
+
+        return val_loss
 
 
     # The idea is that we run only on TEST SET ON THIS ONE. (K-FOLD)

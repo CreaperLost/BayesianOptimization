@@ -9,17 +9,9 @@ from ConfigSpace.hyperparameters import CategoricalHyperparameter, \
 from ConfigSpace.util import impute_inactive_values,deactivate_inactive_hyperparameters
 
 from typing import List
-import typing
 
-from acquisition_functions.ei_mine import EI
-from acquisition_functions.mace import MACE
 
-from initial_design.sobol_design import SobolDesign
-from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
 
-from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-
-from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
 
 
 from BayesianOptimizers.Conditional_BayesianOptimization.per_group_smac import Per_Group_Bayesian_Optimization
