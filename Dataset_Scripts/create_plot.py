@@ -584,8 +584,8 @@ time_plot = True
 double_plot = False
 #How many initial configurations we have run.
 interval = 50
-result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search' ] # 'Multi_RF_Local',
+result_space = 'Backup-Early'
+optimizers = ['Multi_RF_Local','Random_Search','SMAC' ] # 'Multi_RF_Local',
 
 opt_colors = dict()
 clr_pos = 0
@@ -646,7 +646,7 @@ for bool_flag in ['False','True']:
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
 """
 #,'OpenML'
-for data_repo in ['Jad']:
+for data_repo in ['Jad','OpenML']:
     
 
     for bool_flag in ['False','True']: #'True'
@@ -672,8 +672,7 @@ for data_repo in ['Jad']:
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
-    for data_repo in ['Jad']:
-    
+    for data_repo in ['Jad','OpenML']:
         time_plot = bool_flag
         double_plot = False
 

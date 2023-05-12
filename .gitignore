@@ -14,3 +14,5 @@ acquisition_functions/__pycache__/
 single_smac/
 
 per_instance_smac/
+Backup-Early/
+single_smac2/
