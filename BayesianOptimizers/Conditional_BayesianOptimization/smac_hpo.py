@@ -11,7 +11,7 @@ class SMAC_HPO:
     def __init__(self,configspace,config_dict,task_id,repo,max_evals,seed,objective_function,n_workers=1):
         #Scenario object specifying the optimization environment
         self.scenario = Scenario(configspace,name='Dataset'+str(task_id),
-                                           output_directory='single_smac' +str(n_workers) +'/'+repo,
+                                           output_directory='single_smac' +'/'+repo,
                                      n_trials=max_evals,deterministic=True,seed=seed,n_workers = n_workers )
          
         # Use SMAC to find the best configuration/hyperparameters
@@ -54,18 +54,20 @@ class SMAC_HPO:
                 x = item.walltime
 
                 if item.config_ids[0] == id :
-                    print(extra_cost, item.walltime , np.cumsum(self.total_time))
+                    
                     print(item.config_ids,id)
                     if len(self.total_time) == 0:
                         extra_cost = item.walltime
+                        print(extra_cost, item.walltime)
                     else:
-                        extra_cost  = item.walltime - np.cumsum(self.total_time)[0]
-                    
-                    
+                        
+                        extra_cost  = item.walltime - np.cumsum(self.total_time)[-1]
+                        print(extra_cost, item.walltime)
                     break
             
                 #new_row = pd.DataFrame({'Time':x,'Score':y},index=[0])
                 #self.total_time = self.total_time.append(new_row,ignore_index=True)
+            
             self.total_time.append(extra_cost)
             #print(self.total_time)
 
