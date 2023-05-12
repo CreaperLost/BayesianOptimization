@@ -101,8 +101,10 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         total_res = np.vstack ( (total_res, np.array([name,average_configurations,average_score]) ) )
         total_df=pd.DataFrame(total_res)
         headers = total_df.iloc[0]
+        print(repo)
         total_df  = pd.DataFrame(total_df.values[1:], columns=headers)
-        total_df.to_csv('Pavlos_Idea.csv')
+        print(total_df)
+        total_df.to_csv('Pavlos_Idea'+data_repo+'.csv')
                 
                 
                 

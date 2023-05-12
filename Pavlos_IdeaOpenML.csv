@@ -1,0 +1,9 @@
+,name,avg config,avg score
+0,cylinder-bands,215,0.090744
+1,balance-scale,278,3.8e-05
+2,pc1,284,0.11659
+3,kc1,477,0.174156
+4,sick,424,0.002598
+5,spambase,373,0.010172
+6,churn,303,0.081193
+7,phoneme,437,0.034336
