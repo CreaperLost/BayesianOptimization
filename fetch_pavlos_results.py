@@ -102,7 +102,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
         total_df=pd.DataFrame(total_res)
         headers = total_df.iloc[0]
         total_df  = pd.DataFrame(total_df.values[1:], columns=headers)
-        print(total_df)
+        total_df.to_csv('Pavlos_Idea.csv')
                 
                 
                 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     opt_list = ['Pavlos'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
     for speed in ['fast']:
      # obtain the benchmark suite    
-        for repo in ['Jad','OpenML']: #,'Jad' ,
+        for repo in ['OpenML','Jad']: #,'Jad' ,
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
