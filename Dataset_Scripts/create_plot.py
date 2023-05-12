@@ -142,6 +142,14 @@ def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
     full_eval=l_eval[:initial_config] + extra_l
     return full_eval
 
+def get_pavlos_score(dataset_name):
+    parent_dir = os.path.join(os.getcwd(), os.pardir)
+    Res_File = pd.read_csv(os.path.join(parent_dir,'Pavlos_Idea.csv'),index_col=0).set_index('name')
+    if dataset_name not in Res_File.index:
+        return None
+    return Res_File.loc[dataset_name].values[0],Res_File.loc[dataset_name].values[1]
+
+
 def get_Jad_avg_score(dataset_name):
     parent_dir = os.path.join(os.getcwd(), os.pardir)
     Res_File = pd.read_csv(os.path.join(parent_dir,'JAD_Results_AUC.csv'),index_col=0).set_index('dataset')
@@ -200,6 +208,7 @@ def plot_per_dataset(config):
 
         jad_score =  get_Jad_avg_score(title_name)
         
+        n_configs,pavlos_score = get_pavlos_score(title_name)
 
 
         if double_plot_bool == True:
@@ -295,6 +304,8 @@ def plot_per_dataset(config):
 
         if  jad_score != None:
             plt.axhline(y=1-jad_score,color = 'black', linestyle = '-',label='Jad Score')
+        if  pavlos_score != None:
+            plt.scatter(y= pavlos_score,color = 'black',marker='o',label='Pavlos BO Score')
         # This happens for all the figures.
         ax1.set_ylabel('(1-AUC)')
         fig.suptitle(title_name + " /w classifier "  + clf_name)
