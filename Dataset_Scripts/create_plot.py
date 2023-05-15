@@ -208,9 +208,10 @@ def plot_per_dataset(config):
 
         jad_score =  get_Jad_avg_score(title_name)
         if jad_score != None:
-            jad_score = 1 -jad_score
+            jad_score = np.round(1 -jad_score,6)
         n_configs, pavlos_score = get_pavlos_score(title_name)
-
+        if pavlos_score != None:
+            pavlos_score = np.round(pavlos_score,6)
         #print('Current Dataset : ' , dataset)
         #print('Final Pavlos Score : ', pavlos_score)
         #print('Basic JAD Score : ' , jad_score)
@@ -278,7 +279,7 @@ def plot_per_dataset(config):
                         x = [i+1 for i in range(eval_range)]
                         
                         #print(f'Optimizer {opt} has avg score {means.iloc[-1]}')
-                        init_row.append(means.iloc[-1]) 
+                        init_row.append(np.round(means.iloc[-1],6)) 
                         #Plot the mean and the confidence
                         ax1.plot(x,means,opt_colors[opt],label=opt)
                         ax1.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)

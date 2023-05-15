@@ -1,3 +1,11 @@
 ,name,avg config,avg score
 0,squash-stored_v2_did972,213,0.074074
 1,white-clover_v2_did1009,186,0.108796
+2,cylinder-bands,215,0.090744
+3,balance-scale,278,3.8e-05
+4,pc1,284,0.11659
+5,kc1,477,0.174156
+6,sick,424,0.002598
+7,spambase,373,0.010172
+8,churn,303,0.081193
+9,phoneme,437,0.034336
