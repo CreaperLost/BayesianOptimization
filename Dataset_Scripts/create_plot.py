@@ -12,7 +12,7 @@ sys.path.insert(0, '..')
 from global_utilities.global_util import csv_postfix,directory_notation,file_name_connector,break_config_into_pieces_for_plots,parse_directory
 from pathlib import Path
 import os
-
+import csv
 
 
 def get_results_per_optimizer(config={},accumulate='none'):
@@ -142,6 +142,14 @@ def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
     full_eval=l_eval[:initial_config] + extra_l
     return full_eval
 
+def get_pavlos_score(dataset_name):
+    parent_dir = os.path.join(os.getcwd(), os.pardir)
+    Res_File = pd.read_csv(os.path.join(parent_dir,'Pavlos_Idea.csv'),index_col=0).set_index('name')
+    if dataset_name not in Res_File.index:
+        return None,None
+    return Res_File.loc[dataset_name].values[0],Res_File.loc[dataset_name].values[1]
+
+
 def get_Jad_avg_score(dataset_name):
     parent_dir = os.path.join(os.getcwd(), os.pardir)
     Res_File = pd.read_csv(os.path.join(parent_dir,'JAD_Results_AUC.csv'),index_col=0).set_index('dataset')
@@ -199,9 +207,17 @@ def plot_per_dataset(config):
         title_name = get_dataset_name(dataset,total_config_dictionary[metric_list[0]][0])
 
         jad_score =  get_Jad_avg_score(title_name)
+        if jad_score != None:
+            jad_score = np.round(1 -jad_score,6)
+        n_configs, pavlos_score = get_pavlos_score(title_name)
+        if pavlos_score != None:
+            pavlos_score = np.round(pavlos_score,6)
+        #print('Current Dataset : ' , dataset)
+        #print('Final Pavlos Score : ', pavlos_score)
+        #print('Basic JAD Score : ' , jad_score)
+
+        init_row = [title_name,pavlos_score,jad_score]
         
-
-
         if double_plot_bool == True:
             fig, (ax1,ax2) = plt.subplots(2,1,sharex=True)
         else: 
@@ -261,7 +277,9 @@ def plot_per_dataset(config):
                         #Get the range for the x-axis
                         eval_range = means.shape[0]
                         x = [i+1 for i in range(eval_range)]
-
+                        
+                        #print(f'Optimizer {opt} has avg score {means.iloc[-1]}')
+                        init_row.append(np.round(means.iloc[-1],6)) 
                         #Plot the mean and the confidence
                         ax1.plot(x,means,opt_colors[opt],label=opt)
                         ax1.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
@@ -281,9 +299,15 @@ def plot_per_dataset(config):
                         elif metric_measured == 'Surrogate_Time':
                             ax2.plot(x,means,opt_colors[opt],label=opt)
                             ax2.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
-                
+            
+                 
                 #Initial configurations.    
         if time_plot_bool == 'False':
+            with open('per_dataset.csv','a') as fd:
+                print(init_row)
+                writer = csv.writer(fd)
+                writer.writerow(init_row)
+            
             x_ticks = [i for i in range(eval_range) if i%interval==0]
             plt.xticks(x_ticks,x_ticks)
             plt.xlim([1,eval_range])
@@ -294,7 +318,9 @@ def plot_per_dataset(config):
                 ax2.set_ylabel('Time in seconds')
 
         if  jad_score != None:
-            plt.axhline(y=1-jad_score,color = 'black', linestyle = '-',label='Jad Score')
+            plt.axhline(y=jad_score,color = 'black', linestyle = '-',label='Jad Score')
+            if  pavlos_score != None:
+                plt.scatter(x=n_configs,y= pavlos_score,color = 'black',marker='o',label='Pavlos BO Score')
         # This happens for all the figures.
         ax1.set_ylabel('(1-AUC)')
         fig.suptitle(title_name + " /w classifier "  + clf_name)
@@ -584,8 +610,8 @@ time_plot = True
 double_plot = False
 #How many initial configurations we have run.
 interval = 50
-result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search' ] # 'Multi_RF_Local',
+result_space = 'Backup-Early'
+optimizers = ['Multi_RF_Local','Random_Search','SMAC' ] # 'Multi_RF_Local',
 
 opt_colors = dict()
 clr_pos = 0
@@ -646,7 +672,7 @@ for bool_flag in ['False','True']:
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
 """
 #,'OpenML'
-for data_repo in ['Jad']:
+for data_repo in ['Jad','OpenML']:
     
 
     for bool_flag in ['False','True']: #'True'
@@ -672,8 +698,7 @@ for data_repo in ['Jad']:
 for bool_flag in ['False','True']:
     means_per_cat = []
     means_per_cat_time = []
-    for data_repo in ['Jad']:
-    
+    for data_repo in ['Jad','OpenML']:
         time_plot = bool_flag
         double_plot = False
 
