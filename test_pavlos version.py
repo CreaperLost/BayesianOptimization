@@ -144,6 +144,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 
                 #The file path for current optimizer.
                 config_per_group_directory=parse_directory([config_per_optimizer_directory,opt])
+
+
+                
                 
                 if save == True:
                     try:
