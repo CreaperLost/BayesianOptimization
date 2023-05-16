@@ -195,7 +195,7 @@ def get_openml_data(speed = None):
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [842,851,850] # 839, 847,1114,
+        return [842,851,850,839, 847,1114] # 
     #  on all seeds 
     return [843,883,866]
     
@@ -206,14 +206,14 @@ if __name__ == '__main__':
     opt_list = ['Pavlos'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',]
     for speed in ['fast']:
      # obtain the benchmark suite    
-        for repo in ['Jad','OpenML',]: #,'Jad' ,
+        for repo in ['OpenML','Jad']: 
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
                 'max_evals' : 550,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
-                'n_seeds' : [1,2,3], #
+                'n_seeds' : [1], #
                 'type_of_bench': 'Main_Multi_Fold_Group_Space_Results',
                 'bench_name' :'GROUP',
                 'bench_class' : Group_MultiFold_Space,

@@ -130,10 +130,10 @@ class Group_MultiFold_MLBenchmark():
 
         #Load ola ta folds.
         if data_repo == 'Jad':
-            dm = JadDataManager(task_id,data_path,self.global_seed,n_folds = 10, use_holdout = use_holdout)
+            dm = JadDataManager(task_id,data_path,self.global_seed,n_folds = 5, use_holdout = use_holdout)
             dm.load()
         else:
-            dm = OpenMLDataManager(task_id, data_path, self.global_seed,n_folds = 10, use_holdout = use_holdout)
+            dm = OpenMLDataManager(task_id, data_path, self.global_seed,n_folds = 5, use_holdout = use_holdout)
             dm.load()
 
         # Data variables

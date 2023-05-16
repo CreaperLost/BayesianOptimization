@@ -77,9 +77,7 @@ class Pavlos_BO:
         self.X = []
         self.fX = np.array([])
 
-        self.surrogate_time = np.array([])
-        self.acquisition_time = np.array([])
-        self.objective_time = np.array([])
+        
         self.total_time = np.array([])
 
         #Number of current evaluations!
@@ -89,12 +87,12 @@ class Pavlos_BO:
         self.n_folds = n_folds
         initial_evaluations = self.n_init * len(configuration_space)
 
-        print('How many subspaces we got?', len(configuration_space))
-        print('Initial configurations run in total',initial_evaluations)
+        #print('How many subspaces we got?', len(configuration_space))
+        #print('Initial configurations run in total',initial_evaluations)
 
 
         self.max_evals_per_fold = int ( (self.max_evals - initial_evaluations ) / self.n_folds)
-        print('Max Evaluations per fold',self.max_evals_per_fold)
+        #print('Max Evaluations per fold',self.max_evals_per_fold)
 
 
         #Construct the Bayesian Optimization Objects per case.
@@ -115,21 +113,34 @@ class Pavlos_BO:
         self.X_group = []
 
     def run(self):
+        init_overhead = 0
+        start_time_opt = time.time()
         for fold in range(0,self.n_folds):
-            print('Currently Running fold : ', fold)
+            #print('Currently Running fold : ', fold)
+
+            if init_overhead == -1:
+                init_overhead = 0
             if fold == 0:
+                initial_time = []
                 for classifier_name in self.object_per_group:
                     #print('Initializing Group : ', classifier_name)
                     self.object_per_group[classifier_name].run_initial_configurations(fold)
                     #Train the surrogate model
                     self.object_per_group[classifier_name].train_surrogate()
+
+                    total_time = self.object_per_group[classifier_name].total_time
+                    total_time[-1] += self.object_per_group[classifier_name].surrogate_time[-1]
+                    initial_time.append(total_time)
+                    
                 
+                self.total_time = np.array(initial_time).flatten()
                 #This allows us to pool the performance and configurations per group
                 #And add the best configuration and score to our self.X , self.fX for tracking.
                 #self.compute_initial_configurations_curve()
                 self.n_evals = self.n_init * len(self.object_per_group)
                 self.track_initial_groups()
             else:
+                start_time = time.time()
                 for classifier_name in self.object_per_group:
                     #print('Re-run previous configurations on new fold.',classifier_name)
                     #Runs the previous configurations on the current fold
@@ -140,17 +151,19 @@ class Pavlos_BO:
                     self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
                     #Train the surrogate model.
                     self.object_per_group[classifier_name].train_surrogate()
+                init_overhead += time.time() - start_time
 
-
+            start_time = time.time()
             #At this step changed is always 1. As we find the new incumberment on the new fold.
             changed = self.compute_best_config_on_new_fold()
+            init_overhead += time.time() - start_time
             
-
             #here we have the first sanity check. The best overall should the same and not change.
             
             for iter in range(0,self.max_evals_per_fold):
-                print(f'currently running iter {iter}, inc score is : {self.inc_score}')
+                #print(f'currently running iter {iter}, inc score is : {self.inc_score}')
                 #Sanity check.
+                start_iter_time = time.time()
                 assert self.n_evals <= self.max_evals
                 if changed == 1:
                     #Compute acquisition per group. If incumberment has changed then compute acquisition again for all.
@@ -170,9 +183,6 @@ class Pavlos_BO:
                     self.max_acquisitions_is_old[classifier_name] = is_old
                     #Make sure this updates correctly.
 
-
-
-
                 #Get the maximum acquisition for all.
                 #Select group with highest acquisition --> check code.
                 best_next_classifier = max(self.max_acquisitions_score, key=lambda k: self.max_acquisitions_score.get(k))
@@ -180,11 +190,10 @@ class Pavlos_BO:
                 
                 # If we already have implemented this, we move to the next fold.
                 if self.max_acquisitions_is_old[best_next_classifier] == 1:
-                    
-                    print('=====================================')
-                    print('Already run Configuration')
-                    print(best_next_classifier)
-                    print(X_next)
+                    end_iter_time = time.time() - start_iter_time
+                    if init_overhead == -1:
+                        init_overhead = 0
+                    init_overhead += end_iter_time
                     break
                 
                 #Just add the next group here.
@@ -209,16 +218,23 @@ class Pavlos_BO:
                 #Check if new configuration is the incumberment. 
                 changed = self.compute_incumberment_overall()
 
-            
+                end_iter_time = time.time() - start_iter_time
 
+                if init_overhead != -1:
+                    end_iter_time += init_overhead
+                    init_overhead = -1
+                
+                #print(best_next_config)
+                #print(f'currently running iter {iter}, cost of iter is : {end_iter_time}')
+                self.total_time = np.concatenate((self.total_time,np.array([end_iter_time])))
 
-
-                        
-        self.acquisition_time = np.array([0 for i in range(self.max_evals)])
-        self.surrogate_time = np.array([0 for i in range(self.max_evals)])
-        self.objective_time = np.array([0 for i in range(self.max_evals)])
+        
         #Makes the final fX score progression
+        st_time = time.time()
         self.make_X_Y()
+        init_overhead  += time.time()-st_time
+        self.total_time[-1] += init_overhead
+        
         return self.inc_score        
     
     def make_X_Y(self):
