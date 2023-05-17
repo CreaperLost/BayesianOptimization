@@ -25,12 +25,7 @@ def get_results_per_optimizer(config={},accumulate='none'):
     #Get us the main file
     main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
 
-    #Get the directory.
-    wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo]
-
-
-    # Briskomaste sto fakelo me kathe dataset kai ta results tou.
-    results_directory= parse_directory(wanted_directory_attributes)
+    results_directory = os.path.join(main_directory,result_space,classifier,results_type,data_repo)
 
     #Get each dataset file. :D
     Dataset_files = [f for f in listdir(results_directory) if isdir(join(results_directory, f))]
@@ -76,33 +71,6 @@ def get_results_per_optimizer(config={},accumulate='none'):
     
     return optimizer_results_per_dataset
 
-#Computes the bounds for each evaluation point, upper and lower confidence. a is the best, b is the worst.
-#Returns dataframe. 1 row is the best, 2nd row is the worst.
-# df.iloc[0,:] , df.iloc[1,:] to access
-# returns also the mean
-def get_seeds_per_dataset(seeds):
-    df_concat = pd.concat(seeds, axis = 1)
-    a,b=stats.norm.interval(0.95, loc=df_concat.mean(axis=1), scale=df_concat.std(axis=1)/np.sqrt(len(seeds)))
-    return pd.DataFrame(np.vstack((a,b))) , df_concat.mean(axis=1)
-
- 
-def get_dataset_name(dataset_id, config):
-    result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
-    #Get us the main file
-    main_directory =  getcwd()
-
-    #Get the directory.
-    wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo,'dataset_characteristics.csv']
-
-    # Briskomaste sto fakelo me kathe dataset kai ta results tou.
-    path= parse_directory(wanted_directory_attributes)
-
-    if data_repo == 'Jad':
-        path = parse_directory([main_directory,'Jad_Full_List.csv'])
-        return get_dataset_name_Jad(dataset_id,path)
-    
-    return get_dataset_name_OpenML(dataset_id,path)
-
 
 #Casually returns the dataset name given a string
 # e.g. Dataset11 --> Kr vs Kp
@@ -120,27 +88,33 @@ def get_dataset_name_Jad(dataset,path):
     jad_datasets = pd.read_csv(path)    
     name = filter_datasets(jad_datasets,[int(data_id)],'Jad')['name']
     return name.values[0]
+ 
+def get_dataset_name(dataset_id, config):
+    result_space, classifier ,results_type ,optimizer_type, number_of_seeds, data_repo  = break_config_into_pieces_for_plots(config)
+    #Get us the main file
+    main_directory =  getcwd()
 
+    #Briskomaste sto fakelo me kathe dataset kai ta results tou.
+
+    if data_repo == 'Jad':
+        path = parse_directory([main_directory,'Jad_Full_List.csv'])
+        return get_dataset_name_Jad(dataset_id,path)
+    
+    #Get the directory.
+    wanted_directory_attributes = [main_directory,result_space,classifier,results_type,data_repo,'dataset_characteristics.csv']
+    path= parse_directory(wanted_directory_attributes)
+    return get_dataset_name_OpenML(dataset_id,path)
+
+
+def get_seeds_per_dataset(seeds):
+    df_concat = pd.concat(seeds, axis = 1)
+    a,b=stats.norm.interval(0.95, loc=df_concat.mean(axis=1), scale=df_concat.std(axis=1)/np.sqrt(len(seeds)))
+    return pd.DataFrame(np.vstack((a,b))) , df_concat.mean(axis=1)
 
 def create_plot_per_optimizer(optimizer_results_for_dataset):
     confidence, means = get_seeds_per_dataset(optimizer_results_for_dataset['result'])
-    return confidence,means
-    
-    
-# Gia kathe configuration experiment.
-# Gia kathe classifier.
-# Gia kathe dataset.
-# Gia kathe seed.
-# Gia kathe optimizer.
+    return confidence,means 
 
-
-#Essential after initial_configs propagate the cost by the corresponding step.
-# For batch acquisition function
-def propagate_batch(time_evals:pd.DataFrame,step = 10,initial_config = 20):
-    l_eval = time_evals.to_list()
-    extra_l=list(itertools.chain.from_iterable(itertools.repeat(x, step) for x in l_eval[initial_config:]))
-    full_eval=l_eval[:initial_config] + extra_l
-    return full_eval
 
 def get_pavlos_score(dataset_name):
     parent_dir = os.path.join(os.getcwd(), os.pardir)
@@ -218,10 +192,8 @@ def plot_per_dataset(config):
 
         init_row = [title_name,pavlos_score,jad_score]
         
-        if double_plot_bool == True:
-            fig, (ax1,ax2) = plt.subplots(2,1,sharex=True)
-        else: 
-            fig, ax1 = plt.subplots()
+
+        fig, ax1 = plt.subplots()
         #for each configuration in the configurations do:
         #At this point we essentially parse throught the optimizers.
         for config_result_idx in range(len(configuration_results[metric_list[0]])):
@@ -236,23 +208,14 @@ def plot_per_dataset(config):
                 # The configuration list of optimizers used for specific metric
                 config_list_per_optimizer = total_config_dictionary['Metric']
 
-
                 #Get the optimizers.
                 opt = config_list_per_optimizer[config_result_idx]['optimizer_type']
-                
-                """if 'Multi_Fold' in opt:
-                    config_list_time = configuration_results['Surrogate_Time'] + configuration_results['Objective_Time'] + configuration_results['Acquisition_Time']
-                """
-
 
                 #Get the confidence and means for the specific dataset.
                 confidence,means = create_plot_per_optimizer(config_list_score[config_result_idx][dataset])
                 #Get the confidence in time and the mean metric for the specific dataset
                 time_confidence,time_means = create_plot_per_optimizer(config_list_time[config_result_idx][dataset])
-                if opt == 'HEBO_RF5':
-                    time_means= propagate_batch(time_means,5,interval)
-                elif opt == 'HEBO_RF10':
-                    time_means= propagate_batch(time_means,10,interval)
+                
                 x = config_list_time[config_result_idx][dataset]
                 ax1.plot(time_means,means,opt_colors[opt],label=opt)
                 ax1.fill_between(time_means, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
@@ -283,23 +246,6 @@ def plot_per_dataset(config):
                         #Plot the mean and the confidence
                         ax1.plot(x,means,opt_colors[opt],label=opt)
                         ax1.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
-
-                    elif double_plot_bool == False and metric_measured != 'Metric':
-                        continue 
-                    elif double_plot_bool == True and metric_measured != 'Metric':
-                        #Create a plot for the surrogate time metric.
-                        confidence,means = create_plot_per_optimizer(config_list_per_metric[config_result_idx][dataset])
-
-                        #Check the metric we measure and do the appropriate handling. :)
-                        if metric_measured == 'Objective_Time' and config_result_idx == 0:
-                            ax2.plot(x,means,'orange',label='Mean-Objective Time')
-                        elif metric_measured == 'Acquisition_Time' and config_result_idx == 0:
-                            ax2.plot(x,means,'yellow',label='Mean-Acquisition Time')
-                        #Plot the mean and the confidence on axis 2.
-                        elif metric_measured == 'Surrogate_Time':
-                            ax2.plot(x,means,opt_colors[opt],label=opt)
-                            ax2.fill_between(x, confidence.iloc[0,:], confidence.iloc[1,:], color=opt_colors[opt], alpha=.1)
-            
                  
                 #Initial configurations.    
         if time_plot_bool == 'False':
@@ -326,27 +272,33 @@ def plot_per_dataset(config):
         fig.suptitle(title_name + " /w classifier "  + clf_name)
         plt.legend(bbox_to_anchor=(1.05, 1),loc = 'upper left')
                 
+        save_figure(data_repo,dataset,time_plot_bool,clf_name)
+        
 
-        main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
-        if time_plot_bool == 'True':
-            wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'TimePlot']
-        elif time_plot_bool == 'False':
-            if double_plot_bool == False:
-               wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'SingleEvalPlot'] 
-            else:
-                wanted_directory_attributes = [main_directory,'Figures',data_repo,dataset,'DoubleEvalPlot'] 
-        results_directory = parse_directory(wanted_directory_attributes)
 
-        
-        
-        try:
-            Path(results_directory).mkdir(parents=True, exist_ok=False)
-        except FileExistsError:
-            pass
-        else:
-            pass
-        
-        plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
+
+def save_figure(data_repo, dataset, time_plot_bool, clf_name):
+    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
+    
+    if data_repo == 'OverAllDatasets':
+        path_to_figure = os.path.join(main_directory,'Figures','OverAllDatasets')
+    else:
+        path_to_figure = os.path.join(main_directory,'Figures',data_repo,dataset)
+
+
+    if time_plot_bool == 'True':
+        extra  = 'TimePlot'
+    else:
+        extra = 'SingleEvalPlot' 
+
+    results_directory = os.path.join(path_to_figure,extra)
+    try:
+        Path(results_directory).mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        pass
+    else:
+        pass
+    plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 
 def plot_average(config):
@@ -421,10 +373,6 @@ def plot_average(config):
             time_mean = pd.concat(means_time_total, axis = 1).mean(axis=1)
             x = time_mean
 
-            if opt == 'HEBO_RF5':
-                x= propagate_batch(x,5,interval)
-            elif opt == 'HEBO_RF10':
-                x= propagate_batch(x,10,interval)
         plt.plot(x,means_normalized,opt_colors[opt],label=opt)
         plt.fill_between(x, confidence_normalized.iloc[0,:], confidence_normalized.iloc[1,:], color=opt_colors[opt], alpha=.1)
 
@@ -442,23 +390,10 @@ def plot_average(config):
     plt.title('Average effectiveness of BO methods ' + " /w classifier "  + clf_name)
     plt.ylabel('Average `1-AUC')
     plt.legend()
-    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
+    
+    
+    save_figure('OverAllDatasets',None,time_plot_bool,clf_name)
 
-    if time_plot_bool == 'True':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','TimePlot']
-    elif time_plot_bool == 'False':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','SingleEvalPlot'] 
-    elif time_plot_bool =='Partial':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','PartialEvalPlot'] 
-            
-    results_directory = parse_directory(wanted_directory_attributes)
-    try:
-        Path(results_directory).mkdir(parents=True, exist_ok=False)
-    except FileExistsError:
-        pass
-    else:
-        pass 
-    plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
 
 #Get the mean  on all datasets, all optimizers
 #Get the min mean per dataset
@@ -483,10 +418,6 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
             time_mean = pd.concat((time_data1[opt_index],time_data2[opt_index]),axis=1).mean(axis=1)
             x = time_mean
 
-            """if opt == 'HEBO_RF5':
-                x= propagate_batch(x,5,interval)
-            elif opt == 'HEBO_RF10':
-                x= propagate_batch(x,10,interval)"""
             """print(f'{opt}, Final Performance {np.round(means_normalized.iloc[499],4)} ,\
                 Performance at 100 iter {np.round(means_normalized.iloc[99],4)}, \
                 Performance at 200 iter {np.round(means_normalized.iloc[199],4)}, \
@@ -500,9 +431,7 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
         x_ticks = [i for i in range(eval_range) if i%interval==0]
         plt.xticks(x_ticks,x_ticks)
         plt.xlim([1,eval_range])
-        #plt.axvline(x = 10, color = 'black', linestyle = '--',label=' 10 Initial_Evaluations')
         plt.axvline(x = 10, color = 'black', linestyle = '--',label=' 10 Initial_Evaluations')
-        #plt.axvline(x = 50, color = 'black', linestyle = '--',label=' 50 Initial_Evaluations')
         plt.xlabel('Number of objective evals.')
     elif time_plot_bool =='True':
         plt.xlim(left=0)
@@ -512,23 +441,11 @@ def plot_two_categories(data1,data2,opt_list,clf_name,time_plot_bool,time_data1=
     plt.title('Average effectiveness of BO methods ' + " /w classifier "  + clf_name)
     plt.ylabel('Average `1-AUC')
     plt.legend()
-    main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
 
-    if time_plot_bool == 'True':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','TimePlot']
-    elif time_plot_bool == 'False':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','SingleEvalPlot'] 
-    elif time_plot_bool =='Partial':
-        wanted_directory_attributes = [main_directory,'Figures','OverAllDatasets','PartialEvalPlot'] 
-            
-    results_directory = parse_directory(wanted_directory_attributes)
-    try:
-        Path(results_directory).mkdir(parents=True, exist_ok=False)
-    except FileExistsError:
-        pass
-    else:
-        pass
-    plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
+
+    save_figure('OverAllDatasets',None,time_plot_bool,clf_name)
+
+    
 
 def get_average_per_category(config):
     clf_name = config['classifier']
@@ -603,11 +520,9 @@ def get_average_per_category(config):
 colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 
 
-data_repo = 'Jad'
-n_seeds=  3
-metrics = ['Metric','Surrogate_Time','Objective_Time','Acquisition_Time','Total_Time']
+n_seeds=  1
+metrics = ['Metric','Total_Time']
 time_plot = True
-double_plot = False
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Backup-Early'
@@ -619,58 +534,6 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-"""
-for data_repo in ['Jad','OpenML']:
-    
-
-    for bool_flag in ['False','True']:
-        time_plot = bool_flag
-        double_plot = False
-
-        general_config = {
-        'classifier':'XGB',
-        'result_space':result_space,
-        'optimizers' : optimizers,
-        'n_seeds' : n_seeds,
-        'data_repo':data_repo,
-        'double_plot':double_plot,
-        'metrics': metrics,
-        'time_plot':time_plot,
-        }
-    
-
-        plot_per_dataset(general_config)
-        plt.clf()
-
-    #,
-for bool_flag in ['False','True']:
-    means_per_cat = []
-    means_per_cat_time = []
-    for data_repo in ['Jad','OpenML']:
-    
-        time_plot = bool_flag
-        double_plot = False
-
-        general_config = {
-        'classifier':'XGB',
-        'result_space':result_space,
-        'optimizers' : optimizers,
-        'n_seeds' : n_seeds,
-        'data_repo':data_repo,
-        'double_plot':double_plot,
-        'metrics': metrics,
-        'time_plot':time_plot,
-        }
-    
-
-        #plot_per_dataset(general_config)
-        opt, opt_time  = get_average_per_category(general_config)
-        means_per_cat.append( opt )
-        means_per_cat_time.append( opt_time )
-    plt.clf()
-    #One category is for JAD, the other is for OpenML.
-    plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
-"""
 #,'OpenML'
 for data_repo in ['Jad','OpenML']:
     

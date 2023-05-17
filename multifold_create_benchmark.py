@@ -175,16 +175,16 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [9952] #14954, 11,3918,3917,3021,43,167141,
-    return [2074,9976,9910,167125]
+        return [] #14954, 11,3918,3917,3021,43,167141,9952
+    return [167125] # 2074,9976,
     
-
+    # 9910, need to run 'GP_Sobol','RF_ACQ10000','RF_Random'
 
 #
 def get_jad_data(speed = None):
     assert speed !=None
     if speed == 'fast':
-        return [850,1114,847,839] #842,851,
+        return [842,851] # 850,1114,847,839
     return [843,883,866]
     
 
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     
     opt_list = ['Random_Search','RF_Local','RF_Sobol','GP_Sobol','RF_ACQ10000','RF_Random'] # ,'Multi_RF_Local' ,'Random_Search','RF_Local',] #
     
-    for speed in ['fast']:
+    for speed in ['slow']:
      # obtain the benchmark suite    
         for repo in ['OpenML','Jad']:
             #XGBoost Benchmark    

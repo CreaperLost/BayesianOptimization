@@ -72,7 +72,7 @@ def get_jad_data_list():
     project = jad.project.find_project('jad_research')
     # Load dataset list
     dataset_list = jad.project.find_project_datasets(project)
-    if analysis_type == 'CLASSIFICATION':
+    if analysis_type == 'CLASSIFICATION': 
         dataset_list = [d for d in dataset_list if jad.project.find_project_dataset_feature(d['id'], 'target')['type'] == 'Categorical']
     else:
         dataset_list = [d for d in dataset_list if jad.project.find_project_dataset_feature(d['id'], 'target')['type'] == 'Numerical']
