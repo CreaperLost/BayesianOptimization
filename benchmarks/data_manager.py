@@ -76,9 +76,11 @@ class OpenMLDataManager(DataManager):
 
         data_set_path = self.data_path + "/org/openml/www/datasets/" + str(self.task.dataset_id)
         successfully_loaded = self.try_to_load_data(data_set_path)
+        print(successfully_loaded,data_set_path)
         if successfully_loaded:
             self.logger.info(f'Successfully loaded the preprocessed splits from '
                              f'{data_set_path}')
+            
             return
 
         # If the data is not available, download it.

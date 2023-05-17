@@ -151,7 +151,11 @@ class JadDataManager(DataManager):
 
     def preprocess_data(self,dataset):
         df = dataset.copy()
-        df.drop('gr.gnosisda-1',axis=1,inplace=True)
+        if 'gr.gnosisda-1' in list(df.columns):
+            df.drop('gr.gnosisda-1',axis=1,inplace=True)
+        else:
+            df.drop('Unnamed: 0',axis=1,inplace=True)
+        
         X = df.drop(['target'],axis=1)
         y = df['target']
         #Categorical_ind is experimental
@@ -184,7 +188,8 @@ class JadDataManager(DataManager):
             self.Client.project.download_dataset(self.task_id,tmp_file_loc)
 
         dataset = pd.read_csv(tmp_file_loc)
-        
+        print(dataset)
+        print(dataset.columns)
 
         X, y, categorical_ind,continuous_ind = self.preprocess_data(dataset)
         self.n_classes = y.nunique()
