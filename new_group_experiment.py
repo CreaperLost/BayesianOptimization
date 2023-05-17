@@ -25,7 +25,7 @@ from csv import writer
 import time 
 
 
-def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=False):
+def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
     assert optimizers_used != []
     assert bench_config != {}
 
@@ -87,34 +87,35 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=False
                 elif opt == 'Multi_RF_Local':
                     Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                
                 else: 
                     print(opt)
                     raise RuntimeError
-                """elif opt == 'SMAC':
-                    Optimization=SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                             repo=repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)                
+                """            
+                elif opt == 'SMAC':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)    
                 elif opt == 'SMAC_Instance':
                     Optimization=SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
                              repo=repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function_per_fold)"""
                 
                 
-                if load == False:
-                    start_time = time.time()
-                    Optimization.run()
-                    m_time = time.time()-start_time
-                    print('Measured Total Time ',m_time)
-                else:
-                    Optimization.load()
+                
+                start_time = time.time()
+                Optimization.run()
+                m_time = time.time()-start_time
+                print('Measured Total Time ',m_time)
                 
                 
-                print('Total Time',np.cumsum(Optimization.total_time)[-1])
+                
+                print('Total Time',Optimization.total_time)
                 print(Optimization.inc_score,Optimization.inc_config)
                                 
                 #Change this.
                 y_evaluations = Optimization.fX
                 total_time_evaluations = Optimization.total_time
 
-                if save == True and load == False:
+                if save == True:
                     try:
                         Path(score_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
                         Path(total_time_per_optimizer_directory).mkdir(parents=True, exist_ok=True)
@@ -150,8 +151,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True,load=False
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
                             pd.concat([X_df,y_df],axis=1).to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                elif load == True:
-                    pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
+               
 
 
 
@@ -167,7 +167,7 @@ def get_openml_data(speed = None):
     return [2074,9976,9910,167125]
     
 
-def get_jad_data(speed = None):
+def get_jad_data(speed = None):        
     assert speed !=None
     if speed == 'fast':
         return [842,851,850,839,847,1114] #
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     
-    opt_list = ['Pavlos','Random_Search','Multi_RF_Local'] # ,,'Random_Search','RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search','Multi_RF_Local'
+    opt_list = ['Pavlos','Random_Search','Multi_RF_Local'] # ,,'Random_Search','RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search','Multi_RF_Local', 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC'
     for speed in ['fast','slow']:
      # obtain the benchmark suite    
         for repo in ['Jad','OpenML']:

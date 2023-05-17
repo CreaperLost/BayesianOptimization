@@ -3,7 +3,7 @@ from smac import HyperparameterOptimizationFacade, Scenario
 from ConfigSpace import Configuration, ConfigurationSpace
 import pandas as pd
 import numpy as np
-
+import time
 
 class SMAC_HPO:
                 
@@ -33,45 +33,12 @@ class SMAC_HPO:
         self.inc_score = np.inf
         self.inc_config = {}
 
-        #self.total_time = pd.DataFrame(columns=['Time','Score'])  
-        self.total_time = []
-
-    def load(self):
-        smac_single = HyperparameterOptimizationFacade(self.scenario, self.objective_function,overwrite=False)
+        self.total_time = pd.DataFrame(columns=['Time','Score'])  
         
-        # Plot all trials
-        for trial_info, trial_value in smac_single.runhistory.items():
-            id = trial_info.config_id
-            
-            extra_cost = 0
-            
-            for item in smac_single.intensifier.trajectory:
-                # Single-objective optimization
-                assert len(item.config_ids) == 1
-                assert len(item.costs) == 1
 
-                y = item.costs[0]
-                x = item.walltime
-
-                if item.config_ids[0] == id :
-                    
-                    print(item.config_ids,id)
-                    if len(self.total_time) == 0:
-                        extra_cost = item.walltime
-                        print(extra_cost, item.walltime)
-                    else:
-                        
-                        extra_cost  = item.walltime - np.cumsum(self.total_time)[-1]
-                        print(extra_cost, item.walltime)
-                    break
-            
-                #new_row = pd.DataFrame({'Time':x,'Score':y},index=[0])
-                #self.total_time = self.total_time.append(new_row,ignore_index=True)
-            
-            self.total_time.append(extra_cost)
-            #print(self.total_time)
-
+    
     def run(self):
+        start_time = time.time()
 
         smac_single = HyperparameterOptimizationFacade(self.scenario, self.objective_function,overwrite=True)
         incumbent_single = smac_single.optimize()
@@ -86,10 +53,10 @@ class SMAC_HPO:
             cost = trial_value.cost
             #time = trial_value.time
 
-            #if cost < self.inc_score:
-            #    self.inc_config  = config_descr.get_dictionary()
-            #    self.inc_score = cost
-            #    print(f'Best config {self.inc_config} at step: {trial_info.config_id}, score :{cost}')
+            if cost < self.inc_score:
+                self.inc_config  = config_descr.get_dictionary()
+                self.inc_score = cost
+                print(f'Best config {self.inc_config} at step: {trial_info.config_id}, score :{cost}')
 
             #add time and fX.
             self.fX = np.append(self.fX,np.array(cost))
@@ -117,8 +84,13 @@ class SMAC_HPO:
             x = item.walltime
             new_row = pd.DataFrame({'Time':x,'Score':y},index=[0])
             self.total_time = self.total_time.append(new_row,ignore_index=True)
+
+        #Finally append the final score!!!!!! YEAS
+        end_time = time.time() - start_time
+        print(f'this { smac_single._get_optimizer().used_walltime } == {end_time}')
+        new_row = pd.DataFrame({'Time':end_time,'Score':y},index=[0])
         
-        print(self.total_time)
+        self.total_time = self.total_time.append(new_row,ignore_index=True)
 
-
+        print(incumbent_single,self.inc_config)
             
