@@ -3,22 +3,15 @@ from smac import HyperparameterOptimizationFacade, Scenario
 from ConfigSpace import Configuration, ConfigurationSpace
 import pandas as pd
 import numpy as np
-
+from smac.intensifier.intensifier import Intensifier
+import time 
 
 class SMAC_Instance_HPO:
-                
+                 
 
     def __init__(self,configspace,config_dict,task_id,repo,max_evals,seed,objective_function):
+        
 
-      
-        self.scenario = Scenario(configspace,name='Dataset'+str(task_id),
-                            output_directory = 'per_instance_smac/'+repo,
-                            n_trials=max_evals,  # We want to try max 5000 different trials
-                            min_budget=1,max_budget=10,  # Use min 1 fold, Use max 10 folds. 
-                            instances=[0,1,2,3,4,5,6,7,8,9],
-                            deterministic=True,seed=seed)
-        
-        
         # Use SMAC to find the best configuration/hyperparameters
         self.configspace = configspace
         self.save_configuration={}
@@ -26,40 +19,69 @@ class SMAC_Instance_HPO:
             self.save_configuration[i] = pd.DataFrame()
         self.objective_function = objective_function
 
+        instances = [0,1,2,3,4]
+        instance_features = dict()
+        for i in instances:
+            instance_features[i] = [i]
         
-        self.fX = np.array([])
-        self.X_group = np.array([])
-        self.total_time = np.array([])
-
-        self.acquisition_time = np.array([0 for i in range(max_evals)])
-        self.surrogate_time = np.array([0 for i in range(max_evals)])
-        self.objective_time = np.array([0 for i in range(max_evals)])
+        self.scenario = Scenario(configspace,name='Dataset'+str(task_id),
+                            output_directory = 'per_instance_smac/'+repo,
+                            n_trials=max_evals,  # We want to try max 5000 different trials
+                            min_budget=1,max_budget=10,  # Use min 1 fold, Use max 10 folds. 
+                            instances=instances,
+                            instance_features = instance_features,
+                            deterministic=True,seed=seed)
         
-        self.inc_score = np.inf
-        self.inc_config = {}
-
-    def run(self):
+        self.intensifier = Intensifier(scenario=self.scenario, max_config_calls=len(instances),seed=seed)
         
 
+        
 
-        per_instance_smac = MFFacade(
-                    self.scenario,
-                    self.objective_function,
+        self.per_instance_smac = HyperparameterOptimizationFacade(
+                    scenario= self.scenario,
+                    target_function = self.objective_function,
+                    intensifier=self.intensifier,
                     overwrite=True,
                 )
 
 
-        incumbent_per_instance = per_instance_smac.optimize()
         
+
+        
+        self.fX = np.array([])
+        self.X_group = np.array([])
+
+        self.inc_score = np.inf
+        self.inc_config = {}
+
+        self.total_time = pd.DataFrame(columns=['Time','Score'])  
+
+    def run(self):
+        
+        start_time = time.time()
+    
+        incumbent_per_instance = self.per_instance_smac.optimize()
+        
+        end_time = time.time() - start_time
+
+        ids_already_validated = []
+
         # Plot all trials
-        for trial_info, trial_value in per_instance_smac.runhistory.items():
-                    
-            # Trial info
-            config_descr = per_instance_smac.runhistory.get_config(trial_info.config_id)
+        for trial_info, trial_value in self.per_instance_smac.runhistory.items():
+            
+
+            #The unique id of the configuration
+            config_id = trial_info.config_id
+            
+            # Here we get the configuration.
+            config_descr = self.per_instance_smac.runhistory.get_config(config_id)
                 
-            # Trial value
-            cost = trial_value.cost
-            time = trial_value.time
+            if config_id in ids_already_validated:
+                continue
+            
+            # Run the proposed configuration on all folds.
+            cost = self.per_instance_smac.validate(config=config_descr)
+            ids_already_validated.append(config_id)
 
             if cost < self.inc_score:
                 self.inc_config  = config_descr.get_dictionary()
@@ -68,7 +90,8 @@ class SMAC_Instance_HPO:
 
             #add time and fX.
             self.fX = np.append(self.fX,np.array(cost))
-            self.total_time = np.append(self.total_time,np.array(time))   
+            
+            #self.total_time = np.append(self.total_time,np.array(time))   
 
             self.X_group = np.append(self.X_group,config_descr['model']) 
             #This is a better interpretable form of storing the configurations.
@@ -79,21 +102,25 @@ class SMAC_Instance_HPO:
             y_df = pd.DataFrame({'y':cost},index=[0])
             new_row = pd.concat([X_df,y_df],axis=1)
             self.save_configuration[config_descr['model']] = self.save_configuration[config_descr['model']].append(new_row,ignore_index=True)
-            
-
-            
 
 
+        
+        for item in self.per_instance_smac.intensifier.trajectory:
+            # Single-objective optimization
+            assert len(item.config_ids) == 1
+            assert len(item.costs) == 1
 
-"""
-                
-                # Create our SMAC object and pass the scenario and the train method
-                
-                # Now we start the optimization process
-                instance_incumbent = per_instance_smac.optimize()
-                print(instance_incumbent)
-                # Let's calculate the cost of the incumbent
-                instance_incumbent_cost = per_instance_smac.validate(instance_incumbent)
-                print(f"Instance Incumbent cost: {instance_incumbent_cost}")
-                #The file path for current optimizer.
-                """
+            print(item.config_ids[0])
+
+            y = self.fX[ids_already_validated.index(item.config_ids[0])]
+            x = item.walltime
+            new_row = pd.DataFrame({'Time':x,'Score':y},index=[0])
+            self.total_time = self.total_time.append(new_row,ignore_index=True)
+
+        #Finally append the final score!!!!!! YEAS
+        print(f'Score of supposed inc : {y} equals actual inc {self.inc_score}')
+        new_row = pd.DataFrame({'Time':end_time,'Score':self.inc_score},index=[0])
+        
+        self.total_time = self.total_time.append(new_row,ignore_index=True)
+
+        print(incumbent_per_instance,self.inc_config)
