@@ -105,6 +105,14 @@ def get_dataset_name(dataset_id, config):
     path= parse_directory(wanted_directory_attributes)
     return get_dataset_name_OpenML(dataset_id,path)
 
+def get_dataset_name_byrepo(dataset_id, data_repo):
+    #Briskomaste sto fakelo me kathe dataset kai ta results tou.
+    if data_repo == 'Jad':
+        path = parse_directory([getcwd(),'Jad_Full_List.csv'])
+        return get_dataset_name_Jad(dataset_id,path)
+    
+    return get_dataset_name_OpenML(dataset_id,None)
+
 
 def get_seeds_per_dataset(seeds):
     df_concat = pd.concat(seeds, axis = 1)
@@ -260,9 +268,6 @@ def plot_per_dataset(config):
             plt.axvline(x = interval, color = 'black', linestyle = '--',label='Initial_Evaluations')
             plt.xlabel('Number of Objective Evaluations')
 
-            if double_plot_bool == True:
-                ax2.set_ylabel('Time in seconds')
-
         if  jad_score != None:
             plt.axhline(y=jad_score,color = 'black', linestyle = '-',label='Jad Score')
             if  pavlos_score != None:
@@ -286,7 +291,7 @@ def save_figure(data_repo, dataset, time_plot_bool, clf_name):
         path_to_figure = os.path.join(main_directory,'Figures',data_repo,dataset)
 
 
-    if time_plot_bool == 'True':
+    if time_plot_bool == True:
         extra  = 'TimePlot'
     else:
         extra = 'SingleEvalPlot' 
@@ -517,24 +522,8 @@ def get_average_per_category(config):
     return per_opt,per_opt_time
 
 
-colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 
-
-n_seeds=  1
-metrics = ['Metric','Total_Time']
-time_plot = True
-#How many initial configurations we have run.
-interval = 50
-result_space = 'Backup-Early'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC' ] # 'Multi_RF_Local',
-
-opt_colors = dict()
-clr_pos = 0
-for opt in optimizers:
-    opt_colors.update({opt:colors[clr_pos]})
-    clr_pos+=1
-
-#,'OpenML'
+"""#,'OpenML'
 for data_repo in ['Jad','OpenML']:
     
 
@@ -584,3 +573,76 @@ for bool_flag in ['False','True']:
     plt.clf()
     #One category is for JAD, the other is for OpenML.
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'GROUP',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
+"""
+
+
+def time_plot_for_opt(time,metric,opt):
+
+    if 'SMAC' in opt:
+        x = time['Time'].values
+        y = time['Score'].values
+    else:
+        x = np.cumsum(time.values)
+        y = np.minimum.accumulate(metric.values)
+        
+    plt.plot(x,y,opt_colors[opt],label=opt)
+    
+
+def config_plot_for_opt(metric,opt):
+    
+    x =  [i for i in range(metric.shape[0])]
+    y = np.minimum.accumulate(metric.values)
+    
+    plt.plot(x,y,opt_colors[opt],label=opt)
+
+colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
+seeds = [1]
+#How many initial configurations we have run.
+interval = 50
+result_space = 'Main_Multi_Fold_Group_Space_Results'
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos'] # 'Multi_RF_Local',
+
+space_type = 'GROUP'
+
+opt_colors = dict()
+clr_pos = 0
+for opt in optimizers:
+    opt_colors.update({opt:colors[clr_pos]})
+    clr_pos+=1
+
+for data_repo in ['Jad','OpenML']:
+    
+    for time_bool_flag in [False,True]: #'True'
+        path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
+        if os.path.exists(path_str) == False:
+            continue
+        for dataset in os.listdir(path_str):
+            
+            for seed in seeds:
+                for opt in optimizers:
+
+                    metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
+                    metric.columns = ['Score']
+                    time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
+                    if opt !='SMAC':
+                        time.columns = ['Time']
+                    else:
+                        time.columns = ['Time','Score']
+                    
+                    if time_bool_flag:
+                        plt.xlabel('Average time in seconds')
+                        time_plot_for_opt(time,metric,opt)
+                    else:
+                        plt.xlim([0,250])
+                        plt.xlabel('Number of objective evals.')
+                        config_plot_for_opt(metric,opt)
+
+
+            plt.grid(True, which='major')
+            dataset_name = get_dataset_name_byrepo(dataset,data_repo)
+            plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
+            plt.ylabel('Average `1-AUC')
+            plt.legend()
+            save_figure(data_repo,dataset_name,time_bool_flag,'Group')
+            plt.clf()
+                    
