@@ -10,33 +10,19 @@ from ConfigSpace.util import impute_inactive_values,deactivate_inactive_hyperpar
 
 from typing import List
 import typing
- 
 from acquisition_functions.ei_mine import EI
 from acquisition_functions.mace import MACE
-
 from initial_design.sobol_design import SobolDesign
 from BayesianOptimizers.SMAC.Sobol_Maximizer import SobolMaximizer
-"""from BayesianOptimizers.SMAC.RandomMaximizer import RandomMaximizer
-from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
-from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
-from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer"""
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
-
-"""from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
-from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
-from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
-from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
-from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
-from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate"""
 
 
 import pandas as pd
 
 
 
-class MultiFold_Per_Group_Bayesian_Optimization:
+class Holdout_Per_Group_Bayesian_Optimization:
     """The Random Forest Based Regression Local Bayesian Optimization.
     
     Parameters
@@ -61,6 +47,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
     def __init__(
         self,
         f,
+        f_test,
         lb ,
         ub ,
         configuration_space:ConfigurationSpace,
@@ -89,6 +76,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         # Save function information
         #Objective function
         self.f = f
+        self.f_test = f_test
 
         #Set a seed.
         self.seed = random_seed
@@ -155,6 +143,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         self.X = np.zeros((0, self.dim))
         self.X_df = pd.DataFrame()
         self.fX = np.array([])
+        self.fX_test = np.array([])
 
         self.surrogate_time = np.array([])
         self.acquisition_time = np.array([])
@@ -170,10 +159,8 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         self.n_cand = 900 #min(100 * self.dim, 10000)
 
-
         self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
         
-
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
             
@@ -187,7 +174,32 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         
         self.batch_size = 1
         
+    # Runs the objective function on the specified point.
+    def run_objective_test(self,X_next:Configuration):
 
+        assert self.batch_size == 1
+        #Run objective
+
+        start_time = time.time()
+        
+        ## Make sure the vector is in config_space, in order to be run fast by the model
+        config = self.vector_to_configspace( X_next )
+
+        #Run the objective function
+        res = self.f_test(self.add_group_name_to_config(config))
+        
+        #Get the AUC - R2 etc.
+        fX_next = res['function_value']
+        #print(self.group_name,fX_next)
+
+        #Add to X and fX vectors.
+        self.fX_test = np.concatenate((self.fX_test, [fX_next]))
+
+
+        end_time=time.time() - start_time
+        self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+
+        return fX_next
 
     def vector_to_configspace(self, vector: np.array,from_normalized = True) -> ConfigurationSpace:
         '''Converts numpy array to ConfigSpace object
@@ -346,6 +358,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         for i in range(self.n_init):
             time_start = time.time()
             fX_next=self.run_objective(initial_configurations[i],fold)
+            self.run_objective_test(initial_configurations[i])
             self.check_if_incumberment_initial_configs(self.vector_to_configspace( initial_configurations[i] ),fX_next)
             #measure the time.
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))

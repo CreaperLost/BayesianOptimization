@@ -25,7 +25,7 @@ class SobolMaximizer():
         self.objective_function = objective_function
 
     def maximize(self,configspace_to_vector,eta):
-        """
+        """ 
         Maximizes the given acquisition function. 
 
         Returns

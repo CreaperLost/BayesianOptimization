@@ -21,12 +21,12 @@ from BayesianOptimizers.SMAC.MACE_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.DE_Maximizer import DE_Maximizer
 from BayesianOptimizers.SMAC.Scipy_Maximizer import Scipy_Maximizer"""
 from BayesianOptimizers.SMAC.Sobol_Local_Maximizer import Sobol_Local_Maximizer
-
+from BayesianOptimizers.Experimental.Multiple_Acquisition_Maximizer import EvolutionOpt
 from BayesianOptimizers.SMAC.Simple_RF_surrogate import Simple_RF
-
+from BayesianOptimizers.SMAC.Extramethods.Hebo_Random_Forest_surrogate import HEBO_RF
 """from BayesianOptimizers.SMAC.random_forest_surrogate import RandomForest
 from BayesianOptimizers.SMAC.GaussianProcess_surrogate import GaussianProcess
-from BayesianOptimizers.SMAC.Hebo_Random_Forest_surrogate import HEBO_RF
+
 from BayesianOptimizers.SMAC.Hebo_GaussianProcess_surrogate import HEBO_GP
 from BayesianOptimizers.SMAC.NGBoost_surrogate import NGBoost_Surrogate
 from BayesianOptimizers.SMAC.BayesianNN_surrogate import BNN_Surrogate"""
@@ -36,7 +36,7 @@ import pandas as pd
 
 
 
-class MultiFold_Per_Group_Bayesian_Optimization:
+class PavlosV2_PerGroup:
     """The Random Forest Based Regression Local Bayesian Optimization.
     
     Parameters
@@ -70,9 +70,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         batch_size=1,
         verbose=True,
         random_seed = int(1e6),
-        acq_funct = 'EI',
-        model = 'RF',
-        maximizer  = 'Sobol',group_name = '',n_folds = 5
+        populaton = 100,group_name = '',n_folds = 10
     ):
 
         # Very basic input checks
@@ -147,7 +145,6 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         self.n_folds = n_folds
 
-
         #Keep score of each fold in here...
         self.y = [list() for _ in range(self.n_folds)]
 
@@ -156,36 +153,23 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         self.X_df = pd.DataFrame()
         self.fX = np.array([])
 
-        self.surrogate_time = np.array([])
-        self.acquisition_time = np.array([])
-        self.objective_time = np.array([])
-        self.checks_time = np.array([])
-        self.total_time = np.array([])
-
         #Number of current evaluations!
         self.n_evals = 0 
         
         #Save the group name here in order to use on configuration objects.
         self.group_name = group_name
 
-        self.n_cand = 900 #min(100 * self.dim, 10000)
+        self.populaton = populaton
 
-
-        self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
+        self.model = HEBO_RF(self.config_space,rng=random_seed,n_estimators=100)
+        
+        self.acquisition_function = MACE(self.model)
+        
+        self.acquistion_function_max  = EI(self.model)
+        self.maximize_func  = EvolutionOpt(self.acquistion_function_max,self.config_space,self.acquisition_function,pop=self.populaton,iters=100,change_to_vector = self.configspace_to_vector)
         
 
-        if acq_funct == "EI":
-            self.acquisition_function = EI(self.model)
-            
-            if maximizer == 'Sobol':
-                self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
-            elif maximizer == 'Sobol_Local':
-                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
-            else:
-                raise RuntimeError
 
-        
-        self.batch_size = 1
         
 
 
@@ -309,23 +293,6 @@ class MultiFold_Per_Group_Bayesian_Optimization:
             population = np.random.uniform(low=0.0, high=1.0, size=(initial_config_size, self.dim))
         return np.array(population)
 
-     
-    def convert_configurations_to_array(configs: List[Configuration]) -> np.ndarray:
-        """Impute inactive hyperparameters in configurations with their default.
-
-        Necessary to apply an EPM to the data.
-
-        Parameters
-        ----------
-        configs : List[Configuration]
-            List of configuration objects.
-
-        Returns
-        -------
-        np.ndarray
-        """
-        return np.array([config.get_array() for config in configs], dtype=np.float64)
-
 
     def add_group_name_to_config(self,config:Configuration):
         new_config =config.get_dictionary().copy()
@@ -341,22 +308,15 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         """
 
         initial_configurations = self.load_initial_design_configurations(self.n_init)
-        curr_time = []
+
         #Run each initial configuration on fold specified.
         for i in range(self.n_init):
-            time_start = time.time()
             fX_next=self.run_objective(initial_configurations[i],fold)
             self.check_if_incumberment_initial_configs(self.vector_to_configspace( initial_configurations[i] ),fX_next)
             #measure the time.
-            self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
-            self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
-            end_time = time.time() - time_start
-            curr_time.append(end_time)
-            
-        self.total_time = np.concatenate((self.total_time,np.array(curr_time)))
-
+        
         #After running all initials save the results on fX
-        self.fX = np.array(deepcopy(self.y[fold])) 
+        self.fX = np.array(deepcopy(self.y[fold]))
         
 
     # Returns the best configuration of this specific group along with the score.
@@ -367,17 +327,10 @@ class MultiFold_Per_Group_Bayesian_Optimization:
     #Trains the surrogate model.
     def train_surrogate(self):
 
-        start_time = time.time()
-
         # Warp inputs
         X = self.X  
         # Standardize values
         fX = self.fX
-        
-        
-        #print(X.shape)
-        #print(fX.shape)
-        #print(self.y)
 
         #here we train...
         self.model.train(X,fX)
@@ -385,43 +338,17 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Always update the acquisition function with the new surrogate model.
         self.acquisition_function.update(self.model)
 
-        end_time=time.time() - start_time
 
-        #Add the extra time here.
-        self.surrogate_time = np.concatenate((self.surrogate_time,np.array([end_time])))
-
-        
-
-    # Runs the surrogate on the points provided, computes the acquisition value per point and returns the suggested point + its value.
-    def suggest_next_point(self, global_eta:float):
-        
-        #Currently only works with batch_size = 1 for simplicity.
-        assert self.batch_size == 1
-
-        start_time = time.time()
-        
-        #Search around my current best -- even though I compete against the global best.
-        if isinstance(self.maximize_func,Sobol_Local_Maximizer):
-            X_next,acquisition_value = self.maximize_func.maximize(self.configspace_to_vector,eta = global_eta,best_config = self.inc_config)
-        else:
-            X_next,acquisition_value = self.maximize_func.maximize(self.configspace_to_vector,eta = global_eta)
-
-        end_time=time.time() - start_time
-
-        #Add the acquisition time here.
-        self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
-
-        return (X_next,acquisition_value)
+    def suggest_population(self,global_eta:float):
+        X_points,acq_vals = self.maximize_func.maximize(initial_suggest = self.inc_config,eta = global_eta)
+        return list(zip( list(np.array(X_points)),acq_vals,[self.group_name for i in range(acq_vals.shape[0])]))
 
 
     # Runs the objective function on the specified point.
     def run_objective(self,X_next:Configuration,fold = None):
 
-        assert self.batch_size == 1
         assert fold != None
         #Run objective
-
-        start_time = time.time()
         
         ## Make sure the vector is in config_space, in order to be run fast by the model
         config = self.vector_to_configspace( X_next )
@@ -432,30 +359,21 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         #Get the AUC - R2 etc.
         fX_next = res['function_value']
 
-        #Increase the number of evaluations
-        self.n_evals+=self.batch_size
-
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
         self.y[fold].append(fX_next)
 
+        self.n_evals+=1
 
         #This is a better interpretable form of storing the configurations.
         new_row = pd.DataFrame(config.get_dictionary().copy(),index=[0])
         self.X_df = self.X_df.append(new_row,ignore_index=True)
         
-        
-
-        end_time=time.time() - start_time
-        self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
-
         return fX_next
      
     # Checks if the current configuration is the incumberment.
     # Only in initial configurations
     def check_if_incumberment_initial_configs(self,config:Configuration,fX_next:float):
-
-        start_time = time.time()
 
         if fX_next < self.inc_score:
             self.inc_score = fX_next
@@ -465,24 +383,6 @@ class MultiFold_Per_Group_Bayesian_Optimization:
                 #print('Not Configuration')
                 self.inc_config = self.vector_to_configspace( config )
             print(f"{self.group_name} {self.n_evals}) New best: {self.inc_score:.4}")
-
-        end_time=time.time() - start_time
-
-        self.checks_time = np.concatenate((self.checks_time,np.array([end_time])))
-
-
-    # Computes the total_time cost for this optimization group.
-    def compute_total_time(self):
-
-        time_metrics = [
-            self.acquisition_time,
-            self.surrogate_time,
-            self.objective_time,
-            self.checks_time
-        ]
-
-        self.total_time = np.sum(time_metrics, axis=0)
-        #print(self.total_time)
 
 
     def run_old_configs_on_current_fold(self,fold):
@@ -517,16 +417,13 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
     # This runs a new configuration on all the previous folds. --> Return the average
     def run_objective_on_previous_folds(self,X_next,iter_fold):
-
+        
         ## Make sure the vector is in config_space, in order to be run fast by the model
         config = self.vector_to_configspace( X_next )
 
-        #print(config)
         #again this is the iterator fold, so its up-to. Fold 0 == Iterator Fold 1.
         per_fold_auc = [self.f(self.add_group_name_to_config(config),fold=f)['function_value'] for f in range(iter_fold+1)]
-        #print(iter_fold)
-        #print(per_fold_auc)
-        self.n_evals+=self.batch_size
+        
         #Add to X and fX vectors.
         self.X = np.vstack((self.X, deepcopy(X_next)))
 
@@ -534,17 +431,16 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         new_row = pd.DataFrame(config.get_dictionary().copy(),index=[0])
         self.X_df = self.X_df.append(new_row,ignore_index=True)
 
+        self.n_evals+=1
+
+
         # each list increase by 1 config for each fold.
         # Try with append.
         for f in range(iter_fold+1):
             self.y[f] = self.y[f] + [per_fold_auc[f]]
             
-            
-
-        #print(np.mean(per_fold_auc))
         self.fX = np.concatenate((self.fX,np.array([np.mean(per_fold_auc)])))
-        #print('Average over folds.')
-        #print(self.fX)
+        
         return np.mean(per_fold_auc)
 
         
