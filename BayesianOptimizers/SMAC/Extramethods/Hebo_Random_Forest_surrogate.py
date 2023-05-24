@@ -95,7 +95,7 @@ class  HEBO_RF(BaseModel):
         """
         if len(X.shape) != 2:
             raise ValueError("Expected 2d array, got %dd array!" % len(X.shape))
-    
+        
         mean = self.rf.predict(X).reshape(-1, 1)
         preds = []
         for estimator in self.rf.estimators_:
