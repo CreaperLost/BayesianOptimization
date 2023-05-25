@@ -171,10 +171,8 @@ class EvolutionOpt:
 
 
         
-        print(f'My suggestions should be 100 == {opt_x.shape}')
         #Configurations in float format.
         results = pd.DataFrame(opt_x).drop_duplicates()
-        print(f'My suggestions should be 100 == {results.shape}')
         # Just add some random in here.
         if results.shape[0] < self.pop:
             init_design_def_kwargs = {
@@ -191,7 +189,6 @@ class EvolutionOpt:
             r_configs = SobolDesign(**init_design_def_kwargs)._select_configurations()
             r_cfgs = [self.config_space_to_cont_vector(cfg) for cfg in r_configs]
             results = results.append(r_cfgs,ignore_index=True)
-        print(f'My suggestions should be 100 == {results.shape}')
         # the population is maintained in a list-of-vector form where each ConfigSpace
         # configuration is scaled to a unit hypercube, i.e., all dimensions scaled to [0,1]
         #y = self.objective_function(X_candidates,eta =eta)

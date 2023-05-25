@@ -611,7 +611,7 @@ seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','SMAC_Instance','Jad'] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','SMAC_Instance','Jad','PavlosV2'] # 'Multi_RF_Local',
 
 space_type = 'GROUP'
 
@@ -621,7 +621,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-"""for data_repo in ['Jad','OpenML']:
+for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
@@ -634,18 +634,24 @@ for opt in optimizers:
                         jad_score =  get_Jad_avg_score(dataset_name)
                         if jad_score != None: plt.axhline(y= 1-jad_score,label=opt)
                         continue
-                    
-                    metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
-                    metric.columns = ['Score']
-                    
+                    try:
+                        metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
+                        metric.columns = ['Score']
+                    except:
+                        continue
                     if time_bool_flag:
                         time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
                         if 'SMAC' not in opt:
                             time.columns = ['Time']
                         else:
                             time.columns = ['Time','Score']
+                        
+
                         plt.xlabel('Average time in seconds')
                         x,y = time_plot_for_opt(time,metric,opt)
+                        
+                        if opt == 'PavlosV2':
+                            y = [y[49],y[149],y[249],y[349],y[449],y[549]]
                     else:
                         plt.xlim([0,550])
                         plt.xlabel('Number of objective evals.')
@@ -657,7 +663,7 @@ for opt in optimizers:
             plt.ylabel('1-AUC score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
-            plt.clf()"""
+            plt.clf()
                     
 
 # Store the results per optimizer.
@@ -687,10 +693,11 @@ for data_repo in ['Jad','OpenML']:
                         y_per_opt_for_time[opt].append(1- jad_score)
                     continue
                         
-                    
-                metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
-                metric.columns = ['Score']
-                
+                try:
+                    metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
+                    metric.columns = ['Score']
+                except:
+                    continue
                 time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
                 if 'SMAC' not in opt:
                     time.columns = ['Time']
