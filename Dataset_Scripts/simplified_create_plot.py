@@ -611,7 +611,7 @@ seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','SMAC_Instance','Jad'] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','SMAC_Instance','Jad','PavlosV2'] # 'Multi_RF_Local',
 
 space_type = 'GROUP'
 
@@ -620,7 +620,7 @@ clr_pos = 0
 for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
-
+"""
 for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
@@ -635,21 +635,28 @@ for data_repo in ['Jad','OpenML']:
                         if jad_score != None: plt.axhline(y= 1-jad_score,label=opt)
                         continue
                     
-                    metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
-                    metric.columns = ['Score']
-                    
+                    try:
+                        metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
+                        metric.columns = ['Score']
+                    except:
+                        continue
                     if time_bool_flag:
                         time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
                         if 'SMAC' not in opt:
                             time.columns = ['Time']
                         else:
                             time.columns = ['Time','Score']
+
+                        
                         plt.xlabel('Average time in seconds')
                         x,y = time_plot_for_opt(time,metric,opt)
+                        if opt == 'PavlosV2':
+                            y = [y[49],y[149],y[249],y[349],y[449],y[449]] 
                     else:
                         plt.xlim([0,550])
                         plt.xlabel('Number of objective evals.')
                         x,y = config_plot_for_opt(metric,opt)
+
                     plt.plot(x,y,opt_colors[opt],label=opt)
 
             plt.grid(True, which='major')
@@ -659,7 +666,7 @@ for data_repo in ['Jad','OpenML']:
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
             plt.clf()
                     
-
+"""
 # Store the results per optimizer.
 y_per_opt_for_config = {}
 x_per_opt_for_config = {}
@@ -687,19 +694,22 @@ for data_repo in ['Jad','OpenML']:
                         y_per_opt_for_time[opt].append(1- jad_score)
                     continue
                         
-                    
-                metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
-                metric.columns = ['Score']
-                
+                try:
+                    metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
+                    metric.columns = ['Score']
+                except:
+                    continue
                 time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
                 if 'SMAC' not in opt:
                     time.columns = ['Time']
                 else:
                     time.columns = ['Time','Score']
                         
-                x,y = time_plot_for_opt(time,metric,opt)
-                x_time,y_time = config_plot_for_opt(metric,opt)
-
+                x_time,y_time = time_plot_for_opt(time,metric,opt)
+                x,y = config_plot_for_opt(metric,opt)
+                if opt == 'PavlosV2':
+                    y = np.array([y[49],y[149],y[249],y[349],y[449],y[449]])
+                    y_time = np.array(y)
                 y_per_opt_for_config[opt].append(y)
                 x_per_opt_for_config[opt].append(x)
                 y_per_opt_for_time[opt].append(y_time)
@@ -715,13 +725,16 @@ def get_confidence_interval(row):
     interval = stats.t.interval(confidence_level, len(row)-1, loc=mean, scale=std_error)
     return interval
 
-def compute_row_mean_and_std(dictionary_entry):
+def compute_row_mean_and_std(dictionary_entry,iter):
     # Create an empty DataFrame
     df = pd.DataFrame()
     # Iterate through the array_list and append each array as a column
     for i, arr in enumerate(dictionary_entry):
-        print(arr.shape)
-        df[f'Column {i+1}'] = arr.flatten()
+        my_array  = arr.flatten()
+        while len(my_array) < iter:
+            my_array = np.append(my_array, my_array[-1])
+        df[f'Column {i+1}'] = my_array
+
     # Compute the mean of each row
     row_means = df.mean(axis=1)
     # Apply the function across each row to calculate the confidence interval
@@ -731,29 +744,83 @@ def compute_row_mean_and_std(dictionary_entry):
     # Display the row means
     result = pd.concat([row_means, confidence_intervals], axis=1)
     result.columns = ['Mean','Low','Upper']
-    return result 
+    return result
 
 
 
-time_bool_flag = False
+"""time_bool_flag = False
 for opt in optimizers:
     print(f'Current Optimizer {opt}')
+    x=[i for i in range(0,550)]
     if opt =='Jad':
-       y = np.mean(y_per_opt_for_config[opt])
-       y_time = np.mean(y_per_opt_for_time[opt])
-       
-    elif opt == 'Random_Search' or opt == 'Multi_RF_Local':
-        result = compute_row_mean_and_std(y_per_opt_for_config[opt])
-        #PLOOOOT
-        plt.plot(x,result,opt_colors[opt],label=opt)
-        plt.errorbar(x=[i for i in range(0,550)], y=result['Mean'], yerr=[result['Low'],result['High']], fmt='o', capsize=4)
+        continue
+    result = compute_row_mean_and_std(y_per_opt_for_config[opt],550)
+    plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
 
+plt.ylim([0.05,0.1])
 plt.xlim([0,550])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
-plt.title('Effectiveness of BO methods for all dataset ' )
-plt.ylabel('Average `1-AUC')
+plt.title('Effectiveness of BO methods for all datasets')
+plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
-       
+plt.clf()"""
 
+
+
+
+
+def compute_mean_std_per_time(dictionary_entry):
+    # Create an empty DataFrame
+    df = pd.DataFrame()
+    # Iterate through the array_list and append each array as a column
+    for i, arr in enumerate(dictionary_entry):
+        df[f'Column {i+1}'] = arr.flatten()
+
+    # Compute the mean of each row
+    row_means = df.mean(axis=1)
+    # Apply the function across each row to calculate the confidence interval
+    confidence_intervals = df.apply(get_confidence_interval, axis=1, result_type='expand')
+    # Rename the columns
+    confidence_intervals.columns = ['CI Lower', 'CI Upper']
+    # Display the row means
+    result = pd.concat([row_means, confidence_intervals], axis=1)
+    result.columns = ['Mean','Low','Upper']
+    return result
+
+def compute_avg_time(dictionary_entry):
+    # Create an empty DataFrame
+    df = pd.DataFrame()
+
+    # Iterate through the array_list and append each array as a column
+    for i, arr in enumerate(dictionary_entry):
+        print(i,arr)
+        df[f'Column {i+1}'] = arr.flatten()
+    # Compute the mean of each row
+    row_means = list(df.mean(axis=1))
+    return row_means
+
+time_bool_flag = True
+for opt in optimizers:
+    print(f'Current Optimizer {opt}')
+
+    if opt == 'Random_Search' or opt == 'Multi_RF_Local' or opt== 'PavlosV2':
+        result = compute_mean_std_per_time(y_per_opt_for_time[opt])
+        x = compute_avg_time(x_per_opt_for_time[opt]) 
+    else:
+        continue
+    """elif opt == 'Pavlos' or opt == 'SMAC_Instance' or opt =='SMAC':
+        result = compute_row_mean_and_std(y_per_opt_for_time[opt],550)"""
+    
+    plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
+    #plt.fill_between(x, result['Low'], result['Upper'],color=opt_colors[opt], alpha=0.1)
+    #print(result)
+plt.ylim([0.05,0.1])
+plt.xlabel('Time')
+plt.grid(True, which='major')
+plt.title('Effectiveness of BO methods for all datasets ' )
+plt.ylabel('Average 1-AUC')
+plt.legend()
+save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
+plt.clf()
