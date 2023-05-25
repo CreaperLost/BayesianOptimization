@@ -621,7 +621,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-"""for data_repo in ['Jad','OpenML']:
+for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
@@ -657,7 +657,7 @@ for opt in optimizers:
             plt.ylabel('1-AUC score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
-            plt.clf()"""
+            plt.clf()
                     
 
 # Store the results per optimizer.
@@ -746,6 +746,8 @@ for opt in optimizers:
         result = compute_row_mean_and_std(y_per_opt_for_config[opt])
         #PLOOOOT
         plt.plot(x,result,opt_colors[opt],label=opt)
+        plt.errorbar(x=[i for i in range(0,550)], y=result['Mean'], yerr=[result['Low'],result['High']], fmt='o', capsize=4)
+
 plt.xlim([0,550])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
