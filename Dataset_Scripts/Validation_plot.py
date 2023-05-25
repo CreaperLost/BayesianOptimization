@@ -113,6 +113,8 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
+metric_per_data = []
+metric_test_per_data =  []
 for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
@@ -120,7 +122,6 @@ for data_repo in ['Jad','OpenML']:
     for time_bool_flag in [False]: #'True'
         for dataset in os.listdir(path_str):
             dataset_name = get_dataset_name_byrepo(dataset,data_repo)
-            print(dataset,dataset_name)
             for seed in seeds:
                 for opt in optimizers:
                     
@@ -130,16 +131,36 @@ for data_repo in ['Jad','OpenML']:
                     test_metric=pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Metric_Test',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])
                     metric.columns = ['Score']
 
-                    plt.xlim([0,550])
-                    plt.xlabel('Number of objective evals.')
+                    
+                    
                     x,y = config_plot_for_opt(metric,opt)
                     x,y_test = config_plot_for_opt(test_metric,opt)
+                    
+                    metric_per_data.append(y.flatten())
+                    metric_test_per_data.append(y_test.flatten())
                     plt.plot(x,y_test,color = 'red',label='Testing')
                     plt.plot(x,y,color='green',label='Training')
-
+            plt.xlim([0,550])
+            plt.xlabel('Number of objective evals.')
             plt.grid(True, which='major')
             plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
             plt.ylabel('1-AUC score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Validation')
             plt.clf()
+
+
+
+avg_train = list(pd.DataFrame(metric_per_data).transpose().mean(axis=1))
+avg_test = list(pd.DataFrame(metric_test_per_data).transpose().mean(axis=1))
+x =  [i for i in range(len(avg_train))]
+plt.plot(x,avg_train,color = 'green',label = 'Train')
+plt.plot(x,avg_test,color = 'red',label = 'Test')
+plt.xlim([0,550])
+plt.xlabel('Number of objective evals.')
+plt.grid(True, which='major')
+plt.title('Effectiveness of BO methods for dataset')
+plt.ylabel('Average (1-AUC) score')
+plt.legend()
+save_figure('Overall',dataset_name,time_bool_flag,'Validation')
+plt.clf()
