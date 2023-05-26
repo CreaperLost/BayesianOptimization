@@ -1,8 +1,0 @@
-did,name,NumberOfInstances,NumberOfFeatures,NumberOfClasses
-3,kr-vs-kp,3196.0,37.0,2.0
-6,letter,20000.0,17.0,26.0
-11,balance-scale,625.0,5.0,3.0
-12,mfeat-factors,2000.0,217.0,10.0
-14,mfeat-fourier,2000.0,77.0,10.0
-15,breast-w,699.0,10.0,2.0
-
