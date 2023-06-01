@@ -14,13 +14,15 @@ from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
 """
-from BayesianOptimizers.Conditional_BayesianOptimization.random_smac import Random_SMAC"""
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_instance_hpo import SMAC_Instance_HPO
+from BayesianOptimizers.Conditional_BayesianOptimization.random_smac import Random_SMAC
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
+"""
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 from BayesianOptimizers.Experimental.PavlosV2 import PavlosV2
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
-from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
-from BayesianOptimizers.Conditional_BayesianOptimization.smac_instance_hpo import SMAC_Instance_HPO
+from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac import Progressive_BO
 
 from csv import writer
 import time 
@@ -91,17 +93,19 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'PavlosV2':
                     Optimization = PavlosV2(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                elif opt == 'SMAC':
-                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                             repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)   
-                elif opt == 'SMAC_Instance':
-                    Optimization= SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                             repo=repo,max_evals=2*max_evals,seed=seed,objective_function=smac_objective_function_per_fold)
+                elif opt == 'Progressive_BO':
+                    Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 else: 
                     print(opt)
                     raise RuntimeError
                 """            
-                 
+                elif opt == 'SMAC':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)   
+                elif opt == 'SMAC_Instance':
+                    Optimization= SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=repo,max_evals=2*max_evals,seed=seed,objective_function=smac_objective_function_per_fold)
                 """
                 
                 
@@ -113,10 +117,6 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 print('Measured Total Time ',m_time)
                 
                 
-                
-                print('Total Time',Optimization.total_time)
-                print(Optimization.inc_score,Optimization.inc_config)
-                                
                 #Change this.
                 y_evaluations = Optimization.fX
                 total_time_evaluations = Optimization.total_time
@@ -139,7 +139,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local':
+                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -170,28 +170,29 @@ def get_openml_data(speed = None):
     assert speed !=None
     if speed == 'fast':
         return [14954,11,3918,3917,3021,43,167141,9952]
-    return [2074,9976,9910,167125]
-#Smac Incomplete.
-#843, 3917, 3918, 9952
+    return [2074,9976] #,9910,167125
+
 def get_jad_data(speed = None):        
     assert speed !=None
     if speed == 'fast':
         return [839,842,851,850,1114,847]
     #  on all seeds 
-    return [843,883,866]
+    return [] #843,883,866
 
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     
-    opt_list = ['SMAC_Instance'] # ,,'Random_Search','RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search','Multi_RF_Local', 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local'
+    #9976 datasets hasn't run for SMAC.
+
+    opt_list = ['Progressive_BO'] # ,,,'RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search',, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
     for speed in ['fast','slow']:
      # obtain the benchmark suite    
         for repo in ['OpenML','Jad']: #'
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 1050,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], 
