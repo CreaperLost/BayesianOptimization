@@ -114,7 +114,7 @@ seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','SMAC_Instance','Jad','PavlosV2'] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','Jad','Progressive_BO'] # 'Multi_RF_Local',
 
 space_type = 'GROUP'
 
@@ -124,7 +124,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-"""for data_repo in ['Jad','OpenML']:
+for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
@@ -156,7 +156,7 @@ for opt in optimizers:
                         if opt == 'PavlosV2':
                             y = [y[49],y[149],y[249],y[349],y[449],y[449]] 
                     else:
-                        plt.xlim([0,550])
+                        plt.xlim([0,1050])
                         plt.xlabel('Number of objective evals.')
                         x,y = config_plot_for_opt(metric,opt)
 
@@ -168,7 +168,7 @@ for opt in optimizers:
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
             plt.clf()
-  """                  
+                  
 
 # Store the results per optimizer.
 y_per_opt_for_config = {}
@@ -259,31 +259,31 @@ def compute_row_mean_and_std(dictionary_entry,iter):
 
 
 
-"""time_bool_flag = False
+time_bool_flag = False
 for opt in optimizers:
     print(f'Current Optimizer {opt}')
-    x=[i for i in range(0,550)]
+    x=[i for i in range(0,1050)]
     if opt =='Jad':
         continue
     if opt == 'PavlosV2':
         df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],6)
         plt.plot([49,149,249,349,449,549],result['Mean'],opt_colors[opt],label=opt)
     else:
-        df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],550)
+        df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
         plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
     if opt == 'SMAC' or opt =='Random_Search':
         df.columns = dataset_list
         df.to_csv('Avg_performance' +opt+'.csv')
 
 plt.ylim([0.07,0.1])
-plt.xlim([0,550])
+plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets')
 plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
-plt.clf()"""
+plt.clf()
 
 
 

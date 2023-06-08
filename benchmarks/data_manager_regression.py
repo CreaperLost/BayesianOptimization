@@ -10,7 +10,7 @@ from sklearn.utils import check_random_state
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split,StratifiedKFold
+from sklearn.model_selection import train_test_split,KFold
 from oslo_concurrency import lockutils
 from sklearn.preprocessing import LabelEncoder
 
@@ -18,7 +18,7 @@ from hpobench.util.data_manager import DataManager
 from hpobench import config_file
 
 
-class OpenMLDataManager(DataManager):
+class OpenMLDataManager_Regression(DataManager):
 
     def __init__(self, task_id: int,
                  data_path: Union[str, Path, None] = None,
@@ -41,7 +41,6 @@ class OpenMLDataManager(DataManager):
         self.dataset = None
         self.preprocessor = None
         self.lower_bound_train_size = None
-        self.n_classes = None
         self.n_folds = n_folds
         self.use_holdout = use_holdout
 
@@ -54,7 +53,7 @@ class OpenMLDataManager(DataManager):
         #self.data_path = Path(data_path)
         openml.config.set_cache_directory(str(self.data_path))
 
-        super(OpenMLDataManager, self).__init__()
+        super(OpenMLDataManager_Regression, self).__init__()
 
     # pylint: disable=arguments-differ
     @lockutils.synchronized('not_thread_process_safe', external=True,
@@ -67,8 +66,6 @@ class OpenMLDataManager(DataManager):
         # fetches task
         self.task = openml.tasks.get_task(self.task_id, download_data=False)
         
-        self.n_classes = len(self.task.class_labels)
-
         # fetches dataset
         self.dataset = openml.datasets.get_dataset(self.task.dataset_id, download_data=False)
         if verbose:
@@ -118,6 +115,10 @@ class OpenMLDataManager(DataManager):
         # loads full data
         X, y, categorical_ind, feature_names = self.dataset.get_data(target=self.task.target_name,
                                                                      dataset_format="dataframe")
+        
+
+        print(pd.DataFrame(X),categorical_ind)
+        
         #Label encode y.
         labelencoder = LabelEncoder()
         y = pd.Series(labelencoder.fit_transform(y))
@@ -145,7 +146,7 @@ class OpenMLDataManager(DataManager):
         # validation set is fixed as per the global seed independent of the benchmark seed
 
         #Instead of this please do cross-validation
-        skf = StratifiedKFold(n_splits=self.n_folds,shuffle=True,random_state=self.global_seed)
+        skf = KFold(n_splits=self.n_folds,shuffle=True,random_state=self.global_seed)
         for train_index, val_index in skf.split(train_x, train_y):
             X_train = train_x.iloc[train_index]
             y_train = train_y.iloc[train_index]

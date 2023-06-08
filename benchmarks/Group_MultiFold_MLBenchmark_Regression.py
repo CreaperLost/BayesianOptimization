@@ -5,7 +5,7 @@ from typing import Union, Dict
 import ConfigSpace as CS
 import numpy as np
 import pandas as pd
-from sklearn.metrics import make_scorer,roc_auc_score
+from sklearn.metrics import make_scorer,r2_score
 
 from typing import Union, Dict
 
@@ -14,32 +14,19 @@ import numpy as np
 
 from ConfigSpace.util import deactivate_inactive_hyperparameters
 
-from benchmarks.data_manager import OpenMLDataManager
+from benchmarks.data_manager_regression import OpenMLDataManager_Regression
 from benchmarks.Jad_data_manager import JadDataManager
 
 
-"""acc=accuracy_score,
-    bal_acc=balanced_accuracy_score,
-    f1=f1_score,
-    precision=precision_score,roc_auc_score""" 
-    
-    
-    
 metrics = dict(
-    auc = roc_auc_score #accuracy_score
+    r2 = r2_score #accuracy_score
 )
-"""
-acc=dict(),
-    bal_acc=dict(),
-    f1=dict(average="macro", zero_division=0),
-    precision=dict(average="macro", zero_division=0),
 
-"""
 
 
 
 metrics_kwargs = dict(
-    auc =dict(multi_class="ovr",needs_proba=True) #dict() #
+    r2 = dict(force_finite=True) #dict() #
 )
 
 def get_rng(rng: Union[int, np.random.RandomState, None] = None,
@@ -90,7 +77,7 @@ def _cast_int_to_random_state(rng: Union[int, np.random.RandomState]) -> np.rand
     raise ValueError(f"{rng} is neither a number nor a RandomState. Initializing RandomState failed")
 
 
-class Group_MultiFold_MLBenchmark():
+class Group_MultiFold_MLBenchmark_Regression():
     _issue_tasks = [3917, 3945]
 
     def __init__(
@@ -119,21 +106,22 @@ class Group_MultiFold_MLBenchmark():
 
         if data_path is None:
             if data_repo =='Jad':
-                data_path = 'Multi_Fold_Datasets/Jad'
+                data_path = 'Regression_Multi_Fold_Datasets/Jad'
             else:
             #from hpobench import config_file
             #data_path = config_file.data_dir / "OpenML"
-                data_path = 'Multi_Fold_Datasets/OpenML'
+                data_path = 'Regression_Multi_Fold_Datasets/OpenML'
 
         self.data_path = data_path
 
 
         #Load ola ta folds.
         if data_repo == 'Jad':
+            RuntimeError
             dm = JadDataManager(task_id,data_path,self.global_seed,n_folds = 5, use_holdout = use_holdout)
             dm.load()
         else:
-            dm = OpenMLDataManager(task_id, data_path, self.global_seed,n_folds = 5, use_holdout = use_holdout)
+            dm = OpenMLDataManager_Regression(task_id, data_path, self.global_seed,n_folds = 5, use_holdout = use_holdout)
             dm.load()
 
         # Data variables
@@ -149,7 +137,6 @@ class Group_MultiFold_MLBenchmark():
         self.dataset = dm.dataset
         self.preprocessor = dm.preprocessor
         self.lower_bound_train_size = dm.lower_bound_train_size
-        self.n_classes = dm.n_classes
 
         # Observation and fidelity spaces
         self.configuration_space, _ = self.get_configuration_space(self.seed)
@@ -250,7 +237,7 @@ class Group_MultiFold_MLBenchmark():
                 #Select model in first position.
                 scores[k] = v(model[0], train_X[train_idx], train_y.iloc[train_idx])
                 score_cost[k] = time.time() - _start
-            train_loss = 1 - scores["auc"]
+            train_loss = 1 - scores["r2"]
         else:
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[0].shape[1])
@@ -273,7 +260,7 @@ class Group_MultiFold_MLBenchmark():
                 _start = time.time()
                 scores[k] = v(model, train_X[train_idx], train_y.iloc[train_idx])
                 score_cost[k] = time.time() - _start
-            train_loss = 1 - scores["auc"]
+            train_loss = 1 - scores["r2"]
 
         return model, model_fit_time, train_loss, scores, score_cost
 
@@ -295,6 +282,7 @@ class Group_MultiFold_MLBenchmark():
 
         if evaluation == "val":
             model_fit_time = 0
+            #print('FOLD IS LIKE THAT.',int(fold))
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[fold].shape[1])
             # preparing data -- Select the fold
@@ -328,7 +316,7 @@ class Group_MultiFold_MLBenchmark():
                 #Select model in first position.
                 scores[k] = 0#v(model, train_X[train_idx], train_y.iloc[train_idx])
                 score_cost[k] = time.time() - _start
-            train_loss = 1 - scores["auc"]
+            train_loss = 1 - scores["r2"]
         else:
             # initializing model
             model = self.init_model(config, fidelity, rng, n_feat = self.train_X[0].shape[1])
@@ -351,7 +339,7 @@ class Group_MultiFold_MLBenchmark():
                 _start = time.time()
                 scores[k] = v(model, train_X[train_idx], train_y.iloc[train_idx])
                 score_cost[k] = time.time() - _start
-            train_loss = 1 - scores["auc"]
+            train_loss = 1 - scores["r2"]
 
         return model, model_fit_time, train_loss, scores, score_cost
 
@@ -416,13 +404,12 @@ class Group_MultiFold_MLBenchmark():
             #Last model  is for the test set only!
             val_scores[k] = 0.0
             for model_fold in range(len(model)-1):
-                val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
+                val_scores[k] += np.clip(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]) , 0 , 1  ) 
             #Average validation score.
                 #print(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]))
             val_scores[k] /= (len(model)-1)
             val_score_cost[k] = time.time() - _start
-        #print(val_scores['auc'])
-        val_loss = 1 - val_scores["auc"]
+        val_loss = 1 - val_scores["r2"]
 
 
         
@@ -435,7 +422,7 @@ class Group_MultiFold_MLBenchmark():
             #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
             test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
             test_score_cost[k] = time.time() - _start
-        test_loss = 1 - test_scores["auc"]
+        test_loss = 1 - test_scores["r2"]
 
         info = {
             'train_loss': train_loss,
@@ -455,7 +442,7 @@ class Group_MultiFold_MLBenchmark():
 
         return {
             'function_value': info['val_loss'],
-            'cost': model_fit_time + info['val_costs']['auc'],
+            'cost': model_fit_time + info['val_costs']['r2'],
             'info': info
         }
 
@@ -485,11 +472,11 @@ class Group_MultiFold_MLBenchmark():
         for k, v in self.scorers.items():
             _start = time.time()
             #Get the score of a model on the specific set.
-            val_scores[k] = v(model, self.valid_X[fold], self.valid_y[fold])
+            val_scores[k] = np.clip(v(model, self.valid_X[fold], self.valid_y[fold]) , 0 , 1 )
             #Average validation score. We only got 1 model.
             #val_scores[k] /= len(model)
             val_score_cost[k] = time.time() - _start
-        val_loss = 1 - val_scores["auc"]
+        val_loss = 1 - val_scores["r2"]
 
 
         
@@ -502,7 +489,7 @@ class Group_MultiFold_MLBenchmark():
             #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
             test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
             test_score_cost[k] = time.time() - _start
-        test_loss = 1 - test_scores["auc"]
+        test_loss = 1 - test_scores["r2"]
 
         info = {
             'train_loss': train_loss,
@@ -522,7 +509,7 @@ class Group_MultiFold_MLBenchmark():
 
         return {
             'function_value': info['val_loss'],
-            'cost': model_fit_time + info['val_costs']['auc'],
+            'cost': model_fit_time + info['val_costs']['r2'],
             'info': info
         }
 
@@ -551,13 +538,12 @@ class Group_MultiFold_MLBenchmark():
             #Last model  is for the test set only!
             val_scores[k] = 0.0
             for model_fold in range(len(model)-1):
-                val_scores[k] += v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold])
+                val_scores[k] += np.clip(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]),0,1)
             #Average validation score.
                 #print(v(model[model_fold], self.valid_X[model_fold], self.valid_y[model_fold]))
             val_scores[k] /= (len(model)-1)
             val_score_cost[k] = time.time() - _start
-        #print(val_scores['auc'])
-        val_loss = 1 - val_scores["auc"]
+        val_loss = 1 - val_scores["r2"]
 
 
         
@@ -570,7 +556,7 @@ class Group_MultiFold_MLBenchmark():
             #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
             test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
             test_score_cost[k] = time.time() - _start
-        test_loss = 1 - test_scores["auc"]
+        test_loss = 1 - test_scores["r2"]
 
         info = {
             'train_loss': train_loss,
@@ -614,11 +600,11 @@ class Group_MultiFold_MLBenchmark():
         for k, v in self.scorers.items():
             _start = time.time()
             #Get the score of a model on the specific set.
-            val_scores[k] = v(model, self.valid_X[fold], self.valid_y[fold])
+            val_scores[k] = np.clip(v(model, self.valid_X[fold], self.valid_y[fold]),0,1)
             #Average validation score. We only got 1 model.
             #val_scores[k] /= len(model)
             val_score_cost[k] = time.time() - _start
-        val_loss = 1 - val_scores["auc"]
+        val_loss = 1 - val_scores["r2"]
 
 
         
@@ -631,7 +617,7 @@ class Group_MultiFold_MLBenchmark():
             #Last model is on all the dataset and is last on the list of models. Apply it to the test-set.
             test_scores[k] = 0 #v(model[-1], self.test_X, self.test_y)
             test_score_cost[k] = time.time() - _start
-        test_loss = 1 - test_scores["auc"]
+        test_loss = 1 - test_scores["r2"]
 
         info = {
             'train_loss': train_loss,
@@ -675,9 +661,9 @@ class Group_MultiFold_MLBenchmark():
         test_score_cost = dict()
         for k, v in self.scorers.items():
             _start = time.time()
-            test_scores[k] = v(model, self.test_X, self.test_y)
+            test_scores[k] = np.clip(v(model, self.test_X, self.test_y),0,1)
             test_score_cost[k] = time.time() - _start
-        test_loss = 1 - test_scores["auc"]
+        test_loss = 1 - test_scores["r2"]
 
         info = {
             'train_loss': train_loss,
@@ -697,6 +683,6 @@ class Group_MultiFold_MLBenchmark():
 
         return {
             'function_value': float(info['test_loss']),
-            'cost': float(model_fit_time + info['test_costs']['auc']),
+            'cost': float(model_fit_time + info['test_costs']['r2']),
             'info': info
         }

@@ -10,12 +10,13 @@ Single_Space_Results/
 Multi_Fold_Datasets.rar
 Main_Multi_Fold_Group_Space_Results/
 acquisition_functions/__pycache__/
-
+Regression_Multi_Fold_Datasets/
 single_smac/
-
+Main_Multi_Fold_Group_Space_Results_Rregression/
 per_instance_smac/
 Backup-Early/
 single_smac2/
 Multifold-Backup/
 Holdout_Multi_Fold_Datasets/
 Holdout_Experiments/
+pass.csv

@@ -9,19 +9,19 @@ warnings.filterwarnings("ignore")
 import os
 import sys
 sys.path.insert(0, '..')
-from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space
+from benchmarks.Group_MulltiFoldBenchmark_Regression import Group_MultiFold_Space_Regression
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
 """
-from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
+
 """
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 from BayesianOptimizers.Experimental.PavlosV2 import PavlosV2
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
 from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac import Progressive_BO
-
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
 
 from csv import writer
 import time 
@@ -95,15 +95,17 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'Progressive_BO':
                     Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                   
+                elif opt == 'SMAC':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)  
                 else: 
                     print(opt)
                     raise RuntimeError
                 """            
-               
-                elif opt == 'SMAC':
-                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)
+                 
+                elif opt == 'SMAC_Instance':
+                    Optimization= SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                             repo=repo,max_evals=2*max_evals,seed=seed,objective_function=smac_objective_function_per_fold)
                 """
                 
                 
@@ -166,16 +168,30 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     # 2074 needs 15 hours for 3 seeds per optimizer.
     assert speed !=None
+
+
+    """
+    Problematic:
+    1. 361618 : This dataset has no categorical indexes but has categorical attributes!
+    
+    
+    """
+
+
     if speed == 'fast':
-        return [14954,11,3918,3917,3021,43,167141,9952]
-    return [9976] #,9910,167125, 2074,
+        l = [359949, 359936, 359946, 359938, 359939, 359940, 359942, 359935, 360933, 
+         360932, 233214, 359948, 233215, 359944, 359933, 359930, 359945, 359951, 
+         167210, 359932, 360945, 359931, 359950, 359934]
+        l.reverse()
+        return l
+    
+    return [361619,361617,361259,361258,361256,361249]
 
 def get_jad_data(speed = None):        
     assert speed !=None
     if speed == 'fast':
-        return [839,842,851,850,1114,847]
-    #  on all seeds 
-    return [843,883] #843,883,866
+        return []
+    return [] 
 
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
@@ -183,10 +199,10 @@ if __name__ == '__main__':
     
     #9976 datasets hasn't run for SMAC.
 
-    opt_list = ['SMAC'] # ,,,'RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search',, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
-    for speed in ['slow']: 
+    opt_list = ['SMAC','Pavlos','Random_Search','Multi_RF_Local','Progressive_BO'] # ,,,'RF_Local',] 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
+    for speed in ['fast']: 
      # obtain the benchmark suite    
-        for repo in ['OpenML','Jad']: #'
+        for repo in ['OpenML']: #'
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
@@ -194,9 +210,9 @@ if __name__ == '__main__':
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], 
-                'type_of_bench': 'Main_Multi_Fold_Group_Space_Results',
+                'type_of_bench': 'Main_Multi_Fold_Group_Space_Results_Rregression',
                 'bench_name' :'GROUP',
-                'bench_class' : Group_MultiFold_Space,
+                'bench_class' : Group_MultiFold_Space_Regression,
                 'data_repo' : repo
             }
             run_benchmark_total(opt_list,xgb_bench_config)
