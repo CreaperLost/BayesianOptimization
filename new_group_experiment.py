@@ -21,7 +21,7 @@ from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 from BayesianOptimizers.Experimental.PavlosV2 import PavlosV2
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
 from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac import Progressive_BO
-
+from BayesianOptimizers.Conditional_BayesianOptimization.Switch_Surrogate_BO import Switch_BO
 
 from csv import writer
 import time 
@@ -95,7 +95,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'Progressive_BO':
                     Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                   
+                elif opt == 'Switch_BO':
+                    Optimization = Switch_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -137,7 +139,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO':
+                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO' or opt =='Switch_BO':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -175,7 +177,7 @@ def get_jad_data(speed = None):
     if speed == 'fast':
         return [839,842,851,850,1114,847]
     #  on all seeds 
-    return [843,883] #843,883,866
+    return [] #843,883,866
 
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
@@ -183,8 +185,8 @@ if __name__ == '__main__':
     
     #9976 datasets hasn't run for SMAC.
 
-    opt_list = ['SMAC'] # ,,,'RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search',, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
-    for speed in ['slow']: 
+    opt_list = ['Switch_BO'] # ,,,'RF_Local',] 'SMAC' 'SMAC_Instance' ,'SMAC' ,'Random_Search',, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
+    for speed in ['fast','slow']: 
      # obtain the benchmark suite    
         for repo in ['OpenML','Jad']: #'
             #XGBoost Benchmark    
