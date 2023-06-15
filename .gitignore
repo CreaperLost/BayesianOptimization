@@ -20,3 +20,6 @@ Multifold-Backup/
 Holdout_Multi_Fold_Datasets/
 Holdout_Experiments/
 pass.csv
+Regression_Figures/
+.DS_Store
+.DS_Store
