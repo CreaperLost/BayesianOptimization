@@ -63,9 +63,9 @@ def save_figure(data_repo, dataset, time_plot_bool, clf_name):
     main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
     
     if data_repo == 'OverAllDatasets':
-        path_to_figure = os.path.join(main_directory,'Figures','OverAllDatasets')
+        path_to_figure = os.path.join(main_directory,'Regression_Figures','OverAllDatasets')
     else:
-        path_to_figure = os.path.join(main_directory,'Figures',data_repo,dataset)
+        path_to_figure = os.path.join(main_directory,'Regression_Figures',data_repo,dataset)
 
 
     if time_plot_bool == True:
@@ -109,12 +109,12 @@ def get_Jad_avg_score(dataset_name):
         return None
     return Res_File.loc[dataset_name].values[0]
 
-colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
+colors = ['red','blue','green','black','orange','grey','cyan','yellow']
 seeds = [1]
 #How many initial configurations we have run.
 interval = 50
-result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','Jad','Progressive_BO'] # 'Multi_RF_Local',
+result_space = 'Main_Multi_Fold_Group_Space_Results_Rregression'
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','Progressive_BO'] # 'Multi_RF_Local',
 
 space_type = 'GROUP'
 
@@ -184,7 +184,7 @@ for opt in optimizers:
 
 dataset_list = []
 
-for data_repo in ['Jad','OpenML']:
+for data_repo in ['OpenML']:
     # If the repository doesn't exist then move on.
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False: continue
@@ -277,12 +277,12 @@ for opt in optimizers:
         df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],6)
         plt.plot([49,149,249,349,449,549],result['Mean'],opt_colors[opt],label=opt)"""
 
-plt.ylim([0.065,0.1])
+plt.ylim([0.28,0.34])
 plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets')
-plt.ylabel('Average 1-AUC')
+plt.ylabel('Average 1-R2')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
@@ -369,11 +369,11 @@ for opt in optimizers:
     
     #plt.fill_between(x, result['Low'], result['Upper'],color=opt_colors[opt], alpha=0.1)
     #print(result)
-plt.ylim([0.065,0.1])
+plt.ylim([0.28,0.34])
 plt.xlabel('Time')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets ' )
-plt.ylabel('Average 1-AUC')
+plt.ylabel('Average 1-R2')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
