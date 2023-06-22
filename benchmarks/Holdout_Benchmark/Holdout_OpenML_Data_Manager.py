@@ -126,7 +126,7 @@ class Holdout_OpenMLDataManager(DataManager):
         (cont_idx,) = np.where(~categorical_ind)
 
         # Hold out 20%
-        train_x, test_x, train_y, test_y = train_test_split(X, y,stratify=y,test_size=0.2)
+        train_x, test_x, train_y, test_y = train_test_split(X, y,stratify=y,test_size=0.5)
 
         #Save the hold-out data.
         self.test_X = test_x
