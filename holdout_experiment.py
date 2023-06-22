@@ -14,8 +14,10 @@ from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
 from BayesianOptimizers.Holdout_BO.Holdout_group_smac import Holdout_group_BO
+from BayesianOptimizers.Holdout_BO.Holdout_Progressive_group_smac import Holdout_Progressive_BO
 from csv import writer
 import time 
+
 
 
 def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
@@ -69,7 +71,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 if opt == 'Multi_RF_Local':
                     Optimization = Holdout_group_BO(f=objective_function_per_fold,f_test=objective_function_test, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-               
+                elif opt =='Progressive_BO':
+                    Optimization = Holdout_Progressive_BO(f=objective_function_per_fold,f_test=objective_function_test, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -105,7 +109,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     pd.DataFrame(y_eval_test).to_csv( parse_directory([ test_score_per_optimizer_directory, opt+csv_postfix ]))
                     pd.DataFrame(total_time_evaluations).to_csv( parse_directory([ total_time_per_optimizer_directory, opt+csv_postfix ]))
 
-                    if opt == 'Multi_RF_Local':
+                    if opt == 'Multi_RF_Local' or opt == 'Progressive_BO':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -121,10 +125,8 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     # 2074 needs 15 hours for 3 seeds per optimizer.
     assert speed !=None
-    if speed == 'fast':
-        return [11,3918,3917,3021,43,167141,9952,] #14954
-    return [2074,9976,9910,167125,]
-    
+    return [3918,43,167141,9952,9910,9976,3917,3021,2074] #167125
+    #11,
 
 def get_jad_data(speed = None):        
     assert speed !=None
@@ -137,14 +139,14 @@ if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
     
-    opt_list = ['Multi_RF_Local'] # ,,'Random_Search','RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search','Multi_RF_Local', 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local'
-    for speed in ['slow',]: #'fast',
+    opt_list = ['Progressive_BO'] # ,,'Random_Search','RF_Local',] 'SMAC_Instance' ,'SMAC' ,'Random_Search','Multi_RF_Local', 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local'
+    for speed in ['slow']: #'fast',
      # obtain the benchmark suite    
-        for repo in ['Jad','OpenML',]:
+        for repo in ['OpenML']:
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 550,
+                'max_evals' : 1050,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], 

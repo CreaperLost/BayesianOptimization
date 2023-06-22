@@ -246,7 +246,6 @@ class  HoldOut_Group_MultiFold_MLBenchmark():
 
             #Here we got 1 train set. (Train + Validation from Fold 0.)
             start = time.time()
-            print(f'Fit model on {train_X.shape}')
             model.fit(train_X[train_idx], train_y.iloc[train_idx])
             model_fit_time = time.time() - start
 
@@ -391,7 +390,6 @@ class  HoldOut_Group_MultiFold_MLBenchmark():
         test_score_cost = dict()
         for k, v in self.scorers.items():
             _start = time.time()
-            print(f'Predict model on {self.test_X.shape}')
             test_scores[k] = v(model, self.test_X, self.test_y)
             test_score_cost[k] = time.time() - _start
         test_loss = 1 - test_scores["auc"]
