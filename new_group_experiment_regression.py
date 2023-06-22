@@ -21,8 +21,9 @@ from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 from BayesianOptimizers.Experimental.PavlosV2 import PavlosV2
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
 from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac import Progressive_BO
-from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
-
+#from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
+#from BayesianOptimizers.Conditional_BayesianOptimization.Switch_Surrogate_BO import Switch_BO
+from BayesianOptimizers.Conditional_BayesianOptimization.greedy_smac_group import Greedy_SMAC
 from csv import writer
 import time 
 
@@ -95,9 +96,11 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'Progressive_BO':
                     Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                elif opt == 'SMAC':
-                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)  
+                
+                
+                elif opt == 'Greedy_SM':
+                    Optimization = Greedy_SMAC(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 else: 
                     print(opt)
                     raise RuntimeError
@@ -106,9 +109,15 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'SMAC_Instance':
                     Optimization= SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
                              repo=repo,max_evals=2*max_evals,seed=seed,objective_function=smac_objective_function_per_fold)
+
+                elif opt == 'Switch_BO':
+                    Optimization = Switch_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 """
                 
-                
+                """elif opt == 'SMAC':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)  """
                 
                 
                 start_time = time.time()
@@ -139,7 +148,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO':
+                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO' or opt =='Switch_BO' or opt =='GreedySM':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -186,10 +195,15 @@ def get_openml_data(speed = None):
         """l = [359949,359936,359946,359938,359939,359940,\
              359942,359935,360933,360932,233214,,\
              ]"""
-        l.reverse()
+        """l.reverse()"""
+        l = [361234,361256,359951
+                ,361258,233215,360945
+                ,359930,359948,359931
+                ,359932,359933,361619
+                ,359934,359945,361249]
         return l
     #These are from new benchmark
-    return [361619,361617,361259,361258,361256,361249]
+    return #[361619,361617,361259,361258,361256,361249]
 
 def get_jad_data(speed = None):        
     assert speed !=None
@@ -200,10 +214,10 @@ def get_jad_data(speed = None):
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
                         'OpenML': {'data_ids':get_openml_data}      }
-    
+     
     #9976 datasets hasn't run for SMAC.
-
-    opt_list = ['SMAC','Pavlos','Random_Search','Multi_RF_Local','Progressive_BO'] # ,,,'RF_Local',] 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
+    # 'SMAC','Pavlos','Random_Search','Multi_RF_Local','Progressive_BO'
+    opt_list = ['Greedy_SM'] # ,,,'RF_Local',] 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
     for speed in ['fast']: 
      # obtain the benchmark suite    
         for repo in ['OpenML']: #'

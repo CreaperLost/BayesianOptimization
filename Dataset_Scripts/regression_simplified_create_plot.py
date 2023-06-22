@@ -114,9 +114,9 @@ seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Main_Multi_Fold_Group_Space_Results_Rregression'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Pavlos','Progressive_BO'] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Progressive_BO','Greedy_SM'] # 'Multi_RF_Local',
 
-space_type = 'GROUP'
+space_type = 'GROUP_Cleared'
 
 opt_colors = dict()
 clr_pos = 0
@@ -132,6 +132,8 @@ for data_repo in ['Jad','OpenML']:
         for dataset in os.listdir(path_str):
             dataset_name = get_dataset_name_byrepo(dataset,data_repo)
             for seed in seeds:
+                min_y = 1
+                max_y = 0
                 for opt in optimizers:
                     if opt == 'Jad':
                         jad_score =  get_Jad_avg_score(dataset_name)
@@ -159,12 +161,18 @@ for data_repo in ['Jad','OpenML']:
                         plt.xlim([0,1050])
                         plt.xlabel('Number of objective evals.')
                         x,y = config_plot_for_opt(metric,opt)
-
-                    plt.plot(x,y,opt_colors[opt],label=opt)
-
+                    if opt == 'Greedy_SM':
+                        plt.plot([i for i in range(800,1050)],y,opt_colors[opt],label=opt)
+                    else:
+                        plt.plot(x,y,opt_colors[opt],label=opt)
+                    if min_y > np.min(y):
+                        min_y= np.min(y)
+                    if max_y < np.max(y):
+                        max_y = np.max(y)
+            plt.ylim([min_y-0.01,min_y+0.05])
             plt.grid(True, which='major')
             plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
-            plt.ylabel('1-AUC score')
+            plt.ylabel('1-R2 score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
             plt.clf()
@@ -258,6 +266,20 @@ def compute_row_mean_and_std(dictionary_entry,iter):
     return df,result
 
 
+def greedy_score(mean_score):
+    # Create an empty DataFrame
+    df = pd.DataFrame()
+    
+    # Iterate through the array_list and append each array as a column
+    
+    for i, arr in enumerate(mean_score):
+        my_array  = arr.flatten()
+        df[f'Column {i+1}'] = my_array
+
+    final_scores = [0 for i in range(800)] + list(df.mean(axis=1))
+    print(len(final_scores))
+    return final_scores
+
 
 time_bool_flag = False
 for opt in optimizers:
@@ -266,8 +288,11 @@ for opt in optimizers:
     if opt =='Jad':
         continue
     else:
-        df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
-        plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
+        if opt == 'Greedy_SM':
+            plt.plot([i for i in range(800,1050)],greedy_score(y_per_opt_for_config[opt])[800:1050],opt_colors[opt],label=opt)
+        else:
+            df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
+            plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
     
     """if opt == 'SMAC' or opt =='Random_Search':
         df.columns = dataset_list

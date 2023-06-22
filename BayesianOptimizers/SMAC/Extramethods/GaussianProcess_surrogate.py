@@ -18,6 +18,7 @@ from BayesianOptimizers.SMAC.Extramethods.kernels import (ConstantKernel,
     Matern,
     WhiteKernel,)
 from BayesianOptimizers.SMAC.utils import HorseshoePrior, LognormalPrior
+from sklearn.preprocessing import power_transform
 
 
 __copyright__ = "Copyright 2021, AutoML.org Freiburg-Hannover"
@@ -225,6 +226,21 @@ class GaussianProcess(BaseModel):
         #Impute inactive in the X data
         X = self._impute_inactive(X)
 
+        tmp_y = y.copy()
+        try:
+            if y.min() <= 0:
+                y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=False)
+            else:
+                y = power_transform(y / y.std(), method = 'box-cox',standardize=False)
+                if y.std() < 0.5:
+                    y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=False)
+            if y.std() < 0.5:
+                print('It failed...')
+                raise RuntimeError('Power transformation failed')
+        except:    
+            #Reset y.
+            y = tmp_y
+
         # Whether to normalize y or not.
         if self.normalize_y:
             y = self._normalize_y(y)
@@ -248,7 +264,7 @@ class GaussianProcess(BaseModel):
 
         # Call the optimize, set the parameters and in the end fit to the data.
 
-        if do_optimize:
+        if do_optimize: 
             self._all_priors = self._get_all_priors(add_bound_priors=False)
             self.hypers = self._optimize()
             self.gp.kernel.theta = self.hypers

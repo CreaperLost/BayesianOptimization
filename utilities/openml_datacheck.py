@@ -21,6 +21,10 @@ for index, row in task_data.iterrows():
 new_df = pd.DataFrame(rows).to_csv('datasets_openml.csv')
 
 
+
+benchmark = openml.study.get_suite(218)
+task_data = tasks.list_tasks(output_format="dataframe", task_id=benchmark.tasks)
+task_data.to_csv('AutoMLbenchmark.csv')
 """# List all tasks in a benchmark
 """
 

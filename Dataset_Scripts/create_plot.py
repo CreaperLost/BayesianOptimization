@@ -611,7 +611,7 @@ double_plot = False
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Backup-Early'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC' ] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Random_Search','SMAC','Switch_BO','Pavlos'] # 'Multi_RF_Local',
 
 opt_colors = dict()
 clr_pos = 0
@@ -619,7 +619,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-"""
+
 for data_repo in ['Jad','OpenML']:
     
 
@@ -670,7 +670,7 @@ for bool_flag in ['False','True']:
     plt.clf()
     #One category is for JAD, the other is for OpenML.
     plot_two_categories(means_per_cat[0],means_per_cat[1],optimizers,'XGB',bool_flag,means_per_cat_time[0],means_per_cat_time[1])
-"""
+
 #,'OpenML'
 for data_repo in ['Jad','OpenML']:
     
