@@ -75,10 +75,10 @@ class InitialDesign:
         if init_budget is not None:
             self.init_budget = init_budget
             if n_configs_x_params is not None:
-                self.logger.debug(
+                """self.logger.debug(
                     "Ignoring argument `n_configs_x_params` (value %d).",
                     n_configs_x_params,
-                )
+                )"""
         elif configs is not None:
             self.init_budget = len(configs)
         elif n_configs_x_params is not None:
@@ -92,7 +92,7 @@ class InitialDesign:
             raise ValueError(
                 "Initial budget %d cannot be higher than the run limit %d." % (self.init_budget, ta_run_limit)
             )"""
-        self.logger.info("Running initial design for %d configurations" % self.init_budget)
+        #self.logger.info("Running initial design for %d configurations" % self.init_budget)
 
     def select_configurations(self) -> List[Configuration]:
         """Selects the initial configurations."""
@@ -141,7 +141,7 @@ class InitialDesign:
             else:
                 raise ValueError("Hyperparameter not supported in LHD")
 
-        self.logger.debug("Initial Design")
+        #self.logger.debug("Initial Design")
         configs = []
         for vector in design:
             try:
@@ -150,8 +150,8 @@ class InitialDesign:
                 continue
             conf.origin = origin
             configs.append(conf)
-            self.logger.debug(conf)
+            #self.logger.debug(conf)
 
-        self.logger.debug("Size of initial design: %d" % (len(configs)))
+        #self.logger.debug("Size of initial design: %d" % (len(configs)))
 
         return configs

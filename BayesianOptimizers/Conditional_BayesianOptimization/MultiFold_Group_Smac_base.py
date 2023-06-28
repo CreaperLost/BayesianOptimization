@@ -118,7 +118,7 @@ class MultiFold_Group_Bayesian_Optimization:
         for fold in range(0,self.n_folds):
             #print('Currently Running fold : ', fold)
             init_overhead = 0
-            if fold == 0:
+            if fold == 0: 
                 initial_time = []
                 for classifier_name in self.object_per_group:
                     #print('Initializing Group : ', classifier_name)
@@ -190,6 +190,7 @@ class MultiFold_Group_Bayesian_Optimization:
                 
                 # Evaluate the new configuration on all folds up to fold. Run objective on this group.
                 # Add also to the self.fX of the group internally.
+                
                 fX_next = self.object_per_group[best_next_classifier].run_objective_on_previous_folds(best_next_config,fold)
                 # Check if incumberment of the group.
                 self.object_per_group[best_next_classifier].compute_current_inc_after_avg()

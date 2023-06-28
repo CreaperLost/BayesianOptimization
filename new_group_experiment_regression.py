@@ -24,6 +24,7 @@ from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac 
 #from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
 #from BayesianOptimizers.Conditional_BayesianOptimization.Switch_Surrogate_BO import Switch_BO
 from BayesianOptimizers.Conditional_BayesianOptimization.greedy_smac_group import Greedy_SMAC
+from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
 from csv import writer
 import time 
 
@@ -96,8 +97,9 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'Progressive_BO':
                     Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                
-                
+                elif opt =='RF_Local':
+                    Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
+                                                n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local')
                 elif opt == 'Greedy_SM':
                     Optimization = Greedy_SMAC(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
@@ -148,7 +150,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO' or opt =='Switch_BO' or opt =='GreedySM':
+                    elif opt == 'Multi_RF_Local' or opt == 'Progressive_BO' or opt =='Switch_BO' or opt =='GreedySM' or opt == 'RF_Local':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -217,7 +219,7 @@ if __name__ == '__main__':
      
     #9976 datasets hasn't run for SMAC.
     # 'SMAC','Pavlos','Random_Search','Multi_RF_Local','Progressive_BO'
-    opt_list = ['Greedy_SM'] # ,,,'RF_Local',] 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
+    opt_list = ['RF_Local'] # ,,,'RF_Local',] 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
     for speed in ['fast']: 
      # obtain the benchmark suite    
         for repo in ['OpenML']: #'

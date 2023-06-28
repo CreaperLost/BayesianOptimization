@@ -151,6 +151,7 @@ class Per_Group_Bayesian_Optimization:
 
         # Save the full history
         self.X = np.zeros((0, self.dim))
+        self.X_df = pd.DataFrame()
         self.fX = np.array([])
 
         self.surrogate_time = np.array([])
@@ -161,27 +162,16 @@ class Per_Group_Bayesian_Optimization:
 
         #Number of current evaluations!
         self.n_evals = 0 
-        
+         
         #Save the group name here in order to use on configuration objects.
         self.group_name = group_name
 
         # How many candidates per time. (How many Configurations to get out of Sobol Sequence)
-        if 'ACQ10000' in model:
-            self.n_cand = 10000
-        elif 'ACQ100' in model:
-            self.n_cand =100
-        elif 'ACQ500' in model:
-            self.n_cand =500
-        else:
-            self.n_cand = min(100 * self.dim, 10000)
+        self.n_cand = 900 
 
-
-        if 'RF' in model:
-            n_est = 30
-            if 'NTREE_500' in model:
-                n_est = 500
-            self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=n_est)
+        self.model = Simple_RF(self.config_space,rng=random_seed,n_estimators=100)
         
+        self.batch_size = 1
 
         if acq_funct == "EI":
             self.acquisition_function = EI(self.model)
@@ -192,15 +182,7 @@ class Per_Group_Bayesian_Optimization:
                 self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
             else:
                 raise RuntimeError
-
-        
-        #Check batch_size
-        if acq_funct == 'Multi5':
-            self.batch_size = 5
-        elif acq_funct == 'Multi10':
-            self.batch_size = 10
-        else:
-            self.batch_size = 1
+            
         
 
 
@@ -262,7 +244,7 @@ class Per_Group_Bayesian_Optimization:
             )
         except:
             new_config = Configuration(configuration_space=self.config_space, values = new_config,allow_inactive_with_values = True)
-            print(new_config)
+            #print(new_config)
         return new_config
 
 
@@ -353,59 +335,21 @@ class Per_Group_Bayesian_Optimization:
         '''Creates new population of 'pop_size' and evaluates individuals.
         '''
 
-
+        curr_time = []
         #extra_overhead_time = time.time()
         initial_configurations = self.load_initial_design_configurations(self.n_init)
         #objective_value_per_configuration = np.array([np.inf for i in range(self.n_init)])
         #end_extra_overhead_time = time.time() - extra_overhead_time
 
         for i in range(self.n_init):
-
-
+            time_start = time.time()
             self.run_objective(initial_configurations[i])
-            
-            #Run the objective function on it.
-            #start_time = time.time()
-
-            #get the initial configuration
-            
-            #config = self.vector_to_configspace(initial_configurations[i])
-            
-            #res = self.f(self.add_group_name_to_config(config))
-            #Get the value and cost from objective
-            #This is the validation loss averaged over all folds.
-            #objective_value_per_configuration[i] = res['function_value']
-
-            """end_time=time.time() - start_time
-
-            self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))"""
-
             #Extra timings
             self.surrogate_time = np.concatenate((self.surrogate_time,np.array([0])))
             self.acquisition_time = np.concatenate((self.acquisition_time,np.array([0])))
-
-
-            """#Run the objective function on it.
-            start_time = time.time()
-            # If this is better than the overall best score then replace.
-            if objective_value_per_configuration[i] < self.inc_score:
-                self.inc_score = objective_value_per_configuration[i]
-                self.inc_config = config
-            end_time = time.time() - start_time
-
-
-            if i == 0:
-                end_time += end_extra_overhead_time
-
-
-            self.checks_time = np.concatenate((self.checks_time,np.array([end_time])))"""
-
-            
-        """#Save the new runs to both X and fX
-        self.X = deepcopy(initial_configurations)
-        self.fX = deepcopy(objective_value_per_configuration)
-        #change the n_evals.
-        self.n_evals += self.n_init"""
+            end_time = time.time() - time_start
+            curr_time.append(end_time)
+        self.total_time = np.concatenate((self.total_time,np.array(curr_time)))
 
     # Returns the best configuration of this specific group along with the score.
     def return_incumberment(self):
@@ -456,7 +400,17 @@ class Per_Group_Bayesian_Optimization:
         self.acquisition_time = np.concatenate((self.acquisition_time,np.array([end_time])))
 
         return (X_next,acquisition_value)
+    
 
+
+    # Checks if the current configuration is the incumberment.
+    def check_if_incumberment(self,config:Configuration,fX_next:float):
+
+        if fX_next < self.inc_score:
+            self.inc_score = fX_next
+            self.inc_config = config
+            if self.verbose:
+                print(f"{self.group_name} {self.n_evals}) New best: {self.inc_score:.4}")
 
     # Runs the objective function on the specified point.
     def run_objective(self,X_next:Configuration):
@@ -481,49 +435,26 @@ class Per_Group_Bayesian_Optimization:
 
         #Add to X and fX vectors.
         
-        """print(self.X)
-        print(self.fX)
-        print(X_next)
-        print(fX_next)"""
         self.X = np.vstack((self.X, deepcopy(X_next)))
         self.fX = np.concatenate((self.fX, [fX_next]))
 
-
-        end_time=time.time() - start_time
-        self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+        #This is a better interpretable form of storing the configurations.
+        new_row = pd.DataFrame(config.get_dictionary().copy(),index=[0])
+        self.X_df = self.X_df.append(new_row,ignore_index=True)
 
         #Check if this is the best configuration.
         self.check_if_incumberment(config,fX_next)
 
+        end_time=time.time() - start_time
+        self.objective_time = np.concatenate((self.objective_time,np.array([end_time])))
+
+        
+ 
         return fX_next
      
-    # Checks if the current configuration is the incumberment.
-    def check_if_incumberment(self,config:Configuration,fX_next:float):
+    # Returns the best configuration of this specific group along with the score.
+    def return_incumberment(self):
+        return ( self.inc_config, self.inc_score)
 
-        start_time = time.time()
-
-        if fX_next < self.inc_score:
-            self.inc_score = fX_next
-            self.inc_config = config
-            if self.verbose:
-                print(f"{self.group_name} {self.n_evals}) New best: {self.inc_score:.4}")
-
-        end_time=time.time() - start_time
-
-        self.checks_time = np.concatenate((self.checks_time,np.array([end_time])))
-
-
-    # Computes the total_time cost for this optimization group.
-    def compute_total_time(self):
-
-        time_metrics = [
-            self.acquisition_time,
-            self.surrogate_time,
-            self.objective_time,
-            self.checks_time
-        ]
-
-        self.total_time = np.sum(time_metrics, axis=0)
-        print(self.total_time)
 
         

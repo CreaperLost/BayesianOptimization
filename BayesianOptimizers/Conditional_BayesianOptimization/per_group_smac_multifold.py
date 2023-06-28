@@ -164,7 +164,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
 
         #Number of current evaluations!
         self.n_evals = 0 
-        
+         
         #Save the group name here in order to use on configuration objects.
         self.group_name = group_name
 
@@ -245,7 +245,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
             )
         except:
             new_config = Configuration(configuration_space=self.config_space, values = new_config,allow_inactive_with_values = True)
-            print(new_config)
+            #print(new_config)
         return new_config
 
 
@@ -512,7 +512,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         if np.min(self.fX) < self.inc_score:
             self.inc_score = np.min(self.fX)
             #Here we store a config space object
-            self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)])
+            self.inc_config = self.vector_to_configspace(self.X[np.argmin(self.fX)]) 
             print(f"{self.group_name} at eval : {self.n_evals}) New best: {self.inc_score:.4}")
 
     # This runs a new configuration on all the previous folds. --> Return the average

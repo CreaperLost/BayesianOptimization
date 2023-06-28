@@ -59,7 +59,7 @@ class Group_Bayesian_Optimization:
         acq_funct = 'EI',
         model = 'RF',
         maximizer  = 'Sobol'
-    ):
+    ): 
 
         # Very basic input checks
         """assert lb.ndim == 1 and ub.ndim == 1
@@ -120,6 +120,9 @@ class Group_Bayesian_Optimization:
         self.batch_size = 1
 
 
+        #Store the group that was selected at each iteration.
+        self.X_group = []
+
         #Construct the Bayesian Optimization Objects per case.
         self.object_per_group = {}
 
@@ -134,30 +137,26 @@ class Group_Bayesian_Optimization:
     
     # Just call each class and run the initial configurations of each.
     def run_initial_configurations(self):
+        initial_time = []
+
+        #train initial configurations and train surrogate per model.
         for classifier_name in self.object_per_group:
             self.object_per_group[classifier_name].run_initial_configurations()
+            self.object_per_group[classifier_name].train_surrogate()
+            total_time = self.object_per_group[classifier_name].total_time
+            total_time[-1] += self.object_per_group[classifier_name].surrogate_time[-1]
+                    
+            initial_time.append(total_time)
 
+        #save time cost.
+        self.total_time = np.array(initial_time).flatten()
 
-    # Get the initial cost.
-    def compute_initial_configurations_cost(self):
-        list_of_objective_time  = []
-        list_of_acquisition_time  = []
-        list_of_surrogate_time  = []
-        list_of_checks_time = []
-        list_of_total_time  = []
+        #store evaluations
+        self.n_evals = self.n_init * len(self.object_per_group)
+        # Compute incumberment after initial evaluations.
+        self.compute_incumberment_overall()
+        self.track_initial_groups()
 
-        for classifier_name in self.object_per_group:
-            list_of_objective_time.append(self.object_per_group[classifier_name].objective_time)
-            list_of_acquisition_time.append(self.object_per_group[classifier_name].acquisition_time)
-            list_of_surrogate_time.append(self.object_per_group[classifier_name].surrogate_time)
-            list_of_checks_time.append(self.object_per_group[classifier_name].checks_time)
-            list_of_total_time.append(self.object_per_group[classifier_name].total_time)
-        
-        self.objective_time = np.sum(list_of_objective_time, axis=0)
-        self.acquisition_time = np.sum(list_of_acquisition_time, axis=0)
-        self.surrogate_time = np.sum(list_of_surrogate_time, axis=0)
-        self.checks_time = np.sum(list_of_checks_time, axis=0)
-        self.total_time = np.sum(list_of_total_time, axis=0)
 
     # Computate the best configuration.
     def compute_current_incumberment(self):
@@ -194,60 +193,85 @@ class Group_Bayesian_Optimization:
             self.X.append(self.object_per_group[group_name].X[i])
             
 
+    #Compute the best configuration overall.
     def compute_incumberment_overall(self):
-        self.inc_config = self.X[np.argmin(self.fX)]
-        self.inc_score = min(self.fX)
-        print(f'Best score so far : {self.inc_score}')
+        inc_score_list = []
+        for classifier_name in self.object_per_group:
+            inc_score_list.append((self.object_per_group[classifier_name].inc_config , self.object_per_group[classifier_name].inc_score))
+        
+        # Sort the list by the first element of each tuple
+        # Reverse = False means that the min is first element ( LOWEST ERROR  )
+        sorted_list = sorted(inc_score_list, key=lambda x: x[1],reverse=False)
+        potential_config = sorted_list[0][0]
+        potential_score = sorted_list[0][1]
+
+
+        if self.inc_score > potential_score:
+            self.inc_config = potential_config
+            self.inc_score = potential_score
+            print(f'Best score so far : {self.inc_score}')
+            return 1
+        return 0
+    
+    def make_X_Y(self):
+
+        # Current configuration iterator in each group.
+        counter_per_group = {}
+        for classifier_name in self.object_per_group:
+            counter_per_group[classifier_name] = 0
+
+        #Get each group
+        for group in self.X_group:
+            counter = counter_per_group[group]
+            self.fX = np.append(self.fX, self.object_per_group[group].fX[counter])
+            counter_per_group[group]+=1
+
+    def track_initial_groups(self):
+        for i in range(0,self.n_init):
+            for group_name in self.object_per_group:
+                self.X_group.append(group_name)
 
     def run(self):
 
         #Run initial configurations per algorithm
         self.run_initial_configurations()
- 
-        # Compute costs.
-        self.compute_initial_configurations_cost()
 
-        #Compute initial_configurations_curve
-        self.compute_initial_configurations_curve()
+        changed = 1
 
-        # Compute incumberment after initial evaluations.
-        self.compute_incumberment_overall()
-
-        self.n_evals = self.n_init * len(self.object_per_group)
-
-        #Train the surrogate models for each group(once after initial evaluations)
-        for classifier_name in self.object_per_group:
-            self.object_per_group[classifier_name].train_surrogate()
-
-        while self.n_evals <= self.max_evals:
+        while self.n_evals < self.max_evals:
+            # Defense against the dark bugs
+            assert self.n_evals < self.max_evals
             
-            #Compute acquisition per group.
-            acquisition_values = []
-            for classifier_name in self.object_per_group:
-                X_next,acquisition_value =self.object_per_group[classifier_name].suggest_next_point(self.inc_score)
-                acquisition_values.append( (classifier_name,X_next,acquisition_value) )
 
-            
-        
+            # if incumberment changes --> run acquisition maximization for all groups.
+            if changed == 1:
+                self.max_acquisitions_configs = {}
+                self.max_acquisitions_score = {}
+                for classifier_name in self.object_per_group:
+                    X_next,acquisition_value =self.object_per_group[classifier_name].suggest_next_point(self.inc_score)
+                    self.max_acquisitions_configs[classifier_name] = X_next
+                    self.max_acquisitions_score[classifier_name] = acquisition_value
+            else:
+                    #Compute acquisition value only for the next new configuration if the incumberment has not changed.
+                X_next,acquisition_value = self.object_per_group[best_next_classifier].suggest_next_point(self.inc_score)
+                self.max_acquisitions_configs[best_next_classifier] = X_next
+                self.max_acquisitions_score[best_next_classifier] = acquisition_value
+
+
+            #Get the maximum acquisition for all.
             #Select group with highest acquisition --> check code.
-            acquisition_values_sorted = sorted(acquisition_values, key=lambda x: x[2],reverse=True)
+            best_next_classifier = max(self.max_acquisitions_score, key=lambda k: self.max_acquisitions_score.get(k))
+            #Just add the next group here.
+            self.X_group.append(best_next_classifier)
             
-            best_next_classifier = acquisition_values_sorted[0][0]
-            best_next_config = acquisition_values_sorted[0][1]
+            #Get the best configuration using the best group.
+            best_next_config = self.max_acquisitions_configs[best_next_classifier]
 
             #Run objective on this group.
             fX_next = self.object_per_group[best_next_classifier].run_objective(best_next_config)
 
-            """print(f'next best : {best_next_classifier}')
-            print(f'Config: {best_next_config}')
-            print(f'Acq Val: {acquisition_values_sorted[0][2]}')
-            print(f'Score: {fX_next}')"""
-            #Append on this the results
-            self.X.append(best_next_config)
-            self.fX = np.concatenate((self.fX, [fX_next]))
-
             #Check incumberment
-            self.compute_incumberment_overall()
+            changed = self.compute_incumberment_overall()
 
             #Train the surrogate model for the specific group ONLY.
             self.object_per_group[best_next_classifier].train_surrogate()
@@ -255,8 +279,11 @@ class Group_Bayesian_Optimization:
             #Increase n_evals --> current evaluations by batch-size 
             #Batch Size == 1 for now.
             self.n_evals+= self.batch_size
-        for classifier_name in self.object_per_group:
-            print(classifier_name, len(self.object_per_group[classifier_name].fX), min(self.object_per_group[classifier_name].fX))
+        self.make_X_Y()
+
+        self.acquisition_time = np.array([0 for i in range(self.max_evals)])
+        self.surrogate_time = np.array([0 for i in range(self.max_evals)])
+        self.objective_time = np.array([0 for i in range(self.max_evals)])
         return self.inc_score
 
 
