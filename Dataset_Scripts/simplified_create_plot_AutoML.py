@@ -63,9 +63,9 @@ def save_figure(data_repo, dataset, time_plot_bool, clf_name):
     main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
     
     if data_repo == 'OverAllDatasets':
-        path_to_figure = os.path.join(main_directory,'Regression_Figures','OverAllDatasets')
+        path_to_figure = os.path.join(main_directory,'Figures','OverAllDatasets')
     else:
-        path_to_figure = os.path.join(main_directory,'Regression_Figures',data_repo,dataset)
+        path_to_figure = os.path.join(main_directory,'Figures',data_repo,dataset)
 
 
     if time_plot_bool == True:
@@ -109,14 +109,14 @@ def get_Jad_avg_score(dataset_name):
         return None
     return Res_File.loc[dataset_name].values[0]
 
-colors = ['red','blue','green','black','orange','grey','cyan','yellow']
+colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 seeds = [1]
 #How many initial configurations we have run.
 interval = 50
-result_space = 'Main_Multi_Fold_Group_Space_Results_Rregression'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Progressive_BO','Greedy_SM'] # 'Multi_RF_Local',
+result_space = 'Main_Multi_Fold_Group_Space_Results'
+optimizers = ['Random_Search','SMAC','Progressive_BO'] # 'Multi_RF_Local',
 
-space_type = 'GROUP_Cleared'
+space_type = 'GROUP'
 
 opt_colors = dict()
 clr_pos = 0
@@ -124,7 +124,7 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-for data_repo in ['Jad','OpenML']:
+for data_repo in ['AutoML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
@@ -132,8 +132,6 @@ for data_repo in ['Jad','OpenML']:
         for dataset in os.listdir(path_str):
             dataset_name = get_dataset_name_byrepo(dataset,data_repo)
             for seed in seeds:
-                min_y = 1
-                max_y = 0
                 for opt in optimizers:
                     if opt == 'Jad':
                         jad_score =  get_Jad_avg_score(dataset_name)
@@ -155,8 +153,7 @@ for data_repo in ['Jad','OpenML']:
                         
                         plt.xlabel('Average time in seconds')
                         x,y = time_plot_for_opt(time,metric,opt)
-                        """if opt == 'PavlosV2':
-                            y = [y[49],y[149],y[249],y[349],y[449],y[449]] """
+                        
                     else:
                         plt.xlim([0,1050])
                         plt.xlabel('Number of objective evals.')
@@ -165,14 +162,10 @@ for data_repo in ['Jad','OpenML']:
                         plt.plot([i for i in range(800,1050)],y,opt_colors[opt],label=opt)
                     else:
                         plt.plot(x,y,opt_colors[opt],label=opt)
-                    if min_y > np.min(y):
-                        min_y= np.min(y)
-                    if max_y < np.max(y):
-                        max_y = np.max(y)
-            plt.ylim([min_y-0.01,min_y+0.05])
+
             plt.grid(True, which='major')
             plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
-            plt.ylabel('1-R2 score')
+            plt.ylabel('1-AUC score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
             plt.clf()
@@ -192,7 +185,7 @@ for opt in optimizers:
 
 dataset_list = []
 
-for data_repo in ['OpenML']:
+for data_repo in ['AutoML']:
     # If the repository doesn't exist then move on.
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False: continue
@@ -222,9 +215,7 @@ for data_repo in ['OpenML']:
                         
                 x_time,y_time = time_plot_for_opt(time,metric,opt)
                 x,y = config_plot_for_opt(metric,opt)
-                if opt == 'PavlosV2':
-                    y = np.array([y[49],y[149],y[249],y[349],y[449],y[449]])
-                    y_time = np.array(y)
+                
                 y_per_opt_for_config[opt].append(y)
                 x_per_opt_for_config[opt].append(x)
                 y_per_opt_for_time[opt].append(y_time)
@@ -238,7 +229,7 @@ def get_confidence_interval(row):
     confidence_level = 0.95
     std_error = stats.sem(row)
     interval = stats.t.interval(confidence_level, len(row)-1, loc=mean, scale=std_error)
-    return interval
+    return interval 
 
 def compute_row_mean_and_std(dictionary_entry,iter):
     # Create an empty DataFrame
@@ -264,6 +255,7 @@ def compute_row_mean_and_std(dictionary_entry,iter):
     result = pd.concat([row_means, confidence_intervals], axis=1)
     result.columns = ['Mean','Low','Upper']
     return df,result
+
 
 
 def greedy_score(mean_score):
@@ -293,27 +285,19 @@ for opt in optimizers:
         else:
             df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
             plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
-    
-    """if opt == 'SMAC' or opt =='Random_Search':
-        df.columns = dataset_list
-        #df.to_csv('Avg_performance' +opt+'.csv')"""
-    """
-    if opt == 'PavlosV2':
-        df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],6)
-        plt.plot([49,149,249,349,449,549],result['Mean'],opt_colors[opt],label=opt)"""
 
-plt.ylim([0.3,0.35])
+plt.ylim([0.05,0.1])
 plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets')
-plt.ylabel('Average 1-R2')
+plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
 
 
-
+"""
 def compute_percentile(numpy_time_measures):
     positions = [0]
     for i in range(1, 10):
@@ -375,6 +359,7 @@ def compute_avg_time(dictionary_entry):
     row_means = list(df.mean(axis=1))
     return row_means
 
+
 time_bool_flag = True
 for opt in optimizers:
     print(f'Current Optimizer {opt}')
@@ -382,23 +367,15 @@ for opt in optimizers:
     x = compute_avg_time(x_per_opt_for_time[opt])
     if opt =='Jad':
         continue
-    """if opt == 'Random_Search' or opt == 'Multi_RF_Local' or opt== 'PavlosV2':
-         result = compute_mean_std_per_time(y_per_opt_for_time[opt])
-        x = compute_avg_time(x_per_opt_for_time[opt])
-    elif opt == 'Pavlos' or opt == 'SMAC_Instance' or opt =='SMAC':
-        result = compute_mean_std_per_time(y_per_opt_for_time[opt])
-        x = compute_avg_time(x_per_opt_for_time[opt]) 
-    else:
-        continue"""
     plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
-    
     #plt.fill_between(x, result['Low'], result['Upper'],color=opt_colors[opt], alpha=0.1)
     #print(result)
-plt.ylim([0.28,0.34])
+plt.ylim([0.065,0.1])
 plt.xlabel('Time')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets ' )
-plt.ylabel('Average 1-R2')
+plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
+"""
