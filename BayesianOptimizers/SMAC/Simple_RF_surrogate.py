@@ -23,7 +23,7 @@ import numpy as np
 from BayesianOptimizers.SMAC.base_surrogate_model import BaseModel
 
 class  Simple_RF(BaseModel):
-    def __init__(self, config_space, rng=None,n_estimators= 100):
+    def __init__(self, config_space, rng=None,n_estimators= 100,STD_OUT=None):
         
         self.config_space = config_space
 
@@ -34,7 +34,7 @@ class  Simple_RF(BaseModel):
 
         self.n_estimators =  n_estimators
         self.rf = RandomForestRegressor(n_estimators = 100,random_state=rng,n_jobs=-1)
-        
+        self.standardize_output = STD_OUT
         super(Simple_RF, self).__init__()
 
 
@@ -45,24 +45,25 @@ class  Simple_RF(BaseModel):
 
         #Not needed for non conditional space.
         #X = self._impute_inactive(X)
+        if self.standardize_output == None:
+            tmp_y = y.copy()
 
-        tmp_y = y.copy()
-
-        try:
-            if y.min() <= 0:
-                y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=False)
-            else:
-                y = power_transform(y / y.std(), method = 'box-cox',standardize=False)
-                if y.std() < 0.5:
+            try:
+                if y.min() <= 0:
                     y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=False)
-            if y.std() < 0.5:
-                print('It failed...')
-                raise RuntimeError('Power transformation failed')
-        except:    
-            #Reset y.
-            y = tmp_y
+                else:
+                    y = power_transform(y / y.std(), method = 'box-cox',standardize=False)
+                    if y.std() < 0.5:
+                        y = power_transform(y / y.std(), method = 'yeo-johnson',standardize=False)
+                if y.std() < 0.5:
+                    print('It failed...')
+                    raise RuntimeError('Power transformation failed')
+            except:    
+                #Reset y.
+                y = tmp_y
 
-        y = self._normalize_y(y)
+            y = self._normalize_y(y)
+        
         y = y.flatten()
         
         self.rf.fit(X,y)
@@ -93,8 +94,9 @@ class  Simple_RF(BaseModel):
         for estimator in self.rf.estimators_:
             preds.append(estimator.predict(X).reshape([-1,1]))
         var = np.var(np.concatenate(preds, axis=1), axis=1)
- 
-        mean, var = self._untransform_y(mean, var)
 
+
+        if self.standardize_output == None:
+            mean, var = self._untransform_y(mean, var)
         return mean.reshape([-1,1]), var.reshape([-1,1]) 
 

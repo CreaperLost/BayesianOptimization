@@ -72,7 +72,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
         random_seed = int(1e6),
         acq_funct = 'EI',
         model = 'RF',
-        maximizer  = 'Sobol',group_name = '',n_folds = 5
+        maximizer  = 'Sobol',group_name = '',n_folds = 5,stdev=None,
     ):
 
         # Very basic input checks
@@ -180,7 +180,7 @@ class MultiFold_Per_Group_Bayesian_Optimization:
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Sobol_Local':
-                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand)
+                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand,stdev=stdev)
             else:
                 raise RuntimeError
 

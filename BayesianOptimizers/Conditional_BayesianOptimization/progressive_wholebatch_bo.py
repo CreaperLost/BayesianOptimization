@@ -1,11 +1,12 @@
 import numpy as np
-from BayesianOptimizers.Experimental.PavlosV2_per_group import PavlosV2_PerGroup
+from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_Batch_Group_EI import EI_Batch_per_group
+
 import pandas as pd
 import time
 
 
 
-class PavlosV2:
+class Batch_Progressive_BO:
     """The Random Forest Based Regression Local Bayesian Optimization.udnn-cu11, minio, kiwisolver, Jinja2, importlib-metadata, emcee, Deprecated, autograd, alive-progress, xgboost, torch, stevedore, scikit-learn, requests-toolbelt, paramz, pandas, matplotlib, george, debtcollector, dask, ConfigSpace, click, autograd-gamma, torchvision, statsmodels, pymoo, oslo.utils, oslo.config, openml, gpytorch, GPy, formulaic, 
     
     Parameters
@@ -77,23 +78,23 @@ class PavlosV2:
         self.X = []
         self.fX = np.array([])
 
-        
+        self.surrogate_time = np.array([])
+        self.acquisition_time = np.array([])
+        self.objective_time = np.array([])
         self.total_time = np.array([])
 
         #Number of current evaluations!
         self.n_evals = 0 
         
-        
         self.n_folds = n_folds
         initial_evaluations = self.n_init * len(configuration_space)
 
-        #print('How many subspaces we got?', len(configuration_space))
-        #print('Initial configurations run in total',initial_evaluations)
+        print('How many subspaces we got?', len(configuration_space))
+        print('Initial configurations run in total',initial_evaluations)
 
 
-        self.max_evals_per_fold = int ( (self.max_evals - initial_evaluations ) / self.n_folds)
-        self.batch_size = self.max_evals_per_fold
-        #print('Max Evaluations per fold',self.max_evals_per_fold)
+        self.max_evals_per_fold = [25,75,150,250,500]
+        print('Max Evaluations per fold',self.max_evals_per_fold)
 
 
         #Construct the Bayesian Optimization Objects per case.
@@ -105,38 +106,30 @@ class PavlosV2:
         #Initialize the X and fX dictionaries.
         for classifier_name in configuration_space:
             classifier_specific_config_space = configuration_space[classifier_name]
-            self.object_per_group[classifier_name] = PavlosV2_PerGroup(f= self.f,lb=None,ub=None,\
+            self.object_per_group[classifier_name] = EI_Batch_per_group(f= self.f,lb=None,ub=None,\
                                                                                     configuration_space=classifier_specific_config_space,\
                                                                                     initial_design=initial_design,n_init=n_init,max_evals=max_evals,
-                                                                                    batch_size=batch_size,random_seed=random_seed,\
-                                                                                    group_name =classifier_name,n_folds = self.n_folds,populaton= self.batch_size)
+                                                                                    batch_size=1,random_seed=random_seed,\
+                                                                                    group_name =classifier_name,n_folds = self.n_folds )
         #Store the group that was selected at each iteration.
         self.X_group = []
 
-    def run(self):
-        init_overhead = 0
-        
+    def run(self): 
         for fold in range(0,self.n_folds):
             print('Currently Running fold : ', fold)
-
-            
             if fold == 0:
-                start_time_opt = time.time()
                 for classifier_name in self.object_per_group:
                     #print('Initializing Group : ', classifier_name)
                     self.object_per_group[classifier_name].run_initial_configurations(fold)
                     #Train the surrogate model
-                    self.object_per_group[classifier_name].train_surrogate()
+                    self.object_per_group[classifier_name].train_surrogate()                    
+                
                 #This allows us to pool the performance and configurations per group
                 #And add the best configuration and score to our self.X , self.fX for tracking.
                 #self.compute_initial_configurations_curve()
                 self.n_evals = self.n_init * len(self.object_per_group)
                 self.track_initial_groups()
-
-                end_init_time = time.time()-start_time_opt
-                self.total_time = np.append(self.total_time,[end_init_time])
             else:
-                start_time_opt = time.time()
                 for classifier_name in self.object_per_group:
                     #print('Re-run previous configurations on new fold.',classifier_name)
                     #Runs the previous configurations on the current fold
@@ -147,14 +140,13 @@ class PavlosV2:
                     self.object_per_group[classifier_name].compute_next_fold_current_inc_after_avg()
                     #Train the surrogate model.
                     self.object_per_group[classifier_name].train_surrogate()
-                end_init_time = time.time()-start_time_opt
 
-            #here we have the first sanity check. The best overall should the same and not change.
-            start_iter_time = time.time()
             #At this step changed is always 1. As we find the new incumberment on the new fold.
-            changed = self.compute_best_config_on_new_fold()
-            
-            
+            changed = self.compute_best_config_on_new_fold()            
+
+            # Get the batch size.
+            batch_size = self.max_evals_per_fold[fold]
+
             acquisition_selector_list = []
             for classifier_name in self.object_per_group:
                 tuple_of_acq_vals =self.object_per_group[classifier_name].suggest_population(self.inc_score)
@@ -163,9 +155,12 @@ class PavlosV2:
             # Sort the tuples based on the score element in descending order
             sorted_tuples = sorted(acquisition_selector_list, key=lambda x: x[1], reverse=True)
 
-            # Retrieve the top 10 tuples
-            top_10_tuples = sorted_tuples[:self.batch_size]
+
             
+
+            # Retrieve the top 10 tuples
+            top_10_tuples = sorted_tuples[:batch_size]
+            print('Aquistion values',len(top_10_tuples),batch_size)
 
             #Run each group. 
             for i in top_10_tuples:
@@ -179,18 +174,12 @@ class PavlosV2:
             
             #Check if new configuration is the incumberment. 
             changed = self.compute_incumberment_overall()
-
-            end_iter_time = time.time() - start_iter_time
-
-            self.total_time = np.concatenate((self.total_time,np.array([end_iter_time])))
-
-        
+                        
+        self.acquisition_time = np.array([0 for i in range(self.max_evals)])
+        self.surrogate_time = np.array([0 for i in range(self.max_evals)])
+        self.objective_time = np.array([0 for i in range(self.max_evals)])
         #Makes the final fX score progression
-        st_time = time.time()
         self.make_X_Y()
-        init_overhead  += time.time()-st_time
-        self.total_time[-1] += init_overhead
-        
         return self.inc_score        
     
     def make_X_Y(self):

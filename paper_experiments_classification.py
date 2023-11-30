@@ -9,31 +9,32 @@ warnings.filterwarnings("ignore")
 import os
 import sys
 sys.path.insert(0, '..')
-from benchmarks.Group_MulltiFoldBenchmark_Regression import Group_MultiFold_Space_Regression,XGB_NAME,LINEAR_SVM_NAME,DT_NAME,RF_NAME,RBF_SVM_NAME
+from benchmarks.Group_MulltiFoldBenchmark import Group_MultiFold_Space,XGB_NAME,LINEAR_SVM_NAME,DT_NAME,RF_NAME,RBF_SVM_NAME
 from global_utilities.global_util import csv_postfix,parse_directory
 from pathlib import Path
 import numpy as np
-"""
 
-"""
+from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_Random_Search import Group_Random_Search
 from BayesianOptimizers.Experimental.Pavlos_BO import Pavlos_BO
 from BayesianOptimizers.Experimental.PavlosV2 import PavlosV2
 from BayesianOptimizers.Conditional_BayesianOptimization.MultiFold_Group_Smac_base import MultiFold_Group_Bayesian_Optimization
 from BayesianOptimizers.Conditional_BayesianOptimization.Progressive_group_smac import Progressive_BO
-from BayesianOptimizers.Conditional_BayesianOptimization.smac_hpo import SMAC_HPO
-#from BayesianOptimizers.Conditional_BayesianOptimization.Switch_Surrogate_BO import Switch_BO
+from BayesianOptimizers.Conditional_BayesianOptimization.progressive_wholebatch_bo import Batch_Progressive_BO
+from BayesianOptimizers.Conditional_BayesianOptimization.progressive_smallbatch_bo import miniBatch_Progressive_BO
+from BayesianOptimizers.Conditional_BayesianOptimization.Switch_Surrogate_BO import Switch_BO
 from BayesianOptimizers.Conditional_BayesianOptimization.greedy_smac_group import Greedy_SMAC
 from BayesianOptimizers.Conditional_BayesianOptimization.Group_SMAC_base import Group_Bayesian_Optimization
-from csv import writer
-import time 
-from BayesianOptimizers.Conditional_BayesianOptimization.Optuna import Optuna
 from BayesianOptimizers.Conditional_BayesianOptimization.Mango import Mango
+from BayesianOptimizers.Conditional_BayesianOptimization.Optuna import Optuna
 from BayesianOptimizers.Conditional_BayesianOptimization.hyperopt import HyperOpt
 from BayesianOptimizers.Conditional_BayesianOptimization.smac_instance_hpo import SMAC_Instance_HPO
 from BayesianOptimizers.Conditional_BayesianOptimization.hyperband import HyperBand
-from BayesianOptimizers.Conditional_BayesianOptimization.progressive_wholebatch_bo import Batch_Progressive_BO
-from BayesianOptimizers.Conditional_BayesianOptimization.progressive_smallbatch_bo import miniBatch_Progressive_BO
+from BayesianOptimizers.Conditional_BayesianOptimization.RF_BO_without_config_norm import Bayesian_Optimization_without_Norm
+
+
+from csv import writer
+import time 
 
 
 def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
@@ -89,6 +90,17 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 
 
                 optuna_objective = benchmark_.optuna_objective
+                
+                hyperopt_objective = benchmark_.hyperopt_objective_function
+                hyperopt_space = benchmark_.hyper_opt_space()
+
+
+                benchmark_multifidelity = benchmark_class(task_id=task_id,rng=seed,data_repo=data_repo,is_multifidelity=True)
+                multifidelity_objective = benchmark_multifidelity.objective_function_multifidelity
+                multifidelity_configspace,multifidelity_config_dict = benchmark_multifidelity.get_configuration_space_multifidelity()
+
+
+
 
                 mango_config_space = benchmark_.get_mango_config_space()
                 mango_objectives  ={ DT_NAME: benchmark_.mango_objective_dt,
@@ -96,65 +108,83 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                                      LINEAR_SVM_NAME : benchmark_.mango_objective_LinearSVM,
                                      RBF_SVM_NAME : benchmark_.mango_objective_RBFSVM,
                                      RF_NAME: benchmark_.mango_objective_RF}
-                
-                hyperopt_objective = benchmark_.hyperopt_objective_function
-                hyperopt_space = benchmark_.hyper_opt_space()
 
-                benchmark_multifidelity = benchmark_class(task_id=task_id,rng=seed,data_repo=data_repo,is_multifidelity=True)
-                multifidelity_objective = benchmark_multifidelity.objective_function_multifidelity
-                multifidelity_configspace,multifidelity_config_dict = benchmark_multifidelity.get_configuration_space_multifidelity()
-                
-                
                 print('Currently running ' + opt + ' on seed ' + str(seed) + ' dataset ' + str(task_id) )
 
                 
-
-
-
                 if opt == 'Random_Search':
                     Optimization = Group_Random_Search(f=objective_function,configuration_space= configspace,n_init = n_init,max_evals= max_evals,random_seed=seed)
-                elif opt == 'Pavlos':
-                    Optimization = Pavlos_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                elif opt == 'Multi_RF_Local':
-                    Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                elif opt == 'PavlosV2':
-                    Optimization = PavlosV2(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 elif opt == 'Progressive_BO':
                     Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                # make sure smac has same intial configurations
+                elif opt == 'SMAC':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1,init_evals = 5*n_init)
                 elif opt =='RF_Local':
-                    Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
+                    Optimization =Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
                                                 n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local')
-                elif opt =='RF_Local2':
-                    Optimization = Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
-                                                n_init=40,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local')
+                elif opt == 'Mango2': #mango runs init per group ( * 5)
+                    Optimization = Mango(mango_config_space,n_init,max_evals,seed,mango_objectives)
+                elif opt == 'Optuna': # Optuna needs specifically the n_init over all groups
+                    Optimization = Optuna(5*n_init,max_evals,seed,optuna_objective)
+                elif opt == 'HyperOpt': # HyperOpt needs specifically the n_init over all groups
+                    Optimization = HyperOpt(5*n_init,max_evals,seed,hyperopt_objective,hyperopt_space)
+                elif opt == 'Optuna2':
+                    Optimization = Optuna(10,max_evals,seed,optuna_objective)
+                elif opt == 'SMAC2':
+                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1,init_evals = None)
+                
+                else: 
+                    print(opt)
+                    raise RuntimeError
+                
+                          
+                """
+                """
+                
+                
+                """
+                elif opt == 'Multi_RF_Local':
+                    Optimization = MultiFold_Group_Bayesian_Optimization(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                
+
+
+                elif opt == 'PavlosV2':
+                    Optimization = PavlosV2(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                
+
+
+                elif opt == 'Pavlos':
+                    Optimization = Pavlos_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                
+                elif opt == 'Switch_BO':
+                    Optimization = Switch_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
                 elif opt == 'Greedy_SM':
                     Optimization = Greedy_SMAC(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                elif opt == 'SMAC2':
-                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1,init_evals = 5*n_init)
+                
                 elif opt == 'SMAC':
                     Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1) 
-                elif opt == 'Optuna':
-                    Optimization = Optuna(max_evals,seed,optuna_objective)
-                elif opt == 'Mango2':
-                    Optimization = Mango(mango_config_space,n_init,max_evals,seed,mango_objectives)
-                elif opt == 'HyperOpt':
-                    Optimization = HyperOpt(max_evals,seed,hyperopt_objective,hyperopt_space)
-                elif opt =='RF_Local_extensive':
-                    Optimization =Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
-                                                n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local',extensive='Hyper')
+                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)
                 elif opt == 'SMAC_Instance':
                     Optimization= SMAC_Instance_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
                              repo=repo,max_evals=5*max_evals,seed=seed,objective_function=smac_objective_function_per_fold)
+
+
+                elif opt =='RF_Local_extensive':
+                    Optimization =Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
+                                                n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local',extensive='Hyper')
                 elif opt =='RF_Local_No_STD':
                     Optimization =Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
                                                 n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local',std_out='Yes')
+                
+
                 elif opt == 'Hyperband':
                     Optimization = HyperBand(configspace=multifidelity_configspace,config_dict=multifidelity_config_dict,task_id=task_id,
                     repo=data_repo,max_evals=max_evals,seed=seed,objective_function=multifidelity_objective,n_workers=1)
@@ -164,22 +194,18 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                 elif opt == 'MiniBatch_Progressive':
                     Optimization = miniBatch_Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
                     initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
-                else: 
-                    print(opt)
-                    raise RuntimeError
-                """            
-                 
-               
-
-                elif opt == 'Switch_BO':
-                    Optimization = Switch_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
-                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5)
+                
+                
+                elif opt == 'RF_Local_std0.2':
+                    Optimization =Group_Bayesian_Optimization(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
+                                                n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local',stdev=0.2)
+                elif opt == 'Progressive_BO_std0.2':
+                    Optimization = Progressive_BO(f=objective_function_per_fold, model='RF' ,lb= None, ub =None , configuration_space= config_dict ,\
+                    initial_design=None,n_init = n_init, max_evals = max_evals, batch_size=1 ,verbose=True,random_seed=seed,maximizer = 'Sobol_Local',n_folds=5,stdev=0.2)
+                elif opt == 'Experimental':
+                    Optimization = Bayesian_Optimization_without_Norm(f=objective_function, model='RF' ,lb= None, ub =None ,configuration_space=config_dict,\
+                                                n_init=n_init,max_evals=max_evals,initial_design=None,random_seed=seed,maximizer='Sobol_Local')
                 """
-                
-                """elif opt == 'SMAC':
-                    Optimization = SMAC_HPO(configspace=configspace,config_dict=config_dict,task_id=task_id,
-                    repo=data_repo,max_evals=max_evals,seed=seed,objective_function=smac_objective_function,n_workers=1)  """
-                
                 
                 start_time = time.time()
                 Optimization.run()
@@ -209,7 +235,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                         for group in Optimization.save_configuration:
                             Optimization.save_configuration[group].to_csv( parse_directory([ config_per_group_directory, group+csv_postfix ]))
                         pd.DataFrame({'GroupName':Optimization.X_group}).to_csv( parse_directory([ config_per_group_directory, 'group_index'+csv_postfix ]))
-                    elif opt == 'Multi_RF_Local' or opt == 'MiniBatch_Progressive' or opt == 'Progr_Batch_BO' or  opt == 'Progressive_BO' or opt =='Switch_BO' or opt =='GreedySM' or opt == 'RF_Local' or opt =='RF_Local_extensive':
+                    elif opt == 'Multi_RF_Local' or opt == 'MiniBatch_Progressive' or opt == 'Progr_Batch_BO' or opt == 'Progressive_BO' or opt =='Switch_BO' or opt =='GreedySM' or opt == 'RF_Local' or opt =='RF_Local_extensive' or opt == 'RF_Local_No_STD':
                         for group in Optimization.object_per_group:
                             X_df = Optimization.object_per_group[group].X_df
                             y_df = pd.DataFrame({'y':Optimization.object_per_group[group].fX})
@@ -230,7 +256,7 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
                     
     
 
- 
+
 
 
 
@@ -238,60 +264,53 @@ def run_benchmark_total(optimizers_used =[],bench_config={},save=True):
 def get_openml_data(speed = None):
     # 2074 needs 15 hours for 3 seeds per optimizer.
     assert speed !=None
-
-
-    """
-    Problematic:
-    1. 361618 : This dataset has no categorical indexes but has categorical attributes!
-    
-    
-    """
-
- 
-    if speed == 'fast': 
-        # 359933, 359944, 233215, 167210, 359949, 359936, 
-        # 359946, 359938, 359939, 359940, 359942, 359935, 
-        # 360933, 360932, 233214, 359948, 359930, 359945,
-        # 359951, 359945, 360945, 359932, 359931, 359950, 359934,359948
-        """l = [359949,359936,359946,359938,359939,359940,\
-             359942,359935,360933,360932,233214,,\
-             ]"""
-        """l.reverse()"""
-        l = [361234,361256,359951
-                ,361258,233215,360945
-                ,359930,359948,359931
-                ,359932,359933,361619
-                ,359934,359945,361249]
-        return l
-    #These are from new benchmark
-    return #[361619,361617,361259,361258,361256,361249]
+    if speed == 'fast':
+        return [14954,11,3918,3917,3021,43,167141,9952,] #[]
+    return [2074, 9976,10101] #[ 2074, 9976,10101] #,9910,167125, 9910,167125
 
 def get_jad_data(speed = None):        
     assert speed !=None
     if speed == 'fast':
-        return []
-    return [] 
+        return [839,842,851,850,1114,847]
+    #  on all seeds 
+    return  [843,883] #[843,883] 866
 
+def get_automl_data(speed=None):
+    assert speed !=None
+    if speed == 'fast':
+        return [3, 11, 12, 14, 15, 16, 18, 22, 23, 
+                28, 29, 31, 37, 43, 45, 49, 53, 2074, 
+                2079, 3021, 3022, 3481, 3549, 3560, 3902, 
+                3903, 3913, 3917, 3918, 9946, 9952, 9957, 
+                9960, 9964, 9971, 9976, 9978, 9981, 9985, 
+                10093, 10101, 14954, 14969, 125920, 125922, 
+                146800, 146817, 146819, 146820, 146821, 146822, 
+                146824, 167140, 167141, 146818, 168910, 168911, 168912]
+    return []
 if __name__ == '__main__':
     config_of_data = { 'Jad':{'data_ids':get_jad_data},
-                        'OpenML': {'data_ids':get_openml_data}      }
-     
+                    'OpenML': {'data_ids':get_openml_data} ,
+                    'AutoML' : {'data_ids':get_automl_data}     }
+    
     #9976 datasets hasn't run for SMAC.
-    # 'SMAC','Pavlos','Random_Search','Multi_RF_Local','Progressive_BO'
-    opt_list = ['MiniBatch_Progressive'] # ,,,'RF_Local',] #'RF_Local2' 'SMAC_Instance' 'SMAC' ,'SMAC' ,,, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
-    for speed in ['fast']: 
+    # 'SMAC','Random_Search','Progressive_BO' 
+    # 'RF_Local','SMAC','Random_Search','Multi_RF_Local','Progressive_BO','Greedy_SM'
+    #opt_list = ['Optuna','HyperOpt','Random_Search','Mango2','RF_Local','SMAC'] #['Switch_BO','SMAC','Random_Search','Multi_RF_Local','Progressive_BO'] # ,,,'RF_Local',] 'SMAC' 'SMAC_Instance' ,'SMAC' ,'Random_Search',, 'Pavlos','Random_Search','Multi_RF_Local' 'SMAC', 'Pavlos','Random_Search','Multi_RF_Local','Random_Search','Multi_RF_Local','Pavlos'
+    opt_list = ['Optuna','HyperOpt','SMAC','Random_Search','Mango2','RF_Local']
+    for speed in ['fast','slow']: #
      # obtain the benchmark suite    
-        for repo in ['OpenML']: #'
+        for repo in ['AutoML']: #'
             #XGBoost Benchmark    
             xgb_bench_config =  {
                 'n_init' : 10,
-                'max_evals' : 1050,
+                'max_evals' : 350,
                 'n_datasets' : 1000,
                 'data_ids' :  config_of_data[repo]['data_ids'](speed=speed),
                 'n_seeds' : [1], 
-                'type_of_bench': 'Main_Multi_Fold_Group_Space_Results_Rregression',
+                'type_of_bench': 'classification_experiments',
                 'bench_name' :'GROUP',
-                'bench_class' : Group_MultiFold_Space_Regression,
+                'bench_class' : Group_MultiFold_Space,
                 'data_repo' : repo
-            }
+            } 
             run_benchmark_total(opt_list,xgb_bench_config)
+

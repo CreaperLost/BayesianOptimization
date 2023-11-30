@@ -14,7 +14,7 @@ from typing import List
 
 
 
-from BayesianOptimizers.Conditional_BayesianOptimization.per_group_smac import Per_Group_Bayesian_Optimization
+from BayesianOptimizers.Conditional_BayesianOptimization.Per_Group_BO_without_norm import Local_BO_Without_Norm
 
 
 import pandas as pd
@@ -22,7 +22,7 @@ import pandas as pd
 
 
 
-class Group_Bayesian_Optimization:
+class Bayesian_Optimization_without_Norm:
     """The Random Forest Based Regression Local Bayesian Optimization.udnn-cu11, minio, kiwisolver, Jinja2, importlib-metadata, emcee, Deprecated, autograd, alive-progress, xgboost, torch, stevedore, scikit-learn, requests-toolbelt, paramz, pandas, matplotlib, george, debtcollector, dask, ConfigSpace, click, autograd-gamma, torchvision, statsmodels, pymoo, oslo.utils, oslo.config, openml, gpytorch, GPy, formulaic, 
     
     Parameters
@@ -58,7 +58,7 @@ class Group_Bayesian_Optimization:
         random_seed = int(1e6),
         acq_funct = 'EI',
         model = 'RF',
-        maximizer  = 'Sobol',extensive = None, std_out = None,stdev=None,
+        maximizer  = 'Sobol',extensive = None, std_out = None,
     ): 
 
         # Very basic input checks
@@ -129,12 +129,11 @@ class Group_Bayesian_Optimization:
         #Initialize the X and fX dictionaries.
         for classifier_name in configuration_space:
             classifier_specific_config_space = configuration_space[classifier_name]
-            self.object_per_group[classifier_name] = Per_Group_Bayesian_Optimization(f= self.f,lb=None,ub=None,\
+            self.object_per_group[classifier_name] = Local_BO_Without_Norm(f= self.f,lb=None,ub=None,\
                                                                                     configuration_space=classifier_specific_config_space,\
                                                                                     initial_design=initial_design,n_init=n_init,max_evals=max_evals,
                                                                                     batch_size=batch_size,random_seed=random_seed,\
-                                                                                      acq_funct=acq_funct,model=model,maximizer=maximizer,group_name =classifier_name,\
-                                                                                      extensive=extensive,STD_OUT = std_out,stdev=stdev)
+                                                                                      acq_funct=acq_funct,model=model,maximizer=maximizer,group_name =classifier_name,extensive=extensive,STD_OUT = std_out)
     
     # Just call each class and run the initial configurations of each.
     def run_initial_configurations(self):

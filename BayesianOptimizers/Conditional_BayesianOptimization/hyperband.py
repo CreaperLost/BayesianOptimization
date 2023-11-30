@@ -1,26 +1,24 @@
 from smac import MultiFidelityFacade as MFFacade
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import HyperparameterOptimizationFacade, Scenario, HyperbandFacade
 from ConfigSpace import Configuration, ConfigurationSpace
 import pandas as pd
 import numpy as np
 import time
+from smac.intensifier.hyperband import Hyperband
 
-class SMAC_HPO:
+class HyperBand:
                 
 
-    def __init__(self,configspace,config_dict,task_id,repo,max_evals,seed,objective_function,n_workers=1,init_evals=None):
+    def __init__(self,configspace,config_dict,task_id,repo,max_evals,seed,objective_function,n_workers=1,init_evals=None,min_budget= 0.5, max_budget = 1):
 
-
-        
         #Scenario object specifying the optimization environment
         self.scenario = Scenario(configspace,name='Dataset'+str(task_id),
                                            output_directory='single_smac' +'/'+repo,
-                                     n_trials=max_evals,deterministic=True,seed=seed,n_workers = n_workers )
+                                     n_trials=max_evals,deterministic=True,seed=seed,n_workers = n_workers, min_budget=1,max_budget=9 )
         self.initial_design = None
-        if init_evals != None:
-            self.initial_design = HyperparameterOptimizationFacade.get_initial_design(self.scenario, n_configs=init_evals)
 
-
+        self.seed =seed
+        
         # Use SMAC to find the best configuration/hyperparameters
         self.configspace = configspace
         self.save_configuration={}
@@ -47,17 +45,20 @@ class SMAC_HPO:
     def run(self):
         start_time = time.time()
 
-        if self.initial_design != None:
-            smac_single = HyperparameterOptimizationFacade(self.scenario,self.objective_function,overwrite=True,initial_design=self.initial_design)
-        else:
-            smac_single = HyperparameterOptimizationFacade(self.scenario, self.objective_function,overwrite=True)
-        incumbent_single = smac_single.optimize()
+
+        custom_intensifier = Hyperband(self.scenario,incumbent_selection='any_budget')
+
+        hyper_band = HyperbandFacade(self.scenario, self.objective_function,overwrite=True,intensifier=custom_intensifier)
+        incumbent_single = hyper_band.optimize()
         
+
+        #print('Run History : ',len(hyper_band.runhistory.items()))
+
         # Plot all trials
-        for trial_info, trial_value in smac_single.runhistory.items():
+        for trial_info, trial_value in hyper_band.runhistory.items():
                     
             # Trial info
-            config_descr = smac_single.runhistory.get_config(trial_info.config_id)
+            config_descr = hyper_band.runhistory.get_config(trial_info.config_id)
                 
             # Trial value
             cost = trial_value.cost
@@ -83,13 +84,14 @@ class SMAC_HPO:
             new_row = pd.concat([X_df,y_df],axis=1)
             self.save_configuration[config_descr['model']] = self.save_configuration[config_descr['model']].append(new_row,ignore_index=True)
 
-
+        #print('Trajectory : ',len(hyper_band.intensifier.trajectory))
         
-        for item in smac_single.intensifier.trajectory:
+        for item in hyper_band.intensifier.trajectory:
             # Single-objective optimization
             assert len(item.config_ids) == 1
             assert len(item.costs) == 1
-
+            config_descr = hyper_band.runhistory.get_config(item.config_ids[0])
+            
             y = item.costs[0]
             x = item.walltime
             new_row = pd.DataFrame({'Time':x,'Score':y},index=[0])
@@ -97,8 +99,11 @@ class SMAC_HPO:
 
         #Finally append the final score!!!!!! YEAS
         end_time = time.time() - start_time
-        print(f'this { smac_single._get_optimizer().used_walltime } == {end_time}')
+        #print(f'this { hyper_band._get_optimizer().used_walltime } == {end_time}')
         new_row = pd.DataFrame({'Time':end_time,'Score':y},index=[0])
+
+
+        print(np.min(self.fX),new_row.iloc[-1])
         
         self.total_time = self.total_time.append(new_row,ignore_index=True)
 

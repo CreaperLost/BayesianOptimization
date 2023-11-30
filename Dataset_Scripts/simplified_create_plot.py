@@ -114,10 +114,12 @@ seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Main_Multi_Fold_Group_Space_Results'
-optimizers = ['Multi_RF_Local','Random_Search','SMAC','Progressive_BO','Greedy_SM','Switch_BO',] # 'Multi_RF_Local',
-
 space_type = 'GROUP'
 
+#optimizers = ['Mango','Multi_RF_Local','Random_Search','SMAC','Progressive_BO','RF_Local','Optuna','Mango2'] # 'Multi_RF_Local','Greedy_SM',
+#optimizers = ['Random_Search','Mango2','Optuna','SMAC','RF_Local_extensive','RF_Local','HyperOpt','RF_Local_No_STD','Hyperband']
+
+optimizers = ['Progressive_BO','RF_Local','Experimental']
 opt_colors = dict()
 clr_pos = 0
 for opt in optimizers:
@@ -128,7 +130,7 @@ for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
-    for time_bool_flag in [False,True]: #'True'
+    for time_bool_flag in [False]: #'True'
         for dataset in os.listdir(path_str):
             dataset_name = get_dataset_name_byrepo(dataset,data_repo)
             for seed in seeds:
@@ -161,6 +163,7 @@ for data_repo in ['Jad','OpenML']:
                     if opt == 'Greedy_SM':
                         plt.plot([i for i in range(800,1050)],y,opt_colors[opt],label=opt)
                     else:
+                        print(opt)
                         plt.plot(x,y,opt_colors[opt],label=opt)
 
             plt.grid(True, which='major')
@@ -187,6 +190,7 @@ dataset_list = []
 
 for data_repo in ['Jad','OpenML']:
     # If the repository doesn't exist then move on.
+    print(data_repo)
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False: continue
     for dataset in os.listdir(path_str):
@@ -207,19 +211,19 @@ for data_repo in ['Jad','OpenML']:
                     metric.columns = ['Score']
                 except:
                     continue
-                time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
+                """time = pd.read_csv(os.path.join(os.pardir,result_space,space_type,'Total_Time',data_repo,dataset,'Seed'+str(seed),opt,opt+'.csv'),index_col=['Unnamed: 0'])  
                 if 'SMAC' not in opt:
                     time.columns = ['Time']
                 else:
-                    time.columns = ['Time','Score']
+                    time.columns = ['Time','Score']"""
                         
-                x_time,y_time = time_plot_for_opt(time,metric,opt)
+                #x_time,y_time = time_plot_for_opt(time,metric,opt)
                 x,y = config_plot_for_opt(metric,opt)
                 
                 y_per_opt_for_config[opt].append(y)
                 x_per_opt_for_config[opt].append(x)
-                y_per_opt_for_time[opt].append(y_time)
-                x_per_opt_for_time[opt].append(x_time)
+                """y_per_opt_for_time[opt].append(y_time)
+                x_per_opt_for_time[opt].append(x_time)"""
 
 
         # Define the desired confidence level (e.g., 95% confidence interval)
@@ -286,7 +290,7 @@ for opt in optimizers:
             df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
             plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
 
-plt.ylim([0.065,0.1])
+plt.ylim([0.08,0.1])
 plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')

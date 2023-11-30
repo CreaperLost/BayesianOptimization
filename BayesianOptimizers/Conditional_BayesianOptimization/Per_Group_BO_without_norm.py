@@ -34,7 +34,7 @@ import pandas as pd
 
 
 
-class Per_Group_Bayesian_Optimization:
+class Local_BO_Without_Norm:
     """The Random Forest Based Regression Local Bayesian Optimization.
     
     Parameters
@@ -70,7 +70,7 @@ class Per_Group_Bayesian_Optimization:
         random_seed = int(1e6),
         acq_funct = 'EI',
         model = 'RF',
-        maximizer  = 'Sobol',group_name = '',extensive=None,STD_OUT=None,stdev = None
+        maximizer  = 'Sobol',group_name = '',extensive=None,STD_OUT=None
     ):
 
         # Very basic input checks
@@ -188,7 +188,7 @@ class Per_Group_Bayesian_Optimization:
             if maximizer == 'Sobol':
                 self.maximize_func = SobolMaximizer(self.acquisition_function, self.config_space, self.n_cand)
             elif maximizer == 'Sobol_Local':
-                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand,local_points=local_points,stdev=stdev)
+                self.maximize_func  = Sobol_Local_Maximizer(self.acquisition_function, self.config_space, self.n_cand,local_points=local_points)
             else:
                 raise RuntimeError
             
@@ -205,6 +205,8 @@ class Per_Group_Bayesian_Optimization:
         '''
         # creates a ConfigSpace object dict with all hyperparameters present, the inactive too
         new_config = impute_inactive_values(self.config_space.sample_configuration()).get_dictionary()
+        #print('Vector to configuration space')
+        #print(vector)
         # iterates over all hyperparameters and normalizes each based on its type
         for i, hyper in enumerate(self.config_space.get_hyperparameters()):
             if from_normalized==True:
@@ -254,6 +256,8 @@ class Per_Group_Bayesian_Optimization:
         except:
             new_config = Configuration(configuration_space=self.config_space, values = new_config,allow_inactive_with_values = True)
             #print(new_config)
+        #print(new_config)
+        #print('=============================================')
         return new_config
 
 
@@ -268,10 +272,15 @@ class Per_Group_Bayesian_Optimization:
         config = impute_inactive_values(config)
         dimensions = len(self.config_space.get_hyperparameters())
         vector = [np.nan for i in range(dimensions)]
+        #print('Configuration to Vector')
+        #print(config)
         for name in config:
             i = self.hps[name]
 
             hyper = self.config_space.get_hyperparameter(name)
+            # Continuous - > infinite neighborss
+            # Categorical and integers === the boundds.
+            
             if normalize == True:
                 if type(hyper) == OrdinalHyperparameter:
                     nlevels = len(hyper.sequence)
@@ -287,19 +296,31 @@ class Per_Group_Bayesian_Optimization:
                     else:
                         vector[i] =  (config[name] - bounds[0]) / (bounds[1] - bounds[0])
             else:
+                #print(name,config[name])
+                #print(hyper)
                 if type(hyper) == OrdinalHyperparameter:
+                    #print('Ordinal ',hyper.sequence)
                     nlevels = len(hyper.sequence)
                     vector[i] = config[name] #hyper.sequence.index() 
                 elif type(hyper) == CategoricalHyperparameter:
+                    #print('Categorical ',hyper.choices)
                     nlevels = len(hyper.choices)
                     vector[i] = hyper.choices.index(config[name]) 
                 else:
                     bounds = (hyper.lower, hyper.upper)
+                    #print('Numerical  ',bounds)
                     param_value = config[name]
+                    # CHECK 
                     if hyper.log:
-                        vector[i] = np.log(param_value / bounds[0]) / np.log(bounds[1] / bounds[0])
+                        #print('Numerical is Log')
+                        vector[i] = np.log(param_value / bounds[0]) / np.log(bounds[1] / bounds[0]) #param_value 
+                        #print(f'Prev {param_value }, After log : {vector[i]}')
                     else:
+                        #print('Numerical is not logged ', param_value)
                         vector[i] =  param_value
+
+        #print(np.array(vector))
+        #print("==========================")
         return np.array(vector)
 
 
@@ -318,22 +339,6 @@ class Per_Group_Bayesian_Optimization:
         return np.array(population)
 
      
-    def convert_configurations_to_array(configs: List[Configuration]) -> np.ndarray:
-        """Impute inactive hyperparameters in configurations with their default.
-
-        Necessary to apply an EPM to the data.
-
-        Parameters
-        ----------
-        configs : List[Configuration]
-            List of configuration objects.
-
-        Returns
-        -------
-        np.ndarray
-        """
-        return np.array([config.get_array() for config in configs], dtype=np.float64)
-
 
     def add_group_name_to_config(self,config:Configuration):
         new_config =config.get_dictionary().copy()

@@ -42,7 +42,7 @@ class Progressive_BO:
         acq_funct = 'EI',
         model = 'RF',
         maximizer  = 'Sobol',
-        n_folds = 10,
+        n_folds = 10,stdev=None
     ):
 
         # Very basic input checks
@@ -110,7 +110,7 @@ class Progressive_BO:
                                                                                     configuration_space=classifier_specific_config_space,\
                                                                                     initial_design=initial_design,n_init=n_init,max_evals=max_evals,
                                                                                     batch_size=batch_size,random_seed=random_seed,\
-                                                                                      acq_funct=acq_funct,model=model,maximizer=maximizer,group_name =classifier_name,n_folds = self.n_folds )
+                                                                                      acq_funct=acq_funct,model=model,maximizer=maximizer,group_name =classifier_name,n_folds = self.n_folds ,stdev=stdev)
         #Store the group that was selected at each iteration.
         self.X_group = []
 

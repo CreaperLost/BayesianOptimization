@@ -23,3 +23,5 @@ pass.csv
 Regression_Figures/
 .DS_Store
 .DS_Store
+classification_experiments/
+finished_experiments/

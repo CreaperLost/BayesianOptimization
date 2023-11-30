@@ -80,7 +80,7 @@ def save_figure(data_repo, dataset, time_plot_bool, clf_name):
         pass
     else:
         pass
-    plt.savefig(parse_directory([results_directory,clf_name+'.png']),bbox_inches='tight')
+    plt.savefig(parse_directory([results_directory,clf_name+'-ADTM.png']),bbox_inches='tight')
 
 def time_plot_for_opt(time,metric,opt):
 
@@ -117,8 +117,6 @@ result_space = 'Main_Multi_Fold_Group_Space_Results_Rregression'
 #optimizers = ['Multi_RF_Local','Random_Search','SMAC','Progressive_BO','Greedy_SM','RF_Local'] # 'Multi_RF_Local',
 optimizers = ['Random_Search','Mango2','Optuna','SMAC','RF_Local_extensive','RF_Local','HyperOpt','RF_Local_No_STD']
 
-#optimizers = ['RF_Local','Hyperband','Progressive_BO','Greedy_SM']
-optimizers = ['Progr_Batch_BO','Progressive_BO','RF_Local','MiniBatch_Progressive']
 
 space_type = 'GROUP'
 
@@ -196,6 +194,8 @@ for opt in optimizers:
 
 dataset_list = []
 
+
+min_per_data = []
 for data_repo in ['OpenML']:
     # If the repository doesn't exist then move on.
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
@@ -205,6 +205,7 @@ for data_repo in ['OpenML']:
         dataset_name = get_dataset_name_byrepo(dataset,data_repo)
         dataset_list.append(dataset_name +'_' +  str(dataset))
         for seed in seeds:
+            scores = []
             for opt in optimizers:
                 if opt == 'Jad':
                     jad_score =  get_Jad_avg_score(dataset_name)
@@ -230,11 +231,12 @@ for data_repo in ['OpenML']:
                     y = np.array([y[49],y[149],y[249],y[349],y[449],y[449]])
                     y_time = np.array(y)
                 #print(dataset,y,opt)
+                scores.append(y[-1])
                 y_per_opt_for_config[opt].append(y)
                 x_per_opt_for_config[opt].append(x)
                 """y_per_opt_for_time[opt].append(y_time)
                 x_per_opt_for_time[opt].append(x_time)"""
-
+            min_per_data.append( min(scores) )
 
         # Define the desired confidence level (e.g., 95% confidence interval)
 
@@ -245,14 +247,16 @@ def get_confidence_interval(row):
     interval = stats.t.interval(confidence_level, len(row)-1, loc=mean, scale=std_error)
     return interval
 
-def compute_row_mean_and_std(dictionary_entry,iter):
+def compute_row_mean_and_std(dictionary_entry,iter,min_scores):
     # Create an empty DataFrame
     df = pd.DataFrame()
     # Iterate through the array_list and append each array as a column
     
     for i, arr in enumerate(dictionary_entry):
-        
-        my_array  = arr.flatten()
+        min_score = - min_scores[i] + 1
+        tmp_arr =  (- arr.flatten()) + 1 
+        my_array  = (min_score - tmp_arr) *100 / min_score
+        #my_array  = arr.flatten()
         while len(my_array) < iter:
             my_array = np.append(my_array, my_array[-1])
         df[f'Column {i+1}'] = my_array
@@ -297,7 +301,7 @@ for opt in optimizers:
             plt.plot([i for i in range(800,1050)],greedy_score(y_per_opt_for_config[opt])[800:1050],opt_colors[opt],label=opt)
         else:
             #print(y_per_opt_for_config[opt])
-            df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
+            df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050,min_per_data)
             plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
     
     """if opt == 'SMAC' or opt =='Random_Search':
@@ -308,12 +312,12 @@ for opt in optimizers:
         df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],6)
         plt.plot([49,149,249,349,449,549],result['Mean'],opt_colors[opt],label=opt)"""
 
-plt.ylim([0.31,0.35])
+plt.ylim([0,10])
 plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets')
-plt.ylabel('Average 1-R2')
+plt.ylabel('Percentage Difference from Best R2')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()

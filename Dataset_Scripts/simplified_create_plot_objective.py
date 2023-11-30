@@ -63,9 +63,9 @@ def save_figure(data_repo, dataset, time_plot_bool, clf_name):
     main_directory =  getcwd().replace(directory_notation+'Dataset_Scripts','')
     
     if data_repo == 'OverAllDatasets':
-        path_to_figure = os.path.join(main_directory,'Regression_Figures','OverAllDatasets')
+        path_to_figure = os.path.join(main_directory,'Figures','OverAllDatasets')
     else:
-        path_to_figure = os.path.join(main_directory,'Regression_Figures',data_repo,dataset)
+        path_to_figure = os.path.join(main_directory,'Figures',data_repo,dataset)
 
 
     if time_plot_bool == True:
@@ -109,26 +109,29 @@ def get_Jad_avg_score(dataset_name):
         return None
     return Res_File.loc[dataset_name].values[0]
 
-colors = ['red','blue','green','black','orange','grey','cyan','brown']
+colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 seeds = [1]
 #How many initial configurations we have run.
 interval = 50
-result_space = 'Main_Multi_Fold_Group_Space_Results_Rregression'
-#optimizers = ['Multi_RF_Local','Random_Search','SMAC','Progressive_BO','Greedy_SM','RF_Local'] # 'Multi_RF_Local',
-optimizers = ['Random_Search','Mango2','Optuna','SMAC','RF_Local_extensive','RF_Local','HyperOpt','RF_Local_No_STD']
-
-#optimizers = ['RF_Local','Hyperband','Progressive_BO','Greedy_SM']
-optimizers = ['Progr_Batch_BO','Progressive_BO','RF_Local','MiniBatch_Progressive']
-
+result_space = 'Main_Multi_Fold_Group_Space_Results'
 space_type = 'GROUP'
 
+#optimizers = ['Mango','Multi_RF_Local','Random_Search','SMAC','Progressive_BO','RF_Local','Optuna','Mango2'] # 'Multi_RF_Local','Greedy_SM',
+#optimizers = ['RF_Local','Hyperband','Progressive_BO','SMAC_Instance','Greedy_SM']
+              #'Random_Search','Mango2','Optuna','SMAC','HyperOpt','
+#optimizers = ['RF_Local', 'RF_Local_No_STD', 'RF_Local_extensive', ]
+
+optimizers = ['SMAC', 'SMAC_Instance']
+
+
+# 'RF_Local_No_STD', 'RF_Local_extensive', 
 opt_colors = dict()
 clr_pos = 0
 for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-for data_repo in ['Jad','OpenML']:
+"""for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
         continue
@@ -136,8 +139,6 @@ for data_repo in ['Jad','OpenML']:
         for dataset in os.listdir(path_str):
             dataset_name = get_dataset_name_byrepo(dataset,data_repo)
             for seed in seeds:
-                min_y = 1
-                max_y = 0
                 for opt in optimizers:
                     if opt == 'Jad':
                         jad_score =  get_Jad_avg_score(dataset_name)
@@ -159,8 +160,7 @@ for data_repo in ['Jad','OpenML']:
                         
                         plt.xlabel('Average time in seconds')
                         x,y = time_plot_for_opt(time,metric,opt)
-                        """if opt == 'PavlosV2':
-                            y = [y[49],y[149],y[249],y[349],y[449],y[449]] """
+                        
                     else:
                         plt.xlim([0,1050])
                         plt.xlabel('Number of objective evals.')
@@ -168,18 +168,15 @@ for data_repo in ['Jad','OpenML']:
                     if opt == 'Greedy_SM':
                         plt.plot([i for i in range(800,1050)],y,opt_colors[opt],label=opt)
                     else:
+                        print(opt)
                         plt.plot(x,y,opt_colors[opt],label=opt)
-                    if min_y > np.min(y):
-                        min_y= np.min(y)
-                    if max_y < np.max(y):
-                        max_y = np.max(y)
-            plt.ylim([min_y-0.01,min_y+0.05])
+
             plt.grid(True, which='major')
             plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
-            plt.ylabel('1-R2 score')
+            plt.ylabel('1-AUC score')
             plt.legend()
             save_figure(data_repo,dataset_name,time_bool_flag,'Group')
-            plt.clf()
+            plt.clf()"""
                   
 
 # Store the results per optimizer.
@@ -196,8 +193,9 @@ for opt in optimizers:
 
 dataset_list = []
 
-for data_repo in ['OpenML']:
+for data_repo in ['Jad','OpenML']:
     # If the repository doesn't exist then move on.
+    print(data_repo)
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False: continue
     for dataset in os.listdir(path_str):
@@ -222,14 +220,11 @@ for data_repo in ['OpenML']:
                 if 'SMAC' not in opt:
                     time.columns = ['Time']
                 else:
-                    time.columns = ['Time','Score']
+                    time.columns = ['Time','Score']"""
                         
-                x_time,y_time = time_plot_for_opt(time,metric,opt)"""
+                #x_time,y_time = time_plot_for_opt(time,metric,opt)
                 x,y = config_plot_for_opt(metric,opt)
-                if opt == 'PavlosV2':
-                    y = np.array([y[49],y[149],y[249],y[349],y[449],y[449]])
-                    y_time = np.array(y)
-                #print(dataset,y,opt)
+                
                 y_per_opt_for_config[opt].append(y)
                 x_per_opt_for_config[opt].append(x)
                 """y_per_opt_for_time[opt].append(y_time)
@@ -243,9 +238,9 @@ def get_confidence_interval(row):
     confidence_level = 0.95
     std_error = stats.sem(row)
     interval = stats.t.interval(confidence_level, len(row)-1, loc=mean, scale=std_error)
-    return interval
+    return interval 
 
-def compute_row_mean_and_std(dictionary_entry,iter):
+def compute_row_mean_and_std(dictionary_entry,iter,opt):
     # Create an empty DataFrame
     df = pd.DataFrame()
     # Iterate through the array_list and append each array as a column
@@ -253,6 +248,49 @@ def compute_row_mean_and_std(dictionary_entry,iter):
     for i, arr in enumerate(dictionary_entry):
         
         my_array  = arr.flatten()
+        if opt == 'Progressive_BO':
+            tmp_arr = []
+            # [25,75,150,250,500]
+            for idx,val in enumerate(my_array):
+                if idx  < 75:
+                    tmp_arr.append(val)
+                elif idx == 75:
+                    for _ in range(idx):
+                        tmp_arr.append(val)
+
+                elif idx < 150:
+                    for _ in range(2):
+                        tmp_arr.append(val)
+                elif idx == 150:
+                    for _ in range(idx):
+                        tmp_arr.append(val)
+
+                elif idx < 300:
+                    for _ in range(3):
+                        tmp_arr.append(val)
+                elif idx == 300:
+                    for _ in range(idx):
+                        tmp_arr.append(val)
+
+                elif idx < 550:
+                    for _ in range(4):
+                        tmp_arr.append(val)
+                elif idx == 550:
+                    for _ in range(idx):
+                        tmp_arr.append(val)
+
+                elif idx < 1050:
+                    for _ in range(5):
+                        tmp_arr.append(val)
+                elif idx == 1050:
+                    for _ in range(idx):
+                        tmp_arr.append(val)
+            my_array = tmp_arr        
+        elif opt == 'SMAC_Instance':
+            pass
+        else:
+            my_array = [value for value in my_array for _ in range(5)]
+        print('Number of iterations... ',len(my_array),opt)
         while len(my_array) < iter:
             my_array = np.append(my_array, my_array[-1])
         df[f'Column {i+1}'] = my_array
@@ -271,6 +309,7 @@ def compute_row_mean_and_std(dictionary_entry,iter):
     return df,result
 
 
+
 def greedy_score(mean_score):
     # Create an empty DataFrame
     df = pd.DataFrame()
@@ -279,47 +318,48 @@ def greedy_score(mean_score):
     
     for i, arr in enumerate(mean_score):
         my_array  = arr.flatten()
+        tmp_arr = []
+        # This is not entirely correct. The previous configurations have already run.
+        for idx,val in enumerate(my_array):
+            if idx < 10:
+                tmp_arr.append(val)
+            else:
+                for _ in range(5):
+                    tmp_arr.append(val)
+        my_array = tmp_arr
+        print('Number of iterations... Greedy',len(my_array))
         df[f'Column {i+1}'] = my_array
 
-    final_scores = [0 for i in range(800)] + list(df.mean(axis=1))
-    print(len(final_scores))
+    final_scores = [0 for i in range(2850)] + list(df.mean(axis=1))
+    
     return final_scores
 
 
 time_bool_flag = False
 for opt in optimizers:
     print(f'Current Optimizer {opt}')
-    x=[i for i in range(0,1050)]
+    x=[i for i in range(0,5250)]
     if opt =='Jad':
         continue
     else:
         if opt == 'Greedy_SM':
-            plt.plot([i for i in range(800,1050)],greedy_score(y_per_opt_for_config[opt])[800:1050],opt_colors[opt],label=opt)
+            plt.plot([i for i in range(2850,3960)],greedy_score(y_per_opt_for_config[opt])[2850:3960],opt_colors[opt],label=opt)
         else:
-            #print(y_per_opt_for_config[opt])
-            df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],1050)
+            df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],5250,opt)
             plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
-    
-    """if opt == 'SMAC' or opt =='Random_Search':
-        df.columns = dataset_list
-        #df.to_csv('Avg_performance' +opt+'.csv')"""
-    """
-    if opt == 'PavlosV2':
-        df,result = compute_row_mean_and_std(y_per_opt_for_config[opt],6)
-        plt.plot([49,149,249,349,449,549],result['Mean'],opt_colors[opt],label=opt)"""
 
-plt.ylim([0.31,0.35])
-plt.xlim([0,1050])
+plt.ylim([0.08,0.1])
+plt.xlim([0,5250])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets')
-plt.ylabel('Average 1-R2')
+plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
 
 
-
+"""
 def compute_percentile(numpy_time_measures):
     positions = [0]
     for i in range(1, 10):
@@ -381,31 +421,22 @@ def compute_avg_time(dictionary_entry):
     row_means = list(df.mean(axis=1))
     return row_means
 
-"""time_bool_flag = True
+
+time_bool_flag = True
 for opt in optimizers:
     print(f'Current Optimizer {opt}')
     result = compute_mean_std_per_time(y_per_opt_for_time[opt])
     x = compute_avg_time(x_per_opt_for_time[opt])
     if opt =='Jad':
         continue
-"""
-"""if opt == 'Random_Search' or opt == 'Multi_RF_Local' or opt== 'PavlosV2':
-         result = compute_mean_std_per_time(y_per_opt_for_time[opt])
-        x = compute_avg_time(x_per_opt_for_time[opt])
-    elif opt == 'Pavlos' or opt == 'SMAC_Instance' or opt =='SMAC':
-        result = compute_mean_std_per_time(y_per_opt_for_time[opt])
-        x = compute_avg_time(x_per_opt_for_time[opt]) 
-    else:
-        continue"""
-    #plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
-    
+    plt.plot(x,result['Mean'],opt_colors[opt],label=opt)
     #plt.fill_between(x, result['Low'], result['Upper'],color=opt_colors[opt], alpha=0.1)
     #print(result)
-"""plt.ylim([0.28,0.34])
+plt.ylim([0.065,0.1])
 plt.xlabel('Time')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for all datasets ' )
-plt.ylabel('Average 1-R2')
+plt.ylabel('Average 1-AUC')
 plt.legend()
 save_figure('OverAllDatasets',dataset_name,time_bool_flag,'Group')
 plt.clf()
