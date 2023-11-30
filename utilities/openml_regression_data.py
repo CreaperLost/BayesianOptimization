@@ -10,6 +10,11 @@ keep_these = ['tid', 'did', 'name', 'NumberOfFeatures', 'NumberOfInstances',
        'NumberOfNumericFeatures', 'NumberOfSymbolicFeatures',
        'MaxNominalAttDistinctValues']
 task_data[keep_these].to_csv('OpenML_Regression_Cleaned.csv')
+
+
+
+
+
 """task_id = dataset.split('Dataset')[1] 
 task = openml.tasks.get_task(task_id, download_data=False)
 dataset_info = openml.datasets.get_dataset(task.dataset_id, download_data=False)"""

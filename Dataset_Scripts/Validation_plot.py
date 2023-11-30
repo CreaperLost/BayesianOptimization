@@ -94,16 +94,38 @@ def time_plot_for_opt(time,metric,opt):
 def config_plot_for_opt(metric,opt):
 
     x =  [i for i in range(metric.shape[0])]
-    y = np.minimum.accumulate(metric.values)
+    y = metric.values
     
     return x,y
+
+def find_index(metric):
+    new_array = np.zeros(metric.shape,dtype=np.int64)
+
+    min_index = 0  # Initialize the minimum index
+    for i in range(len(metric)):
+        if metric[i] < metric[min_index]:
+            min_index = i
+        new_array[i] = min_index
+    return new_array
+
+def cumulative_min(metric):
+    return np.minimum.accumulate(metric)
+
+
+def value_per_index(test_score,index):
+    new_array = np.zeros(test_score.shape)
+    
+    for i,value in enumerate(index): 
+        new_array[i] = test_score.values[value[0]]
+
+    return new_array
 
 colors = ['red','blue','green','black','purple','orange','grey','cyan','yellow']
 seeds = [1]
 #How many initial configurations we have run.
 interval = 50
 result_space = 'Holdout_Experiments'
-optimizers = ['Multi_RF_Local'] # 'Multi_RF_Local',
+optimizers = ['Multi_RF_Local','Progressive_BO'] # 'Multi_RF_Local','Progressive_BO'
 
 space_type = 'GROUP'
 
@@ -113,8 +135,14 @@ for opt in optimizers:
     opt_colors.update({opt:colors[clr_pos]})
     clr_pos+=1
 
-metric_per_data = []
-metric_test_per_data =  []
+
+metric_per_data = dict()
+metric_test_per_data =  dict()
+for opt in optimizers:
+    metric_per_data[opt] = []
+    metric_test_per_data[opt] = []
+
+
 for data_repo in ['Jad','OpenML']:
     path_str = os.path.join(os.pardir,result_space,space_type,'Metric',data_repo)
     if os.path.exists(path_str) == False:
@@ -134,13 +162,19 @@ for data_repo in ['Jad','OpenML']:
                     
                     
                     x,y = config_plot_for_opt(metric,opt)
-                    x,y_test = config_plot_for_opt(test_metric,opt)
+                    index_of_min = find_index(y)
+
+
+                    y  = cumulative_min(y)
+
+                    y_test = value_per_index(test_metric,index_of_min)
                     
-                    metric_per_data.append(y.flatten())
-                    metric_test_per_data.append(y_test.flatten())
-                    plt.plot(x,y_test,color = 'red',label='Testing')
-                    plt.plot(x,y,color='green',label='Training')
-            plt.xlim([0,550])
+                    metric_per_data[opt].append(y.flatten())
+                    metric_test_per_data[opt].append(y_test.flatten())
+
+                    plt.plot(x,y_test,color = opt_colors[opt],linestyle='--',label=opt+' Test')
+                    plt.plot(x,y,color=opt_colors[opt],linestyle ='solid',label=opt+ ' Train')
+            plt.xlim([0,1050])
             plt.xlabel('Number of objective evals.')
             plt.grid(True, which='major')
             plt.title('Effectiveness of BO methods for dataset ' + dataset_name)
@@ -150,13 +184,18 @@ for data_repo in ['Jad','OpenML']:
             plt.clf()
 
 
+avg_train = dict()
+avg_test =  dict()
+for opt in optimizers:
+    avg_train[opt] = list(pd.DataFrame(metric_per_data[opt]).transpose().mean(axis=1))
+    avg_test[opt] = list(pd.DataFrame(metric_test_per_data[opt]).transpose().mean(axis=1))
 
-avg_train = list(pd.DataFrame(metric_per_data).transpose().mean(axis=1))
-avg_test = list(pd.DataFrame(metric_test_per_data).transpose().mean(axis=1))
-x =  [i for i in range(len(avg_train))]
-plt.plot(x,avg_train,color = 'green',label = 'Train')
-plt.plot(x,avg_test,color = 'red',label = 'Test')
-plt.xlim([0,550])
+
+    x =  [i for i in range(len(avg_train[opt]))]
+    plt.plot(x,avg_test[opt],color = opt_colors[opt],linestyle='--',label=opt +' Test')
+    plt.plot(x,avg_train[opt],color=opt_colors[opt],linestyle ='solid',label=opt+ ' Train')
+
+plt.xlim([0,1050])
 plt.xlabel('Number of objective evals.')
 plt.grid(True, which='major')
 plt.title('Effectiveness of BO methods for dataset')
